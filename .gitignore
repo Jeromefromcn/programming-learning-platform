@@ -1,0 +1,37 @@
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Java / Maven
+target/
+*.class
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+coverage/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Spring Boot local config overrides
+application-local.yml
+application-local.properties
+
+.claude/settings.local.json
+.claude/worktrees/
