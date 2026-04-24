@@ -56,7 +56,7 @@
 #### ADR-1: Client-Side Code Execution Strategy
 
 **Blockly (Student "Run" button):**
-Blockly generates JavaScript code via its built-in code generator. Client-side execution runs this JS inside a Web Worker with a 3-second timeout. The Web Worker provides natural browser sandboxing — no filesystem, no network, isolated memory.
+Blockly generates JavaScript code via its built-in code generator. Client-side execution runs this JS inside a Web Worker with a timeout. The Web Worker provides natural browser sandboxing — no filesystem, no network, isolated memory.
 
 **Python (Student "Run" button):**
 Pyodide (CPython compiled to WebAssembly) runs inside a Web Worker. This gives students a real Python runtime in-browser without any server round-trip. The Web Worker enforces the time limit; if execution exceeds the configured limit, the worker is terminated and a "Time Limit Exceeded" message is shown.
@@ -66,10 +66,167 @@ Pyodide (CPython compiled to WebAssembly) runs inside a Web Worker. This gives s
 - No server load from hundreds of students running code simultaneously during lab sessions
 - Browser naturally sandboxes execution (no filesystem/network escape)
 
+##### ADR-1a: Infinite Loop Defense (Client-Side)
+
+Student code (especially from beginners) frequently produces infinite loops. Since the browser's main thread must remain responsive at all times, the platform uses a two-layer defense:
+
+**Layer 1 — Blockly Loop Trap (proactive, catches 99% of cases):**
+
+Blockly provides a native `INFINITE_LOOP_TRAP` API. Before code generation, the platform sets:
+
+```javascript
+// Injected before every loop iteration in generated JS
+Blockly.JavaScript.INFINITE_LOOP_TRAP =
+  'if (--__loopCounter <= 0) throw new Error("INFINITE_LOOP");\n';
+```
+
+The generated code for any loop block (repeat, while, for-each) will include a decrement-and-check at the top of every iteration body. The platform prepends a counter initialization to the generated code before sending it to the Web Worker:
+
+```javascript
+// Prepended to generated code before execution
+const executableCode = `var __loopCounter = 10000;\n` + generatedCode;
+```
+
+When the counter hits zero, a JS exception is thrown immediately — the loop never gets to "hang." The Web Worker catches the error and posts a structured message back to the main thread:
+
+```javascript
+// Inside Web Worker
+try {
+  eval(executableCode);
+  self.postMessage({ type: 'success', output: capturedOutput });
+} catch (e) {
+  if (e.message === 'INFINITE_LOOP') {
+    self.postMessage({ type: 'error', errorType: 'INFINITE_LOOP',
+      message: 'Your code has an infinite loop. Check your loop conditions.' });
+  } else {
+    self.postMessage({ type: 'error', errorType: 'RUNTIME_ERROR', message: e.message });
+  }
+}
+```
+
+This provides an immediate, user-friendly error message without any delay.
+
+**Layer 2 — Web Worker hard kill (fallback safety net):**
+
+If the loop trap is somehow bypassed (e.g., a recursive call without loop blocks, or a non-loop construct causing a hang), the main thread enforces a hard timeout:
+
+```javascript
+// Main thread — Worker lifecycle manager
+class CodeRunner {
+  constructor(timeoutMs = 5000) {
+    this.timeoutMs = timeoutMs;
+    this.worker = null;
+  }
+
+  execute(code) {
+    return new Promise((resolve, reject) => {
+      // Always create a fresh worker (cheap, avoids stale state)
+      this.worker = new Worker('/workers/blockly-runner.js');
+
+      const timer = setTimeout(() => {
+        this.worker.terminate();   // Hard kill — cannot be blocked by JS
+        this.worker = null;
+        reject({
+          errorType: 'TIMEOUT',
+          message: 'Code execution exceeded the time limit.'
+        });
+      }, this.timeoutMs);
+
+      this.worker.onmessage = (e) => {
+        clearTimeout(timer);
+        this.worker.terminate();
+        this.worker = null;
+        if (e.data.type === 'success') resolve(e.data);
+        else reject(e.data);
+      };
+
+      this.worker.onerror = (e) => {
+        clearTimeout(timer);
+        this.worker.terminate();
+        this.worker = null;
+        reject({ errorType: 'WORKER_ERROR', message: e.message });
+      };
+
+      this.worker.postMessage({ code });
+    });
+  }
+}
+```
+
+Key design points:
+- `worker.terminate()` is called from the main thread and is **non-blockable** — even an infinite loop inside the Worker cannot prevent termination.
+- A fresh Worker is created for every execution. This avoids the complexity of "resetting" a Worker's state and ensures no leaked variables between runs.
+- The UI disables the "Run" button during execution and re-enables it on completion/timeout, preventing rapid re-clicks from spawning multiple Workers.
+
+**Layer interaction:**
+
+| Scenario | Layer 1 (Loop Trap) | Layer 2 (Worker Kill) | User Experience |
+|---|---|---|---|
+| `while(true)` loop | Catches at 10,000 iterations (~instant) | Not triggered | Immediate error: "Infinite loop detected" |
+| Extremely slow valid loop (>5s) | Not triggered (under 10K iterations) | Kills at timeout | Error: "Time limit exceeded" |
+| Infinite recursion (no loop blocks) | Not applicable (no loop trap injected) | Kills at timeout | Error: "Time limit exceeded" |
+| Stack overflow from recursion | Not applicable | JS engine throws `RangeError` naturally | Error: "Maximum call stack size exceeded" |
+
+**Python (Pyodide) infinite loop defense:**
+
+Pyodide runs in a Web Worker and has the same Layer 2 (hard kill) protection. Python does not have an equivalent of Blockly's loop trap injection, but `worker.terminate()` reliably kills WASM execution. For Python exercises, the timeout is the sole defense, which is acceptable because:
+- Python exercises are for more advanced students who are expected to handle loop logic
+- The Pyodide Web Worker is fully isolated — an infinite loop freezes only the Worker, never the main thread
+- The timeout message guides the student: "Your code exceeded the time limit. Check for infinite loops."
+
 #### ADR-2: Server-Side Grading Sandbox
 
 **Blockly grading:**
-Rhino JS engine runs Blockly-generated JavaScript in a sandboxed context. Rhino allows fine-grained control: disable Java class access, set instruction count limits (mapped to 3-second equivalent), restrict available APIs to `print()` only.
+Rhino JS engine runs Blockly-generated JavaScript in a sandboxed context. Rhino allows fine-grained control: disable Java class access, set instruction count limits, restrict available APIs to `print()` only.
+
+Infinite loop defense on the server side uses Rhino's `Context.setInstructionObserverThreshold()`:
+
+```java
+// RhinoSandbox.java — server-side Blockly execution
+public class RhinoSandbox {
+    private static final int MAX_INSTRUCTIONS = 500_000;
+
+    public ExecutionResult execute(String jsCode) {
+        Context cx = Context.enter();
+        try {
+            // Instruction observer fires every N instructions
+            cx.setInstructionObserverThreshold(10_000);
+            cx.setOptimizationLevel(-1); // Interpreter mode (required for observer)
+
+            // Custom observer that counts total instructions
+            final int[] count = {0};
+            cx.setGenerateObserverCount(true);
+
+            Scriptable scope = cx.initSafeStandardObjects();
+
+            // Inject only console.print, block everything else
+            scope.put("print", scope, new PrintFunction(outputBuffer));
+
+            // Wrap execution with instruction limit
+            cx.executeScript(jsCode, scope, new ContextFactory() {
+                @Override
+                protected void observeInstructionCount(Context cx, int instructionCount) {
+                    count[0] += instructionCount;
+                    if (count[0] > MAX_INSTRUCTIONS) {
+                        throw new Error("INFINITE_LOOP: Instruction limit exceeded");
+                    }
+                }
+            });
+
+            return ExecutionResult.success(outputBuffer.toString());
+        } catch (Error e) {
+            if (e.getMessage().contains("INFINITE_LOOP")) {
+                return ExecutionResult.infiniteLoop();
+            }
+            return ExecutionResult.runtimeError(e.getMessage());
+        } finally {
+            Context.exit();
+        }
+    }
+}
+```
+
+This approach is deterministic and precise — it counts actual bytecode instructions rather than wall-clock time, making it immune to CPU load variance. The 500K instruction limit maps roughly to a 3-second equivalent on typical hardware. Combined with `initSafeStandardObjects()` (no Java class access), this fully contains student code on the JVM side.
 
 **Python grading:**
 A dedicated `sandbox` Docker container runs Python 3.12 inside nsjail. The Spring Boot backend communicates with this container over an internal HTTP API. nsjail provides:
