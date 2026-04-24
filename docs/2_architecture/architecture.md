@@ -239,13 +239,22 @@ A dedicated `sandbox` Docker container runs Python 3.12 inside nsjail. The Sprin
 
 **Architecture:**
 
-```
-Spring Boot ──HTTP POST──▶ Sandbox Container (Python + nsjail)
-                            │
-                            ├─ Receives: student code + test cases + time limit
-                            ├─ Spawns nsjail process per submission
-                            ├─ Runs each test case sequentially
-                            └─ Returns: per-test results (pass/fail/timeout/error)
+```mermaid
+sequenceDiagram
+    participant API as Spring Boot API
+    participant Sandbox as Sandbox Container<br/>(Python + nsjail)
+    participant Jail as nsjail Process
+
+    API->>Sandbox: POST /execute {code, testCases, timeLimit, memoryLimit}
+
+    loop For each test case
+        Sandbox->>Jail: Spawn nsjail subprocess<br/>--time_limit, --rlimit_as, --disable_clone_newnet
+        Note over Jail: Write student code + test wrapper to temp file<br/>Execute python3 temp_file.py<br/>Read-only root FS, writable /tmp only
+        Jail-->>Sandbox: stdout + exit code
+        Note over Sandbox: Compare actual output vs expected
+    end
+
+    Sandbox-->>API: {results: [{index, passed, actual, error, executionTimeMs}, ...]}
 ```
 
 #### ADR-3: Authentication — JWT with DB-Backed Status Check
@@ -286,206 +295,212 @@ Port mapping:
 
 ### 2.1 Container Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Docker Compose — Custom Bridge Network: exercise-platform-net      │
-│                                                                     │
-│  ┌──────────────┐    ┌──────────────────┐    ┌──────────────────┐  │
-│  │   Nginx      │    │  Spring Boot     │    │  Python Sandbox  │  │
-│  │   :80        │───▶│  API Server      │───▶│  (nsjail)        │  │
-│  │              │    │  :8080           │    │  :5000           │  │
-│  │  - Static    │    │                  │    │                  │  │
-│  │    files     │    │  - Auth          │    │  - Receives code │  │
-│  │  - Reverse   │    │  - REST API      │    │  - Runs in jail  │  │
-│  │    proxy     │    │  - Rhino (JS)    │    │  - Returns result│  │
-│  │    /api/*    │    │  - File import   │    │                  │  │
-│  └──────────────┘    │  - Auto-grading  │    └──────────────────┘  │
-│                      │                  │                          │
-│                      └────────┬─────────┘                          │
-│                               │                                    │
-│                      ┌────────▼─────────┐                          │
-│                      │   MySQL 8.0      │                          │
-│                      │   :3306          │                          │
-│                      │                  │                          │
-│                      │  - exercise-db   │                          │
-│                      └──────────────────┘                          │
-│                                                                     │
-│  ┌──────────────┐    ┌──────────────────┐                          │
-│  │  Prometheus  │───▶│  Grafana         │                          │
-│  │  :9090       │    │  :3000 → ext:3001│                          │
-│  └──────────────┘    └──────────────────┘                          │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph DockerCompose["Docker Compose — exercise-platform-net"]
+        subgraph AppLayer["Application Layer"]
+            Nginx["<b>Nginx</b><br/>:80 → ext:80<br/>──────────<br/>Static files<br/>Reverse proxy /api/*"]
+            API["<b>Spring Boot API</b><br/>:8080 (internal)<br/>──────────<br/>Auth · REST API<br/>Rhino (JS grading)<br/>File import<br/>Auto-grading"]
+            Sandbox["<b>Python Sandbox</b><br/>:5000 (internal)<br/>──────────<br/>Python 3.12 + nsjail<br/>Receives code<br/>Runs in jail<br/>Returns results"]
+        end
+
+        subgraph DataLayer["Data Layer"]
+            MySQL[("<b>MySQL 8.0</b><br/>:3306 (internal)<br/>──────────<br/>exercise_db")]
+        end
+
+        subgraph MonitorLayer["Monitoring Layer"]
+            Prometheus["<b>Prometheus</b><br/>:9090 → ext:9090"]
+            Grafana["<b>Grafana</b><br/>:3000 → ext:3001"]
+        end
+
+        Nginx -- "/api/* proxy" --> API
+        API -- "POST /execute" --> Sandbox
+        API -- "JDBC" --> MySQL
+        Prometheus -- "scrape /actuator" --> API
+        Prometheus --> Grafana
+    end
+
+    Browser["🌐 Browser"] -- "HTTP :80" --> Nginx
+    Admin["👤 Admin"] -- "HTTP :3001" --> Grafana
 ```
 
 ### 2.2 Application Module Diagram
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Frontend (React SPA)              │
-│                                                     │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐ │
-│  │  Auth   │ │Exercise │ │ Course  │ │ Student  │ │
-│  │  Module │ │ Mgmt    │ │ Mgmt    │ │ Practice │ │
-│  └────┬────┘ └────┬────┘ └────┬────┘ └─────┬────┘ │
-│  ┌────┴────┐ ┌────┴────┐ ┌────┴────┐ ┌─────┴────┐ │
-│  │ Admin   │ │Grading  │ │Progress │ │ Category │ │
-│  │ Panel   │ │ Module  │ │ Module  │ │ Mgmt     │ │
-│  └─────────┘ └─────────┘ └─────────┘ └──────────┘ │
-│                                                     │
-│  Shared: Blockly Workspace | Monaco Editor          │
-│          Pyodide Worker    | JS Exec Worker         │
-└──────────────────────┬──────────────────────────────┘
-                       │ HTTP (JSON)
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│                Backend (Spring Boot)                 │
-│                                                     │
-│  ┌──────────────────────────────────────────────┐   │
-│  │          Security Filter Chain               │   │
-│  │  JWT Filter → Role Check → Rate Limiter      │   │
-│  └──────────────────────┬───────────────────────┘   │
-│                         │                           │
-│  ┌──────────┐ ┌────────┴───┐ ┌──────────────────┐  │
-│  │ Auth     │ │ Exercise   │ │ Course           │  │
-│  │ Controller│ │ Controller │ │ Controller       │  │
-│  └────┬─────┘ └─────┬──────┘ └───────┬──────────┘  │
-│  ┌────┴─────┐ ┌─────┴──────┐ ┌───────┴──────────┐  │
-│  │ User     │ │ Submission │ │ Category         │  │
-│  │Controller│ │ Controller │ │ Controller       │  │
-│  └────┬─────┘ └─────┬──────┘ └───────┬──────────┘  │
-│  ┌────┴─────┐ ┌─────┴──────┐ ┌───────┴──────────┐  │
-│  │ Settings │ │ Progress   │ │ Global Error     │  │
-│  │Controller│ │ Controller │ │ Handler          │  │
-│  └──────────┘ └────────────┘ └──────────────────┘  │
-│                                                     │
-│  ┌──────────────────────────────────────────────┐   │
-│  │              Service Layer                   │   │
-│  │                                              │   │
-│  │  AuthService    ExerciseService              │   │
-│  │  UserService    SubmissionService            │   │
-│  │  CourseService  GradingService               │   │
-│  │  CategoryService ProgressService             │   │
-│  │  SettingsService FileImportService           │   │
-│  └──────────────────────┬───────────────────────┘   │
-│                         │                           │
-│  ┌──────────────────────┴───────────────────────┐   │
-│  │           Grading Engine                     │   │
-│  │                                              │   │
-│  │  BlocklyGrader (Rhino)  PythonGrader (HTTP)  │   │
-│  │  └─ Output matching     └─ Calls sandbox     │   │
-│  │  └─ Block analysis        container          │   │
-│  └──────────────────────────────────────────────┘   │
-│                                                     │
-│  ┌──────────────────────────────────────────────┐   │
-│  │         Repository Layer (Spring Data JPA)   │   │
-│  └──────────────────────┬───────────────────────┘   │
-│                         │                           │
-└─────────────────────────┼───────────────────────────┘
-                          ▼
-                    ┌───────────┐
-                    │  MySQL    │
-                    └───────────┘
+```mermaid
+graph TB
+    subgraph Frontend["Frontend — React SPA"]
+        direction TB
+        subgraph FE_Modules["Page Modules"]
+            AuthMod["Auth Module"]
+            ExMgmt["Exercise Mgmt"]
+            CourseMgmt["Course Mgmt"]
+            StudentPractice["Student Practice"]
+            AdminPanel["Admin Panel"]
+            GradingMod["Grading Module"]
+            ProgressMod["Progress Module"]
+            CategoryMgmt["Category Mgmt"]
+        end
+        subgraph FE_Shared["Shared Components"]
+            BlocklyWS["Blockly Workspace"]
+            Monaco["Monaco Editor"]
+            PyodideW["Pyodide Worker"]
+            JSExecW["JS Exec Worker"]
+        end
+    end
+
+    subgraph Backend["Backend — Spring Boot"]
+        direction TB
+        subgraph Security["Security Filter Chain"]
+            JWTFilter["JWT Filter"] --> RoleCheck["Role Check"] --> RateLimiter["Rate Limiter"]
+        end
+
+        subgraph Controllers["Controller Layer"]
+            AuthCtrl["AuthController"]
+            ExCtrl["ExerciseController"]
+            CourseCtrl["CourseController"]
+            UserCtrl["UserController"]
+            SubCtrl["SubmissionController"]
+            CatCtrl["CategoryController"]
+            SettingsCtrl["SettingsController"]
+            ProgressCtrl["ProgressController"]
+            ErrorHandler["Global Error Handler"]
+        end
+
+        subgraph Services["Service Layer"]
+            AuthSvc["AuthService"]
+            ExSvc["ExerciseService"]
+            CourseSvc["CourseService"]
+            UserSvc["UserService"]
+            SubSvc["SubmissionService"]
+            CatSvc["CategoryService"]
+            SettingsSvc["SettingsService"]
+            ProgressSvc["ProgressService"]
+            ImportSvc["FileImportService"]
+        end
+
+        subgraph Grading["Grading Engine"]
+            BlocklyGrader["BlocklyGrader · Rhino<br/>Output matching · Block analysis"]
+            PythonGrader["PythonGrader · HTTP<br/>Calls sandbox container"]
+        end
+
+        subgraph Repo["Repository Layer — Spring Data JPA"]
+            Repositories["UserRepo · ExerciseRepo · CourseRepo<br/>SubmissionRepo · CategoryRepo · SettingsRepo"]
+        end
+    end
+
+    MySQL[("MySQL")]
+
+    Frontend -- "HTTP JSON" --> Security
+    Security --> Controllers
+    Controllers --> Services
+    Services --> Grading
+    Services --> Repo
+    Grading --> Repo
+    Repo --> MySQL
 ```
 
 ### 2.3 Core Data Flows
 
 #### Flow 1: Student Practices an Exercise (Client-Side Execution)
 
-```
-Student Browser
-    │
-    ├─ 1. GET /api/exercises/{id} → Load exercise definition
-    │
-    ├─ 2. Student writes code in Blockly workspace or Monaco editor
-    │
-    ├─ 3. Click "Run"
-    │     ├─ Blockly: generate JS → post to Web Worker → execute → capture console.log
-    │     └─ Python: post code to Pyodide Web Worker → execute → capture stdout
-    │
-    ├─ 4. Display output / test case results in UI
-    │
-    └─ 5. Click "Export"
-          └─ Generate JSON locally → browser download
-              {
-                exerciseId, exerciseVersion, exerciseType,
-                studentName, answer (blockly XML or python code),
-                exportedAt (ISO timestamp)
-              }
+```mermaid
+sequenceDiagram
+    participant Student as Student Browser
+    participant API as Spring Boot API
+    participant Worker as Web Worker<br/>(JS or Pyodide)
+
+    Student->>API: 1. GET /api/exercises/{id}
+    API-->>Student: Exercise definition (config, starter code, visible tests)
+
+    Note over Student: 2. Student writes code in<br/>Blockly workspace or Monaco editor
+
+    Student->>Worker: 3. Click "Run" — send code to Worker
+    Note over Worker: Blockly: eval generated JS<br/>Python: Pyodide executes code
+    Worker-->>Student: stdout / test results / error
+
+    Note over Student: 4. Display output in UI
+
+    Note over Student: 5. Click "Export"<br/>Generate JSON locally → browser download<br/>{exerciseId, exerciseVersion, exerciseType,<br/>studentName, answer, exportedAt}
 ```
 
 #### Flow 2: Tutor Imports & Grades Submissions
 
-```
-Tutor Browser                        Spring Boot                    Sandbox
-    │                                     │                            │
-    ├─ 1. POST /api/submissions/import    │                            │
-    │      (multipart: JSON/ZIP files)    │                            │
-    │                                     │                            │
-    │      ┌──────────────────────────────┤                            │
-    │      │ 2. Validate & parse files    │                            │
-    │      │    - ZIP: check path traversal, extract                   │
-    │      │    - JSON: validate schema                                │
-    │      │    - Check exercise exists                                │
-    │      │    - Check duplicates                                     │
-    │      │    - Detect version mismatch                              │
-    │      └──────────────────────────────┤                            │
-    │                                     │                            │
-    │      ┌──────────────────────────────┤                            │
-    │      │ 3. Auto-grade each file      │                            │
-    │      │    ├─ Blockly → Rhino engine  │                            │
-    │      │    └─ Python ─────────────────┼── 4. POST /execute ──────▶│
-    │      │                              │       { code, tests,       │
-    │      │                              │         timeLimit }        │
-    │      │                              │◀── 5. Response ────────────│
-    │      │                              │       { results[] }        │
-    │      └──────────────────────────────┤                            │
-    │                                     │                            │
-    ├─ 6. Response: import results        │                            │
-    │      (per-file status, scores,      │                            │
-    │       errors, warnings)             │                            │
-    │                                     │                            │
-    ├─ 7. GET /api/submissions?exerciseId=│                            │
-    │      Review list                    │                            │
-    │                                     │                            │
-    ├─ 8. PUT /api/submissions/{id}/grade │                            │
-    │      { tutorScore, comment }        │                            │
-    │                                     │                            │
-    └─ 9. GET /api/submissions/export-csv │                            │
-           → Download CSV                │                            │
+```mermaid
+sequenceDiagram
+    participant Tutor as Tutor Browser
+    participant API as Spring Boot API
+    participant Sandbox as Python Sandbox
+
+    Tutor->>API: 1. POST /api/submissions/import<br/>(multipart: JSON/ZIP files)
+
+    Note over API: 2. Validate & parse files<br/>· ZIP: check path traversal, extract<br/>· JSON: validate schema<br/>· Check exercise exists<br/>· Check duplicates<br/>· Detect version mismatch
+
+    loop 3. Auto-grade each file
+        alt Blockly exercise
+            Note over API: Execute via Rhino engine (in-process)
+        else Python exercise
+            API->>Sandbox: 4. POST /execute {code, tests, timeLimit}
+            Sandbox-->>API: 5. {results[]}
+        end
+    end
+
+    API-->>Tutor: 6. Import results (per-file status, scores, errors, warnings)
+
+    Tutor->>API: 7. GET /api/submissions?exerciseId=...
+    API-->>Tutor: Submission list
+
+    Tutor->>API: 8. PUT /api/submissions/{id}/grade {tutorScore, comment}
+    API-->>Tutor: Updated submission
+
+    Tutor->>API: 9. GET /api/submissions/export-csv
+    API-->>Tutor: CSV file download
 ```
 
 #### Flow 3: Authentication & Session Lifecycle
 
-```
-Client                              Spring Boot                    MySQL
-  │                                     │                            │
-  ├─ POST /api/auth/login               │                            │
-  │   { username, password }            │                            │
-  │                                     ├── Check credentials ──────▶│
-  │                                     │◀── User record ───────────│
-  │                                     │                            │
-  │                                     ├── Generate access token    │
-  │                                     ├── Generate refresh token   │
-  │                                     ├── Store refresh token ────▶│
-  │                                     │                            │
-  │◀── { accessToken, user }            │                            │
-  │    + Set-Cookie: refreshToken       │                            │
-  │                                     │                            │
-  ├─ GET /api/* (with Authorization)    │                            │
-  │                                     ├── Validate JWT             │
-  │                                     ├── Check user.status ──────▶│
-  │                                     │◀── ACTIVE / DISABLED ─────│
-  │                                     │                            │
-  │                                     ├── If DISABLED → 401        │
-  │                                     ├── If ACTIVE → proceed      │
-  │                                     │                            │
-  ├─ POST /api/auth/refresh             │                            │
-  │   (Cookie: refreshToken)            │                            │
-  │                                     ├── Validate refresh token ─▶│
-  │                                     ├── Issue new access token   │
-  │                                     │                            │
-  └─ POST /api/auth/logout              │                            │
-       → Delete refresh token ──────────┼──────────────────────────▶│
+```mermaid
+sequenceDiagram
+    participant Client as Client (Browser)
+    participant API as Spring Boot API
+    participant DB as MySQL
+
+    rect rgb(230, 245, 255)
+        Note over Client,DB: Login Flow
+        Client->>API: POST /api/auth/login {username, password}
+        API->>DB: Check credentials
+        DB-->>API: User record
+        API->>API: Generate access token (JWT, 30min)
+        API->>API: Generate refresh token (7 days)
+        API->>DB: Store refresh token hash
+        API-->>Client: {accessToken, user} + Set-Cookie: refreshToken (HttpOnly)
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Client,DB: Authenticated Request
+        Client->>API: GET /api/* (Authorization: Bearer token)
+        API->>API: Validate JWT signature & expiry
+        API->>DB: Check users.status
+        DB-->>API: ACTIVE / DISABLED
+        alt Status = DISABLED
+            API-->>Client: 401 ACCOUNT_DISABLED
+        else Status = ACTIVE
+            API-->>Client: 200 OK (proceed with request)
+        end
+    end
+
+    rect rgb(255, 245, 230)
+        Note over Client,DB: Token Refresh
+        Client->>API: POST /api/auth/refresh (Cookie: refreshToken)
+        API->>DB: Validate refresh token
+        API-->>Client: {accessToken} (new)
+    end
+
+    rect rgb(255, 235, 235)
+        Note over Client,DB: Logout
+        Client->>API: POST /api/auth/logout
+        API->>DB: Delete refresh token
+        API-->>Client: 204 No Content + Clear cookie
+    end
 ```
 
 ---
@@ -494,21 +509,112 @@ Client                              Spring Boot                    MySQL
 
 ### 3.1 Entity Relationship Overview
 
-```
-users ─────────┬──── refresh_tokens
-               │
-               ├──── course_students ────── courses
-               │                             │
-               │                             ├──── course_exercises ──── exercises
-               │                                                          │
-               │                                                          ├──── exercise_versions
-               │                                                          │
-               │                                                          ├──── exercise_likes (P1)
-               │                                                          │
-               └──── submissions (linked by student_name) ────────────────┘
-                                                                          │
-                                                              categories ─┘
-               global_settings (standalone)
+```mermaid
+erDiagram
+    users ||--o{ refresh_tokens : "has"
+    users ||--o{ course_students : "enrolled in"
+    users ||--o{ exercise_likes : "likes"
+
+    courses ||--o{ course_students : "has students"
+    courses ||--o{ course_exercises : "contains"
+
+    exercises ||--o{ course_exercises : "linked to"
+    exercises ||--o{ exercise_versions : "has versions"
+    exercises ||--o{ exercise_likes : "receives"
+    exercises ||--o{ submissions : "has submissions"
+    exercises }o--o| categories : "categorized by"
+
+    exercise_versions ||--o{ submissions : "graded against"
+
+    users {
+        bigint id PK
+        varchar username UK
+        varchar display_name
+        varchar password_hash
+        enum role "STUDENT | TUTOR | SUPER_ADMIN"
+        enum status "ACTIVE | DISABLED"
+    }
+
+    refresh_tokens {
+        bigint id PK
+        bigint user_id FK
+        varchar token_hash
+        datetime expires_at
+    }
+
+    courses {
+        bigint id PK
+        varchar name
+        text description
+        boolean is_deleted
+        bigint created_by FK
+    }
+
+    exercises {
+        bigint id PK
+        varchar title
+        text description
+        enum type "BLOCKLY | PYTHON"
+        enum difficulty "EASY | MEDIUM | HARD"
+        bigint category_id FK
+        enum status "DRAFT | PUBLISHED"
+        bigint current_version_id FK
+        boolean is_deleted
+        int like_count
+    }
+
+    exercise_versions {
+        bigint id PK
+        bigint exercise_id FK
+        int version_number
+        varchar title
+        text description
+        json hints
+        json config
+    }
+
+    categories {
+        bigint id PK
+        varchar name UK
+    }
+
+    submissions {
+        bigint id PK
+        bigint exercise_id FK
+        bigint graded_version_id FK
+        varchar student_name
+        enum exercise_type "BLOCKLY | PYTHON"
+        mediumtext answer_data
+        datetime export_timestamp
+        boolean version_mismatch
+        decimal auto_score
+        json auto_grade_details
+        decimal tutor_score
+        text tutor_comment
+        varchar import_batch_id
+    }
+
+    exercise_likes {
+        bigint id PK
+        bigint exercise_id FK
+        bigint user_id FK
+        varchar browser_id
+    }
+
+    course_students {
+        bigint course_id PK_FK
+        bigint user_id PK_FK
+    }
+
+    course_exercises {
+        bigint course_id PK_FK
+        bigint exercise_id PK_FK
+    }
+
+    global_settings {
+        varchar setting_key PK
+        varchar setting_value
+    }
 ```
 
 ### 3.2 DDL — Flyway Migration Scripts
