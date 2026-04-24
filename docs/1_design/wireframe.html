@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programming Exercise Platform — Wireframe Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Courier New', monospace; background: #f5f5f5; color: #333; font-size: 14px; }
+
+  /* === Layout === */
+  .page { display: none; min-height: 100vh; }
+  .page.active { display: block; }
+  .topbar { background: #444; color: #fff; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .topbar .role-badge { background: #888; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 8px; }
+  .topbar a, .topbar button { color: #ccc; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; text-decoration: underline; }
+  .topbar a:hover, .topbar button:hover { color: #fff; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .breadcrumb { font-size: 12px; color: #888; margin-bottom: 16px; }
+  .breadcrumb a { color: #666; }
+
+  /* === Wireframe Components === */
+  h1 { font-size: 22px; font-weight: bold; border-bottom: 2px solid #999; padding-bottom: 8px; margin-bottom: 20px; }
+  h2 { font-size: 17px; font-weight: bold; margin: 20px 0 10px; color: #555; }
+  h3 { font-size: 14px; font-weight: bold; margin: 12px 0 6px; color: #666; }
+
+  .card { border: 2px solid #bbb; background: #fff; padding: 16px; margin-bottom: 16px; }
+  .card-header { font-weight: bold; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed #ccc; }
+
+  .btn { display: inline-block; padding: 6px 14px; border: 2px solid #888; background: #e8e8e8; color: #333; cursor: pointer; font-family: inherit; font-size: 13px; margin: 4px 4px 4px 0; text-decoration: none; }
+  .btn:hover { background: #d0d0d0; border-color: #666; }
+  .btn-primary { background: #888; color: #fff; border-color: #666; }
+  .btn-primary:hover { background: #666; }
+  .btn-danger { border-color: #a00; color: #a00; }
+  .btn-danger:hover { background: #fdd; }
+  .btn-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+  .btn-p1 { position: relative; }
+  .btn-p1::after { content: 'P1'; position: absolute; top: -8px; right: -8px; background: #aaa; color: #fff; font-size: 9px; padding: 1px 4px; border-radius: 3px; }
+
+  input[type="text"], input[type="password"], input[type="number"], select, textarea {
+    border: 2px solid #bbb; padding: 6px 10px; font-family: inherit; font-size: 13px; background: #fafafa; width: 100%; margin: 4px 0 8px;
+  }
+  textarea { min-height: 60px; resize: vertical; }
+  select { max-width: 300px; }
+  label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-top: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; font-size: 13px; }
+  th { background: #e0e0e0; font-weight: bold; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  tr:hover { background: #eef; }
+
+  .annotation { font-size: 11px; color: #e07000; background: #fff8e0; border: 1px dashed #e0a000; padding: 3px 8px; margin: 4px 0; display: inline-block; }
+  .placeholder-box { border: 2px dashed #bbb; background: #f0f0f0; padding: 40px; text-align: center; color: #999; font-size: 13px; margin: 12px 0; }
+  .flex-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .flex-row > * { flex: 1; min-width: 250px; }
+  .split-panel { display: flex; gap: 0; }
+  .split-panel > .panel { flex: 1; border: 2px solid #bbb; padding: 16px; }
+  .split-panel > .panel:first-child { border-right: none; }
+
+  .stat-box { border: 2px solid #bbb; padding: 12px; text-align: center; background: #fff; min-width: 120px; }
+  .stat-box .stat-num { font-size: 28px; font-weight: bold; color: #555; }
+  .stat-box .stat-label { font-size: 11px; color: #888; }
+
+  .badge { display: inline-block; padding: 2px 8px; font-size: 11px; border: 1px solid #aaa; background: #eee; margin-right: 4px; }
+  .badge-blockly { border-color: #c90; background: #fff4d0; color: #a07000; }
+  .badge-python { border-color: #07a; background: #d0eeff; color: #056; }
+  .badge-draft { border-color: #aaa; background: #eee; color: #666; }
+  .badge-published { border-color: #0a0; background: #d0ffd0; color: #060; }
+
+  .tag { display: inline-block; padding: 1px 6px; font-size: 10px; border: 1px solid #ccc; margin: 2px; background: #f0f0f0; }
+  .pass { color: #080; font-weight: bold; }
+  .fail { color: #a00; font-weight: bold; }
+
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 100; justify-content: center; align-items: center; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #fff; border: 2px solid #888; padding: 24px; width: 90%; max-width: 500px; }
+  .modal h2 { margin-top: 0; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #444; color: #fff; padding: 12px 20px; font-size: 13px; z-index: 200; display: none; border: 2px solid #222; }
+  .toast.show { display: block; }
+
+  .filter-bar { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; align-items: center; }
+  .filter-bar select, .filter-bar input { width: auto; margin: 0; }
+  .pagination { margin: 12px 0; font-size: 12px; color: #888; }
+  .pagination a { color: #555; margin: 0 4px; text-decoration: underline; cursor: pointer; }
+
+  .login-box { max-width: 380px; margin: 80px auto; border: 2px solid #999; padding: 32px; background: #fff; }
+  .login-box h1 { text-align: center; border: none; }
+
+  .nav-tabs { display: flex; gap: 0; margin-bottom: -2px; position: relative; z-index: 1; }
+  .nav-tab { padding: 8px 16px; border: 2px solid #bbb; border-bottom: 2px solid #bbb; background: #eee; cursor: pointer; font-family: inherit; font-size: 13px; }
+  .nav-tab.active { background: #fff; border-bottom-color: #fff; font-weight: bold; }
+  .tab-content { border: 2px solid #bbb; padding: 16px; background: #fff; }
+
+  .version-list { list-style: none; }
+  .version-list li { padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .version-list li:hover { background: #f5f5f5; }
+</style>
+</head>
+<body>
+
+<!-- ==================== TOAST ==================== -->
+<div class="toast" id="toast"></div>
+
+<!-- ==================== LOGIN PAGE ==================== -->
+<div class="page active" id="page-login">
+  <div class="login-box">
+    <h1>Exercise Platform</h1>
+    <p class="annotation">Authentication — PRD §5.1.1</p>
+    <label>Username</label>
+    <input type="text" id="login-user" placeholder="Enter username">
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password">
+    <div style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="doLogin()" style="width:100%">Log In</button>
+    </div>
+    <p class="annotation" style="margin-top:12px;">
+      Demo accounts:<br>
+      admin / admin → SUPER_ADMIN<br>
+      tutor / tutor → TUTOR<br>
+      student / student → STUDENT<br>
+      disabled / disabled → Disabled account
+    </p>
+    <div id="login-error" style="color:#a00; margin-top:8px; display:none;"></div>
+  </div>
+</div>
+
+<!-- ==================== SUPER ADMIN PAGES ==================== -->
+
+<!-- SA: Dashboard -->
+<div class="page" id="page-sa-dashboard">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">SUPER_ADMIN</span></div>
+    <div>admin <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <h1>Admin Dashboard</h1>
+    <p class="annotation">Super Admin landing page — PRD §5.1.2, §5.2.4, §5.8</p>
+    <div class="flex-row">
+      <div class="card" onclick="go('sa-users')" style="cursor:pointer">
+        <div class="card-header">User Management</div>
+        <p>Create, disable, and manage user accounts and roles.</p>
+        <span class="annotation">§5.1.2 — CRUD users, assign roles, disable accounts</span>
+      </div>
+      <div class="card" onclick="go('sa-settings')" style="cursor:pointer">
+        <div class="card-header">Global Settings</div>
+        <p>Configure platform-wide settings such as course filter toggle.</p>
+        <span class="annotation">§5.2.4 — Course filter toggle with impact warning</span>
+      </div>
+      <div class="card" onclick="go('sa-categories')" style="cursor:pointer">
+        <div class="card-header">Category Management</div>
+        <p>Manage exercise categories used in authoring.</p>
+        <span class="annotation">§5.7 — Add/delete categories for exercise dropdown</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SA: User Management -->
+<div class="page" id="page-sa-users">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">SUPER_ADMIN</span></div>
+    <div>admin <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('sa-dashboard')">Dashboard</a> / User Management</div>
+    <h1>User Management</h1>
+    <p class="annotation">§5.1.2 — Create accounts, assign roles (STUDENT/TUTOR/SUPER_ADMIN), disable accounts, change roles. Disabling invalidates all active sessions immediately.</p>
+    <button class="btn btn-primary" onclick="showModal('modal-create-user')">+ Create User</button>
+    <table style="margin-top:12px;">
+      <tr><th>Username</th><th>Display Name</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+      <tr><td>alex01</td><td>Alex Chen</td><td><span class="badge">STUDENT</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>alex02</td><td>Alex Wang</td><td><span class="badge">STUDENT</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>bob03</td><td>Bob Liu</td><td><span class="badge">STUDENT</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>carol04</td><td>Carol Kim</td><td><span class="badge">STUDENT</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>dave05</td><td>Dave Tanaka</td><td><span class="badge">STUDENT</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>drlee</td><td>Dr. Lee</td><td><span class="badge">TUTOR</span></td><td>Active</td>
+        <td><button class="btn" onclick="toast('Role changed')">Change Role</button> <button class="btn btn-danger" onclick="toast('User disabled — all sessions invalidated')">Disable</button></td></tr>
+      <tr><td>admin</td><td>IT Admin</td><td><span class="badge">SUPER_ADMIN</span></td><td>Active</td>
+        <td><button class="btn btn-disabled">Change Role</button> <button class="btn btn-disabled">Disable</button></td></tr>
+    </table>
+    <p class="annotation">Note: Changing role takes effect on next login. Disabling immediately invalidates all active sessions (§5.1.2).</p>
+  </div>
+</div>
+
+<!-- SA: Global Settings -->
+<div class="page" id="page-sa-settings">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">SUPER_ADMIN</span></div>
+    <div>admin <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('sa-dashboard')">Dashboard</a> / Global Settings</div>
+    <h1>Global Settings</h1>
+
+    <div class="card">
+      <div class="card-header">Course-Based Exercise Filtering</div>
+      <p class="annotation">§5.2.4 — When ON, students only see exercises from their enrolled courses. When OFF, all published exercises are visible to everyone.</p>
+      <div style="margin: 12px 0;">
+        <label>Current Status: <strong id="filter-status">OFF</strong></label>
+        <button class="btn" id="filter-toggle-btn" onclick="toggleCourseFilter()">Enable Course Filter</button>
+      </div>
+      <div class="annotation" id="filter-warning" style="display:none;">
+        ⚠ Edge Case §7.3 — Warning: 1 student (dave05) is not enrolled in any course and will see no exercises if filter is enabled. Confirm to proceed.
+        <br><button class="btn btn-primary" onclick="confirmFilter()" style="margin-top:6px;">Confirm Enable</button>
+        <button class="btn" onclick="cancelFilter()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SA: Category Management -->
+<div class="page" id="page-sa-categories">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">SUPER_ADMIN</span></div>
+    <div>admin <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('sa-dashboard')">Dashboard</a> / Category Management</div>
+    <h1>Category Management</h1>
+    <p class="annotation">§5.7 — Manage the exercise category dropdown. Categories with linked exercises cannot be deleted — must remove associations first. Duplicate names are blocked.</p>
+    <div style="margin:12px 0;">
+      <input type="text" id="new-cat" placeholder="New category name" style="width:200px; display:inline-block;">
+      <button class="btn btn-primary" onclick="addCategory('new-cat')">Add Category</button>
+    </div>
+    <table>
+      <tr><th>Category</th><th># Exercises</th><th>Actions</th></tr>
+      <tr><td>Loops</td><td>3</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button> <span class="annotation">Cannot delete — has linked exercises</span></td></tr>
+      <tr><td>Variables</td><td>2</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button></td></tr>
+      <tr><td>Functions</td><td>0</td><td><button class="btn btn-danger" onclick="toast('Category deleted')">Delete</button></td></tr>
+      <tr><td>Conditionals</td><td>1</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== TUTOR PAGES ==================== -->
+
+<!-- Tutor: Dashboard -->
+<div class="page" id="page-tu-dashboard">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <h1>Tutor Dashboard</h1>
+    <p class="annotation">Tutor landing page — links to exercise management, course management, grading, and categories (§5.3, §5.2, §5.5, §5.7)</p>
+    <div class="flex-row">
+      <div class="card" onclick="go('tu-exercises')" style="cursor:pointer">
+        <div class="card-header">Exercise Management</div>
+        <p>Create, edit, version, publish/unpublish exercises.</p>
+        <span class="annotation">§5.3 — Core value proposition: independent exercise authoring</span>
+      </div>
+      <div class="card" onclick="go('tu-courses')" style="cursor:pointer">
+        <div class="card-header">Course Management</div>
+        <p>Manage courses, link exercises, enroll students.</p>
+        <span class="annotation">§5.2 — Courses organize exercises and control visibility</span>
+      </div>
+      <div class="card" onclick="go('tu-import')" style="cursor:pointer">
+        <div class="card-header">Submission Import & Grading</div>
+        <p>Import student answers, auto-grade, review, export CSV.</p>
+        <span class="annotation">§5.5 — Batch import from OLE → auto-grade → manual review → CSV export</span>
+      </div>
+      <div class="card" onclick="go('tu-categories')" style="cursor:pointer">
+        <div class="card-header">Category Management</div>
+        <p>Manage exercise categories for the authoring dropdown.</p>
+        <span class="annotation">§5.7 — Add/delete categories, duplicate name detection, linked exercise guard</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Exercise List -->
+<div class="page" id="page-tu-exercises">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / Exercise Management</div>
+    <h1>Exercise Management</h1>
+    <p class="annotation">§5.3.1 — Create new exercises by selecting type. Each exercise has immutable versions (§5.3.2), can be published/unpublished (§5.3.3), and soft-deleted (§5.3.4).</p>
+    <button class="btn btn-primary" onclick="go('tu-ex-create-blockly')">+ New Blockly Exercise</button>
+    <button class="btn btn-primary" onclick="go('tu-ex-create-python')">+ New Python Exercise</button>
+    <table style="margin-top:12px;">
+      <tr><th>Title</th><th>Type</th><th>Category</th><th>Difficulty</th><th>Version</th><th>Status</th><th>Actions</th></tr>
+      <tr>
+        <td><a onclick="go('tu-ex-detail-blockly')" style="cursor:pointer; color:#06c;">Print Hello World</a></td>
+        <td><span class="badge badge-blockly">Blockly</span></td>
+        <td>Variables</td><td>Easy</td><td>v3</td>
+        <td><span class="badge badge-published">PUBLISHED</span></td>
+        <td>
+          <button class="btn" onclick="go('tu-ex-create-blockly')">Edit</button>
+          <button class="btn" onclick="toast('Exercise unpublished → DRAFT')">Unpublish</button>
+          <button class="btn btn-danger" onclick="toast('Exercise soft-deleted')">Delete</button>
+        </td>
+      </tr>
+      <tr>
+        <td><a onclick="go('tu-ex-detail-blockly')" style="cursor:pointer; color:#06c;">Loop Counter</a></td>
+        <td><span class="badge badge-blockly">Blockly</span></td>
+        <td>Loops</td><td>Medium</td><td>v1</td>
+        <td><span class="badge badge-draft">DRAFT</span></td>
+        <td>
+          <button class="btn" onclick="go('tu-ex-create-blockly')">Edit</button>
+          <button class="btn btn-primary" onclick="toast('Exercise published')">Publish</button>
+          <button class="btn btn-danger" onclick="toast('Exercise soft-deleted')">Delete</button>
+        </td>
+      </tr>
+      <tr>
+        <td><a onclick="go('tu-ex-detail-python')" style="cursor:pointer; color:#06c;">FizzBuzz</a></td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td>Loops</td><td>Medium</td><td>v2</td>
+        <td><span class="badge badge-published">PUBLISHED</span></td>
+        <td>
+          <button class="btn" onclick="go('tu-ex-create-python')">Edit</button>
+          <button class="btn" onclick="toast('Exercise unpublished → DRAFT')">Unpublish</button>
+          <button class="btn btn-danger" onclick="toast('Exercise soft-deleted')">Delete</button>
+        </td>
+      </tr>
+      <tr>
+        <td>Sum of List</td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td>Functions</td><td>Hard</td><td>v1</td>
+        <td><span class="badge badge-published">PUBLISHED</span></td>
+        <td>
+          <button class="btn" onclick="go('tu-ex-create-python')">Edit</button>
+          <button class="btn" onclick="toast('Exercise unpublished → DRAFT')">Unpublish</button>
+          <button class="btn btn-danger" onclick="toast('Exercise soft-deleted')">Delete</button>
+        </td>
+      </tr>
+    </table>
+    <p class="annotation">§5.3.3 — Publish requires ≥1 version. Unpublish hides from students but retains submissions. §5.3.4 — Delete is soft-delete; data retained.</p>
+  </div>
+</div>
+
+<!-- Tutor: Create Blockly Exercise -->
+<div class="page" id="page-tu-ex-create-blockly">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-exercises')">Exercises</a> / New Blockly Exercise</div>
+    <h1>Create Blockly Exercise</h1>
+    <p class="annotation">§5.3.1 — Blockly authoring: visual configuration, no code/config editing required. Journey 1 in PRD §4.</p>
+
+    <div class="flex-row">
+      <div>
+        <h2>Basic Information</h2>
+        <label>Title *</label>
+        <input type="text" value="Print Hello World">
+        <label>Description *</label>
+        <textarea>Use the print block to display "Hello World" on the screen.</textarea>
+        <label>Difficulty *</label>
+        <select><option>Easy</option><option>Medium</option><option>Hard</option></select>
+        <label>Category *</label>
+        <select><option>Variables</option><option>Loops</option><option>Conditionals</option><option>Functions</option></select>
+
+        <h2>Hints</h2>
+        <p class="annotation">§5.4.6 — Progressive hints, revealed one at a time</p>
+        <div class="card" style="padding:8px;">
+          <div>Hint 1: <input type="text" value="Look for the print block in the Text category" style="display:inline; width:60%;"></div>
+          <div>Hint 2: <input type="text" value="Connect the text block to the print block" style="display:inline; width:60%;"></div>
+          <button class="btn" style="margin-top:4px;">+ Add Hint</button>
+        </div>
+      </div>
+      <div>
+        <h2>Blockly Configuration</h2>
+        <p class="annotation">§5.3.1 — Block palette, initial workspace, code view toggle, grading rules</p>
+
+        <label>Allowed Block Types</label>
+        <div class="card" style="padding:8px;">
+          <label><input type="checkbox" checked> print</label><br>
+          <label><input type="checkbox" checked> text</label><br>
+          <label><input type="checkbox"> math_number</label><br>
+          <label><input type="checkbox"> math_arithmetic</label><br>
+          <label><input type="checkbox"> controls_repeat</label><br>
+          <label><input type="checkbox"> controls_if</label><br>
+          <span class="annotation">Visual selection — drag-and-drop palette (simplified as checkboxes for wireframe)</span>
+        </div>
+
+        <label>Initial Workspace</label>
+        <div class="placeholder-box">[ Blockly workspace editor placeholder ]<br>Configure starting blocks</div>
+
+        <label><input type="checkbox" checked> Show Python Code View Panel</label>
+        <p class="annotation">§5.4.2 — Read-only Python code updated in real time</p>
+
+        <h2>Grading Rules</h2>
+        <p class="annotation">§5.5.2 — Output matching, required/forbidden blocks, block count limits</p>
+        <label><input type="checkbox" checked> Output Matching</label>
+        <div style="margin-left:20px;">
+          <label>Expected Output</label>
+          <input type="text" value="Hello World">
+        </div>
+        <label><input type="checkbox"> Required Blocks</label>
+        <label><input type="checkbox"> Forbidden Blocks</label>
+        <label><input type="checkbox"> Block Count Limit</label>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; border-top: 1px solid #ccc; padding-top: 16px;">
+      <button class="btn btn-primary" onclick="go('tu-ex-preview-blockly')">Preview as Student</button>
+      <button class="btn btn-primary" onclick="toast('Saved as DRAFT — Version 1'); go('tu-exercises')">Save as Draft</button>
+      <button class="btn" onclick="go('tu-exercises')">Cancel</button>
+      <span class="annotation" style="margin-left:12px;">§5.3.2 — Each save creates a new immutable version</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Preview Blockly -->
+<div class="page" id="page-tu-ex-preview-blockly">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span> — PREVIEW MODE</div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-ex-create-blockly')">← Back to Editor</a></div>
+    <h1>Preview: Print Hello World</h1>
+    <p class="annotation">§4 Journey 1 Step 5 — Tutor previews exercise as student would see it</p>
+    <div class="split-panel">
+      <div class="panel">
+        <h3>Problem Description</h3>
+        <p>Use the print block to display "Hello World" on the screen.</p>
+        <p><strong>Difficulty:</strong> Easy | <strong>Category:</strong> Variables</p>
+        <h3>Hints</h3>
+        <button class="btn">Get Hint (0/2)</button>
+      </div>
+      <div class="panel">
+        <div class="placeholder-box" style="min-height:200px;">[ Blockly Workspace Placeholder ]<br>Only allowed blocks: print, text</div>
+        <div class="placeholder-box" style="min-height:60px;">[ Read-only Python Code View ]<br>print("...")</div>
+        <button class="btn btn-primary">Run</button>
+        <button class="btn">Clear Workspace</button>
+        <button class="btn">Export</button>
+        <button class="btn">Import Answer</button>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="go('tu-ex-create-blockly')">← Back to Editor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Blockly Exercise Detail / Version History -->
+<div class="page" id="page-tu-ex-detail-blockly">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-exercises')">Exercises</a> / Print Hello World</div>
+    <h1>Print Hello World <span class="badge badge-blockly">Blockly</span> <span class="badge badge-published">PUBLISHED</span></h1>
+
+    <div class="flex-row">
+      <div>
+        <h2>Current Version: v3</h2>
+        <p>Description: Use the print block to display "Hello World"</p>
+        <p>Difficulty: Easy | Category: Variables</p>
+        <button class="btn" onclick="go('tu-ex-create-blockly')">Edit (creates v4)</button>
+        <button class="btn" onclick="toast('Unpublished → DRAFT')">Unpublish</button>
+      </div>
+      <div>
+        <h2>Version History</h2>
+        <p class="annotation">§5.3.2 — Immutable versions. Rollback sets exercise to a previous version. This solves the single biggest pain point: no edit is ever destructive.</p>
+        <ul class="version-list" style="border:2px solid #bbb;">
+          <li><strong>v3</strong> (current) — 2026-04-10 <button class="btn btn-disabled">Current</button></li>
+          <li><strong>v2</strong> — 2026-04-05 <button class="btn" onclick="go('tu-ex-version-preview')">Preview</button> <button class="btn btn-primary" onclick="toast('Rolled back to v2')">Rollback</button></li>
+          <li><strong>v1</strong> — 2026-03-28 <button class="btn" onclick="go('tu-ex-version-preview')">Preview</button> <button class="btn btn-primary" onclick="toast('Rolled back to v1')">Rollback</button></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Version Preview -->
+<div class="page" id="page-tu-ex-version-preview">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-ex-detail-blockly')">← Back to Version History</a></div>
+    <h1>Version Preview: v2 — Print Hello World</h1>
+    <p class="annotation">§5.3.2 — Full preview of historical version. Tutor can rollback to this version.</p>
+    <div class="card">
+      <p><strong>Title:</strong> Print Hello World</p>
+      <p><strong>Description:</strong> Use the print block to display "Hello World" (original version)</p>
+      <p><strong>Blocks Allowed:</strong> print, text</p>
+      <p><strong>Grading:</strong> Output matching — "Hello World"</p>
+    </div>
+    <button class="btn btn-primary" onclick="toast('Rolled back to v2'); go('tu-ex-detail-blockly')">Rollback to This Version</button>
+    <button class="btn" onclick="go('tu-ex-detail-blockly')">Cancel</button>
+  </div>
+</div>
+
+<!-- Tutor: Create Python Exercise -->
+<div class="page" id="page-tu-ex-create-python">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-exercises')">Exercises</a> / New Python Exercise</div>
+    <h1>Create Python Exercise</h1>
+    <p class="annotation">§5.3.1 — Python authoring: starter code, test cases (like LeetCode), time limit. Journey 2 in PRD §4.</p>
+
+    <div class="flex-row">
+      <div>
+        <h2>Basic Information</h2>
+        <label>Title *</label>
+        <input type="text" value="FizzBuzz">
+        <label>Description *</label>
+        <textarea>Write a function fizzbuzz(n) that returns "Fizz" if n is divisible by 3, "Buzz" if divisible by 5, "FizzBuzz" if both, or str(n) otherwise.</textarea>
+        <label>Difficulty *</label>
+        <select><option>Easy</option><option selected>Medium</option><option>Hard</option></select>
+        <label>Category *</label>
+        <select><option>Variables</option><option selected>Loops</option><option>Conditionals</option><option>Functions</option></select>
+        <label>Time Limit (seconds) *</label>
+        <input type="number" value="5" style="width:100px;">
+
+        <h2>Hints</h2>
+        <div class="card" style="padding:8px;">
+          <div>Hint 1: <input type="text" value="Use the modulo operator %" style="display:inline; width:60%;"></div>
+          <button class="btn" style="margin-top:4px;">+ Add Hint</button>
+        </div>
+      </div>
+      <div>
+        <h2>Starter Code</h2>
+        <p class="annotation">§5.3.1 — Code editor for starter code</p>
+        <textarea style="font-family: monospace; min-height: 100px;">def fizzbuzz(n):
+    # Your code here
+    pass</textarea>
+
+        <h2>Test Cases</h2>
+        <p class="annotation">§5.3.1 — Structured test cases: input / expected output / visible toggle. Similar to LeetCode's problem creation.</p>
+        <table>
+          <tr><th>#</th><th>Input</th><th>Expected Output</th><th>Visible?</th><th></th></tr>
+          <tr><td>1</td><td><input type="text" value="fizzbuzz(3)" style="width:120px;"></td><td><input type="text" value='"Fizz"' style="width:120px;"></td><td><input type="checkbox" checked> Visible</td><td><button class="btn btn-danger">×</button></td></tr>
+          <tr><td>2</td><td><input type="text" value="fizzbuzz(5)" style="width:120px;"></td><td><input type="text" value='"Buzz"' style="width:120px;"></td><td><input type="checkbox" checked> Visible</td><td><button class="btn btn-danger">×</button></td></tr>
+          <tr><td>3</td><td><input type="text" value="fizzbuzz(15)" style="width:120px;"></td><td><input type="text" value='"FizzBuzz"' style="width:120px;"></td><td><input type="checkbox"> Hidden</td><td><button class="btn btn-danger">×</button></td></tr>
+          <tr><td>4</td><td><input type="text" value="fizzbuzz(7)" style="width:120px;"></td><td><input type="text" value='"7"' style="width:120px;"></td><td><input type="checkbox"> Hidden</td><td><button class="btn btn-danger">×</button></td></tr>
+        </table>
+        <button class="btn">+ Add Test Case</button>
+
+        <h2>Verify Solution</h2>
+        <p class="annotation">§4 Journey 2 Step 3 — Run test cases against sample solution before publishing</p>
+        <textarea style="font-family: monospace; min-height: 80px;">def fizzbuzz(n):
+    if n % 15 == 0: return "FizzBuzz"
+    if n % 3 == 0: return "Fizz"
+    if n % 5 == 0: return "Buzz"
+    return str(n)</textarea>
+        <button class="btn btn-primary" onclick="toast('All 4 test cases passed ✓')">Run Tests Against Solution</button>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; border-top: 1px solid #ccc; padding-top: 16px;">
+      <button class="btn btn-primary" onclick="toast('Saved as DRAFT — Version 1'); go('tu-exercises')">Save as Draft</button>
+      <button class="btn" onclick="go('tu-exercises')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Python Exercise Detail -->
+<div class="page" id="page-tu-ex-detail-python">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-exercises')">Exercises</a> / FizzBuzz</div>
+    <h1>FizzBuzz <span class="badge badge-python">Python</span> <span class="badge badge-published">PUBLISHED</span></h1>
+    <div class="flex-row">
+      <div>
+        <h2>Current Version: v2</h2>
+        <p>4 test cases (2 visible, 2 hidden) | Time limit: 5s</p>
+        <button class="btn" onclick="go('tu-ex-create-python')">Edit (creates v3)</button>
+        <button class="btn" onclick="toast('Unpublished → DRAFT')">Unpublish</button>
+      </div>
+      <div>
+        <h2>Version History</h2>
+        <ul class="version-list" style="border:2px solid #bbb;">
+          <li><strong>v2</strong> (current) — 2026-04-08 <button class="btn btn-disabled">Current</button></li>
+          <li><strong>v1</strong> — 2026-03-30 <button class="btn">Preview</button> <button class="btn btn-primary" onclick="toast('Rolled back to v1')">Rollback</button></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Course List -->
+<div class="page" id="page-tu-courses">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / Course Management</div>
+    <h1>Course Management</h1>
+    <p class="annotation">§5.2 — Courses organize exercises and control student visibility. CRUD + exercise linking + student enrollment.</p>
+    <button class="btn btn-primary" onclick="showModal('modal-create-course')">+ Create Course</button>
+    <table style="margin-top:12px;">
+      <tr><th>Course Name</th><th>Description</th><th># Exercises</th><th># Students</th><th>Actions</th></tr>
+      <tr>
+        <td><a onclick="go('tu-course-detail')" style="cursor:pointer; color:#06c;">CS101 — Intro to Programming</a></td>
+        <td>Spring 2026 introductory course</td><td>3</td><td>4</td>
+        <td>
+          <button class="btn" onclick="go('tu-course-detail')">Manage</button>
+          <button class="btn btn-danger" onclick="toast('Course soft-deleted — linked data retained')">Delete</button>
+        </td>
+      </tr>
+      <tr>
+        <td>CS201 — Data Structures</td>
+        <td>Advanced programming course</td><td>1</td><td>2</td>
+        <td>
+          <button class="btn" onclick="go('tu-course-detail')">Manage</button>
+          <button class="btn btn-danger" onclick="toast('Course soft-deleted — linked data retained')">Delete</button>
+        </td>
+      </tr>
+    </table>
+    <p class="annotation">§5.2.1 — Delete is soft-delete; linked exercises, submissions, and grades are retained.</p>
+  </div>
+</div>
+
+<!-- Tutor: Course Detail -->
+<div class="page" id="page-tu-course-detail">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-courses')">Courses</a> / CS101</div>
+    <h1>CS101 — Intro to Programming</h1>
+
+    <div class="flex-row">
+      <div>
+        <h2>Course Info</h2>
+        <label>Name</label>
+        <input type="text" value="CS101 — Intro to Programming">
+        <label>Description</label>
+        <textarea>Spring 2026 introductory course</textarea>
+        <button class="btn btn-primary" onclick="toast('Course updated')">Save Changes</button>
+      </div>
+    </div>
+
+    <h2>Linked Exercises</h2>
+    <p class="annotation">§5.2.2 — Link/unlink exercises. An exercise can belong to multiple courses. Unlinking does not affect the exercise or submissions.</p>
+    <table>
+      <tr><th>Exercise</th><th>Type</th><th>Status</th><th>Action</th></tr>
+      <tr><td>Print Hello World</td><td><span class="badge badge-blockly">Blockly</span></td><td><span class="badge badge-published">PUBLISHED</span></td><td><button class="btn btn-danger" onclick="toast('Exercise unlinked from course — exercise & submissions unaffected')">Unlink</button></td></tr>
+      <tr><td>FizzBuzz</td><td><span class="badge badge-python">Python</span></td><td><span class="badge badge-published">PUBLISHED</span></td><td><button class="btn btn-danger" onclick="toast('Exercise unlinked')">Unlink</button></td></tr>
+      <tr><td>Sum of List</td><td><span class="badge badge-python">Python</span></td><td><span class="badge badge-published">PUBLISHED</span></td><td><button class="btn btn-danger" onclick="toast('Exercise unlinked')">Unlink</button></td></tr>
+    </table>
+    <button class="btn btn-primary" onclick="toast('Exercise linked to course')">+ Link Exercise</button>
+
+    <h2>Enrolled Students</h2>
+    <p class="annotation">§5.2.3 — Batch enrollment. Removing a student hides course exercises (when filter is on) but retains historical data.</p>
+    <table>
+      <tr><th><input type="checkbox"></th><th>Username</th><th>Name</th><th>Action</th></tr>
+      <tr><td><input type="checkbox"></td><td>alex01</td><td>Alex Chen</td><td><button class="btn btn-danger" onclick="toast('Student removed — historical data retained')">Remove</button></td></tr>
+      <tr><td><input type="checkbox"></td><td>alex02</td><td>Alex Wang</td><td><button class="btn btn-danger" onclick="toast('Student removed')">Remove</button></td></tr>
+      <tr><td><input type="checkbox"></td><td>bob03</td><td>Bob Liu</td><td><button class="btn btn-danger" onclick="toast('Student removed')">Remove</button></td></tr>
+      <tr><td><input type="checkbox"></td><td>carol04</td><td>Carol Kim</td><td><button class="btn btn-danger" onclick="toast('Student removed')">Remove</button></td></tr>
+    </table>
+    <button class="btn btn-primary" onclick="toast('Students enrolled')">+ Enroll Students</button>
+    <span class="annotation">dave05 is NOT enrolled — affected by course filter (Edge Case §7.3)</span>
+  </div>
+</div>
+
+<!-- Tutor: Category Management -->
+<div class="page" id="page-tu-categories">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / Category Management</div>
+    <h1>Category Management</h1>
+    <p class="annotation">§5.7 — Manage the exercise category dropdown. Categories with linked exercises cannot be deleted — must remove associations first. Duplicate names are blocked.</p>
+    <div style="margin:12px 0;">
+      <input type="text" id="tu-new-cat" placeholder="New category name" style="width:200px; display:inline-block;">
+      <button class="btn btn-primary" onclick="addCategory('tu-new-cat')">Add Category</button>
+    </div>
+    <table>
+      <tr><th>Category</th><th># Exercises</th><th>Actions</th></tr>
+      <tr><td>Loops</td><td>3</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button> <span class="annotation">Cannot delete — has linked exercises</span></td></tr>
+      <tr><td>Variables</td><td>2</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button></td></tr>
+      <tr><td>Functions</td><td>0</td><td><button class="btn btn-danger" onclick="toast('Category deleted')">Delete</button></td></tr>
+      <tr><td>Conditionals</td><td>1</td><td><button class="btn btn-danger btn-disabled" title="Has linked exercises">Delete</button></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Tutor: Submission Import -->
+<div class="page" id="page-tu-import">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / Submission Import & Grading</div>
+    <h1>Submission Import & Grading</h1>
+    <p class="annotation">§5.5.1 — Batch import student answer files from OLE. Supports multiple JSON files or one ZIP. Journey 4 in PRD §4.</p>
+
+    <div class="card">
+      <div class="card-header">Upload Student Submissions</div>
+      <div class="placeholder-box" style="min-height: 80px;">
+        [ Drag & Drop Zone ]<br>
+        Drop JSON files or a ZIP file here, or click to browse
+      </div>
+      <p class="annotation">
+        §5.5.1 — Accepts multiple .json files or single .zip<br>
+        §7.5 — ZIP files are checked for path traversal attacks (../../)<br>
+        §7.2 — Duplicate detection: same student + exercise + timestamp → prompt to skip<br>
+        §7.1 — Version mismatch: graded against current version, discrepancy annotated
+      </p>
+      <button class="btn btn-primary" onclick="go('tu-import-results')">Import & Auto-Grade</button>
+    </div>
+
+    <h2>Previous Imports</h2>
+    <button class="btn" onclick="go('tu-submissions')">View All Submissions</button>
+  </div>
+</div>
+
+<!-- Tutor: Import Results -->
+<div class="page" id="page-tu-import-results">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-import')">Import</a> / Results</div>
+    <h1>Import Results</h1>
+    <p class="annotation">§5.5.1 — Per-file error reporting so tutor knows exactly which files failed and why</p>
+    <table>
+      <tr><th>File</th><th>Student</th><th>Exercise</th><th>Type</th><th>Status</th><th>Auto Score</th><th>Notes</th></tr>
+      <tr><td>AlexChen_PrintHelloWorld.json</td><td>Alex Chen</td><td>Print Hello World</td><td><span class="badge badge-blockly">Blockly</span></td><td class="pass">✓ Imported</td><td>100</td><td></td></tr>
+      <tr><td>AlexWang_FizzBuzz.json</td><td>Alex Wang</td><td>FizzBuzz</td><td><span class="badge badge-python">Python</span></td><td class="pass">✓ Imported</td><td>75</td><td><span class="annotation">⚠ Version mismatch — student used v1, current is v2</span></td></tr>
+      <tr><td>BobLiu_FizzBuzz.json</td><td>Bob Liu</td><td>FizzBuzz</td><td><span class="badge badge-python">Python</span></td><td class="pass">✓ Imported</td><td>50</td><td></td></tr>
+      <tr><td>CarolKim_PrintHelloWorld.json</td><td>Carol Kim</td><td>Print Hello World</td><td><span class="badge badge-blockly">Blockly</span></td><td style="color:#c80;">⚠ Duplicate</td><td>—</td><td>Already imported — <a onclick="toast('Imported anyway')" style="cursor:pointer; color:#06c;">Import Anyway?</a></td></tr>
+      <tr><td>Unknown_SumOfList.json</td><td>???</td><td>DeletedExercise</td><td>—</td><td class="fail">✗ Failed</td><td>—</td><td>Exercise not found or deleted</td></tr>
+    </table>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="go('tu-submissions')">Review Submissions</button>
+      <button class="btn" onclick="go('tu-import')">Import More</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Submission List -->
+<div class="page" id="page-tu-submissions">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-import')">Import</a> / Submissions</div>
+    <h1>Submission List</h1>
+    <div class="filter-bar">
+      <select><option>All Exercises</option><option>Print Hello World</option><option>FizzBuzz</option><option>Sum of List</option></select>
+      <select><option>All Types</option><option>Blockly</option><option>Python</option></select>
+      <button class="btn btn-primary" onclick="toast('CSV downloaded: grades.csv')">Export CSV</button>
+      <span class="annotation">§5.5.5 — Export: Student Name, Exercise Title, Type, Auto Score, Tutor Score, Comment, Submitted At</span>
+    </div>
+    <table>
+      <tr><th>Student</th><th>Exercise</th><th>Type</th><th>Auto Score</th><th>Tutor Score</th><th>Submitted</th><th>Actions</th></tr>
+      <tr><td>Alex Chen</td><td>Print Hello World</td><td><span class="badge badge-blockly">Blockly</span></td><td>100</td><td>—</td><td>2026-04-11</td><td><button class="btn" onclick="go('tu-review-blockly')">Review</button></td></tr>
+      <tr><td>Alex Wang</td><td>FizzBuzz</td><td><span class="badge badge-python">Python</span></td><td>75</td><td>80</td><td>2026-04-11</td><td><button class="btn" onclick="go('tu-review-python')">Review</button></td></tr>
+      <tr><td>Bob Liu</td><td>FizzBuzz</td><td><span class="badge badge-python">Python</span></td><td>50</td><td>—</td><td>2026-04-11</td><td><button class="btn" onclick="go('tu-review-python')">Review</button></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Tutor: Review Blockly -->
+<div class="page" id="page-tu-review-blockly">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-submissions')">Submissions</a> / Review</div>
+    <h1>Review: Alex Chen — Print Hello World</h1>
+    <p class="annotation">§5.5.4 — Blockly submission review: read-only workspace + auto-grade breakdown + manual score/comment</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <h3>Read-Only Block Workspace</h3>
+        <div class="placeholder-box" style="min-height:200px;">[ Student's Blockly Workspace — Read Only ]<br>print("Hello World")</div>
+      </div>
+      <div class="panel">
+        <h3>Auto-Grade Breakdown</h3>
+        <table>
+          <tr><th>Aspect</th><th>Result</th></tr>
+          <tr><td>Output Matching: "Hello World"</td><td class="pass">✓ Pass</td></tr>
+        </table>
+        <p><strong>Auto Score: 100 / 100</strong></p>
+        <p class="annotation">§5.5.2 — Score = proportion of grading aspects passed × 100</p>
+
+        <h3>Tutor Grading</h3>
+        <p class="annotation">§5.5.4 — Manual score overrides auto score in all displays</p>
+        <label>Tutor Score (0–100)</label>
+        <input type="number" value="" placeholder="Leave blank to keep auto score" style="width:200px;">
+        <label>Comment</label>
+        <textarea placeholder="Optional comment for student"></textarea>
+        <button class="btn btn-primary" onclick="toast('Score saved'); go('tu-submissions')">Save</button>
+        <button class="btn" onclick="go('tu-submissions')">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tutor: Review Python -->
+<div class="page" id="page-tu-review-python">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">TUTOR</span></div>
+    <div>Dr. Lee <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('tu-dashboard')">Dashboard</a> / <a onclick="go('tu-submissions')">Submissions</a> / Review</div>
+    <h1>Review: Alex Wang — FizzBuzz <span class="annotation">⚠ Version mismatch (v1 → v2)</span></h1>
+    <p class="annotation">§5.5.4 — Python review: read-only code + test results + manual score. §7.1 — Version mismatch annotated so tutor can judge.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <h3>Student Code (Read Only)</h3>
+        <textarea style="font-family:monospace; min-height:180px; background:#f8f8f8;" readonly>def fizzbuzz(n):
+    if n % 3 == 0:
+        return "Fizz"
+    if n % 5 == 0:
+        return "Buzz"
+    return str(n)</textarea>
+      </div>
+      <div class="panel">
+        <h3>Test Case Results</h3>
+        <p class="annotation">§5.5.3 — All test cases (visible + hidden) run in sandbox. Score = pass ratio × 100.</p>
+        <table>
+          <tr><th>#</th><th>Input</th><th>Expected</th><th>Actual</th><th>Result</th></tr>
+          <tr><td>1</td><td>fizzbuzz(3)</td><td>"Fizz"</td><td>"Fizz"</td><td class="pass">✓ Pass</td></tr>
+          <tr><td>2</td><td>fizzbuzz(5)</td><td>"Buzz"</td><td>"Buzz"</td><td class="pass">✓ Pass</td></tr>
+          <tr><td>3</td><td>fizzbuzz(15)</td><td>"FizzBuzz"</td><td>"Fizz"</td><td class="fail">✗ Fail</td></tr>
+          <tr><td>4</td><td>fizzbuzz(7)</td><td>"7"</td><td>"7"</td><td class="pass">✓ Pass</td></tr>
+        </table>
+        <p><strong>Auto Score: 75 / 100</strong> (3/4 passed)</p>
+
+        <h3>Tutor Grading</h3>
+        <label>Tutor Score (0–100)</label>
+        <input type="number" value="80" style="width:200px;">
+        <label>Comment</label>
+        <textarea>Good effort! Check the order of conditions for FizzBuzz — test n%15 before n%3.</textarea>
+        <button class="btn btn-primary" onclick="toast('Score saved — tutor score 80 overrides auto score 75'); go('tu-submissions')">Save</button>
+        <button class="btn" onclick="go('tu-submissions')">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== STUDENT PAGES ==================== -->
+
+<!-- Student: Home -->
+<div class="page" id="page-st-home">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">STUDENT</span></div>
+    <div>Alex Chen <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <h1>Welcome, Alex</h1>
+    <p class="annotation">Student landing page — quick access to exercise browser and personal progress</p>
+    <div class="flex-row">
+      <div class="card" onclick="go('st-browser')" style="cursor:pointer">
+        <div class="card-header">Exercise Browser</div>
+        <p>Browse and practice Blockly & Python exercises.</p>
+        <span class="annotation">§5.4.1 — Filter by course, type, category, difficulty</span>
+      </div>
+      <div class="card" onclick="go('st-progress')" style="cursor:pointer">
+        <div class="card-header">My Progress</div>
+        <p>Track attempted exercises and view grades.</p>
+        <span class="annotation">§5.6.1 — Total, attempted, graded, avg score, pass rate</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student: Exercise Browser -->
+<div class="page" id="page-st-browser">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">STUDENT</span></div>
+    <div>Alex Chen <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('st-home')">Home</a> / Exercise Browser</div>
+    <h1>Exercise Browser</h1>
+    <p class="annotation">§5.4.1 — Shows published exercises. Visibility depends on course filter toggle (§5.2.4). Displays title, type badge, category, difficulty, like count.</p>
+
+    <div class="filter-bar">
+      <select><option>All Courses</option><option>CS101</option><option>CS201</option></select>
+      <select><option>All Types</option><option>Blockly</option><option>Python</option></select>
+      <select><option>All Categories</option><option>Variables</option><option>Loops</option><option>Conditionals</option></select>
+      <select><option>All Difficulties</option><option>Easy</option><option>Medium</option><option>Hard</option></select>
+      <span class="annotation">§5.4.1 — Filter updates list immediately</span>
+    </div>
+
+    <table>
+      <tr><th>Title</th><th>Type</th><th>Category</th><th>Difficulty</th><th>Likes</th><th></th></tr>
+      <tr>
+        <td><a onclick="go('st-blockly-editor')" style="cursor:pointer; color:#06c;">Print Hello World</a></td>
+        <td><span class="badge badge-blockly">Blockly</span></td>
+        <td>Variables</td><td>Easy</td><td>12</td>
+        <td><button class="btn" onclick="go('st-blockly-editor')">Practice</button></td>
+      </tr>
+      <tr>
+        <td><a onclick="go('st-python-editor')" style="cursor:pointer; color:#06c;">FizzBuzz</a></td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td>Loops</td><td>Medium</td><td>8</td>
+        <td><button class="btn" onclick="go('st-python-editor')">Practice</button></td>
+      </tr>
+      <tr>
+        <td>Sum of List</td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td>Functions</td><td>Hard</td><td>3</td>
+        <td><button class="btn" onclick="go('st-python-editor')">Practice</button></td>
+      </tr>
+    </table>
+    <div class="pagination">
+      Showing 1–3 of 3 | Per page:
+      <a>10</a> <a>25</a> <a>50</a> <a>100</a>
+      <span class="annotation">§5.4.1 — Pagination: 10/25/50/100 per page</span>
+    </div>
+  </div>
+</div>
+
+<!-- Student: Blockly Editor -->
+<div class="page" id="page-st-blockly-editor">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">STUDENT</span></div>
+    <div>Alex Chen <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('st-home')">Home</a> / <a onclick="go('st-browser')">Browser</a> / Print Hello World</div>
+    <h1>Print Hello World <span class="badge badge-blockly">Blockly</span></h1>
+    <p class="annotation">§5.4.2 — Blockly editor: left=description, right=workspace with allowed blocks. Journey 3 in PRD §4.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <h3>Problem Description</h3>
+        <p>Use the print block to display "Hello World" on the screen.</p>
+        <p><strong>Difficulty:</strong> Easy | <strong>Category:</strong> Variables</p>
+
+        <h3>Hints</h3>
+        <button class="btn" id="hint-btn" onclick="showHint()">Get Hint (0/2)</button>
+        <div id="hint-area"></div>
+        <p class="annotation">§5.4.6 — Progressive hints revealed one at a time</p>
+
+        <h3>Output</h3>
+        <div id="blockly-output" style="border: 2px solid #bbb; padding: 8px; min-height: 60px; background: #1a1a1a; color: #0f0; font-family: monospace; font-size: 13px;">
+          <span style="color:#888;">Run your code to see output here...</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="placeholder-box" style="min-height:200px;">[ Blockly Workspace ]<br>Allowed blocks: print, text<br><br><span class="annotation">§5.4.2 — Only allowed block types shown</span></div>
+
+        <h3>Python Code View</h3>
+        <div style="border: 2px solid #bbb; padding: 8px; background: #f8f8f8; font-family: monospace; font-size: 13px; min-height: 40px;">
+          print("Hello World")
+        </div>
+        <p class="annotation">§5.4.2 — Read-only panel, updates in real time as blocks change</p>
+
+        <div style="margin-top: 12px;">
+          <button class="btn btn-primary" onclick="runBlockly()">Run</button>
+          <button class="btn" onclick="if(confirm('Reset workspace to initial state?')) toast('Workspace cleared')">Clear Workspace</button>
+          <button class="btn" onclick="showModal('modal-export')">Export</button>
+          <button class="btn" onclick="showModal('modal-import')">Import Answer</button>
+          <button class="btn btn-disabled btn-p1" onclick="">Like (12)</button>
+        </div>
+        <p class="annotation">§5.4.2 — Run executes in browser, auto-terminates after 3s. §5.4.4 — Export downloads JSON. §5.4.5 — Import restores state.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student: Python Editor -->
+<div class="page" id="page-st-python-editor">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">STUDENT</span></div>
+    <div>Alex Chen <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('st-home')">Home</a> / <a onclick="go('st-browser')">Browser</a> / FizzBuzz</div>
+    <h1>FizzBuzz <span class="badge badge-python">Python</span></h1>
+    <p class="annotation">§5.4.3 — Python editor: left=description + sample test cases, right=code editor with starter code. Journey 3 in PRD §4.</p>
+
+    <div class="split-panel">
+      <div class="panel">
+        <h3>Problem Description</h3>
+        <p>Write a function fizzbuzz(n) that returns "Fizz" if n is divisible by 3, "Buzz" if divisible by 5, "FizzBuzz" if both, or str(n) otherwise.</p>
+        <p><strong>Difficulty:</strong> Medium | <strong>Category:</strong> Loops | <strong>Time Limit:</strong> 5s</p>
+
+        <h3>Sample Test Cases</h3>
+        <p class="annotation">§5.4.3 — Only visible test cases shown; hidden ones used during auto-grading</p>
+        <table>
+          <tr><th>Input</th><th>Expected</th></tr>
+          <tr><td>fizzbuzz(3)</td><td>"Fizz"</td></tr>
+          <tr><td>fizzbuzz(5)</td><td>"Buzz"</td></tr>
+        </table>
+
+        <h3>Hints</h3>
+        <button class="btn" id="py-hint-btn" onclick="showPyHint()">Get Hint (0/1)</button>
+        <div id="py-hint-area"></div>
+
+        <h3>Test Results</h3>
+        <div id="python-results" style="border: 2px solid #bbb; padding: 8px; min-height: 60px; background: #fafafa;">
+          <span style="color:#888;">Run your code to see results...</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Code Editor</h3>
+        <p class="annotation">§5.4.3 — Syntax highlighting & autocomplete (placeholder in wireframe)</p>
+        <textarea id="python-code" style="font-family: monospace; min-height: 220px; background: #1a1a1a; color: #0f0; padding: 12px;">def fizzbuzz(n):
+    # Your code here
+    pass</textarea>
+
+        <div style="margin-top: 12px;">
+          <button class="btn btn-primary" onclick="runPython()">Run</button>
+          <button class="btn" onclick="showModal('modal-export')">Export</button>
+          <button class="btn" onclick="showModal('modal-import')">Import Answer</button>
+          <button class="btn btn-disabled btn-p1">Visualize (PythonTutor)</button>
+          <button class="btn btn-disabled btn-p1">Like (8)</button>
+        </div>
+        <p class="annotation">
+          §5.4.3 — Run compares against visible test cases, shows pass/fail per case<br>
+          §5.4.3 — Time limit exceeded → terminated with TLE message<br>
+          §5.9 [P1] — PythonTutor step-by-step visualization<br>
+          §5.8 [P1] — Like system
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Student: My Progress -->
+<div class="page" id="page-st-progress">
+  <div class="topbar">
+    <div>Exercise Platform <span class="role-badge">STUDENT</span></div>
+    <div>Alex Chen <button onclick="doLogout()">Logout</button></div>
+  </div>
+  <div class="container">
+    <div class="breadcrumb"><a onclick="go('st-home')">Home</a> / My Progress</div>
+    <h1>My Progress</h1>
+    <p class="annotation">§5.6.1 — Summary stats + per-exercise status. "Attempted" = has export/import record. Pass = score ≥ 60. Multiple submissions → show highest score. Tutor score preferred over auto score.</p>
+
+    <div class="flex-row" style="margin-bottom: 20px;">
+      <div class="stat-box"><div class="stat-num">3</div><div class="stat-label">Total Exercises</div></div>
+      <div class="stat-box"><div class="stat-num">2</div><div class="stat-label">Attempted</div></div>
+      <div class="stat-box"><div class="stat-num">1</div><div class="stat-label">Graded</div></div>
+      <div class="stat-box"><div class="stat-num">100</div><div class="stat-label">Avg Score</div></div>
+      <div class="stat-box"><div class="stat-num">100%</div><div class="stat-label">Pass Rate (≥60)</div></div>
+    </div>
+
+    <table>
+      <tr><th>Exercise</th><th>Type</th><th>Status</th><th>Score</th></tr>
+      <tr>
+        <td><a onclick="go('st-blockly-editor')" style="cursor:pointer; color:#06c;">Print Hello World</a></td>
+        <td><span class="badge badge-blockly">Blockly</span></td>
+        <td><span class="badge badge-published" style="background:#d0ffd0;">Graded</span></td>
+        <td><strong>100</strong> <span class="annotation">Auto score (no tutor override)</span></td>
+      </tr>
+      <tr>
+        <td><a onclick="go('st-python-editor')" style="cursor:pointer; color:#06c;">FizzBuzz</a></td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td><span class="badge" style="background:#fff4d0; border-color:#c90;">Attempted</span></td>
+        <td>— <span class="annotation">Not yet graded</span></td>
+      </tr>
+      <tr>
+        <td>Sum of List</td>
+        <td><span class="badge badge-python">Python</span></td>
+        <td><span class="badge badge-draft">Not Attempted</span></td>
+        <td>—</td>
+      </tr>
+    </table>
+    <p class="annotation">§5.6.1 — Multiple submissions → highest score shown. Tutor score takes priority over auto score in all displays.</p>
+  </div>
+</div>
+
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Modal: Create User -->
+<div class="modal-overlay" id="modal-create-user">
+  <div class="modal">
+    <h2>Create User</h2>
+    <p class="annotation">§5.1.2 — Create account with role assignment</p>
+    <label>Username *</label>
+    <input type="text" placeholder="e.g. newstudent01">
+    <label>Display Name *</label>
+    <input type="text" placeholder="e.g. New Student">
+    <label>Password *</label>
+    <input type="password" placeholder="Initial password">
+    <label>Role *</label>
+    <select><option>STUDENT</option><option>TUTOR</option><option>SUPER_ADMIN</option></select>
+    <div style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="toast('User created'); hideModal('modal-create-user')">Create</button>
+      <button class="btn" onclick="hideModal('modal-create-user')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create Course -->
+<div class="modal-overlay" id="modal-create-course">
+  <div class="modal">
+    <h2>Create Course</h2>
+    <p class="annotation">§5.2.1 — Course name and description</p>
+    <label>Course Name *</label>
+    <input type="text" placeholder="e.g. CS301 — Algorithms">
+    <label>Description</label>
+    <textarea placeholder="Course description"></textarea>
+    <div style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="toast('Course created'); hideModal('modal-create-course')">Create</button>
+      <button class="btn" onclick="hideModal('modal-create-course')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Export Answer -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal">
+    <h2>Export Answer</h2>
+    <p class="annotation">§5.4.4 — Enter name → download JSON. Filename: {name}_{exerciseTitle}.json</p>
+    <label>Your Name *</label>
+    <input type="text" id="export-name" placeholder="Enter your name" value="Alex Chen">
+    <p class="annotation">§5.4.4 — Export is blocked if name is empty</p>
+    <div style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="doExport()">Download JSON</button>
+      <button class="btn" onclick="hideModal('modal-export')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Import Answer -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <h2>Import Answer</h2>
+    <p class="annotation">§5.4.5 — Restore a previously exported answer file</p>
+    <div class="placeholder-box" style="min-height:60px;">[ Drop JSON file here or click to browse ]</div>
+    <p class="annotation">
+      Validations:<br>
+      • File type must match current exercise type (§5.4.5)<br>
+      • If exercise ID doesn't match → prompt "Import anyway?" (§5.4.5)<br>
+      • On success → restore editor state + auto-fill name
+    </p>
+    <div style="margin-top: 12px;">
+      <button class="btn btn-primary" onclick="toast('Answer imported — editor state restored'); hideModal('modal-import')">Import</button>
+      <button class="btn" onclick="hideModal('modal-import')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // === Navigation ===
+  function go(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + pageId);
+    if (target) {
+      target.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+  }
+
+  // === Auth ===
+  function doLogin() {
+    const user = document.getElementById('login-user').value.trim();
+    const pass = document.getElementById('login-pass').value.trim();
+    const errEl = document.getElementById('login-error');
+
+    if (user === 'disabled') {
+      errEl.textContent = 'Account disabled — please contact an administrator';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (user === 'admin' && pass === 'admin') { go('sa-dashboard'); errEl.style.display = 'none'; return; }
+    if (user === 'tutor' && pass === 'tutor') { go('tu-dashboard'); errEl.style.display = 'none'; return; }
+    if (user === 'student' && pass === 'student') { go('st-home'); errEl.style.display = 'none'; return; }
+
+    errEl.textContent = 'Invalid username or password';
+    errEl.style.display = 'block';
+  }
+
+  function doLogout() {
+    go('login');
+    document.getElementById('login-user').value = '';
+    document.getElementById('login-pass').value = '';
+    toast('Logged out — session invalidated');
+  }
+
+  // === Toast ===
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // === Modals ===
+  function showModal(id) { document.getElementById(id).classList.add('active'); }
+  function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  // === Course Filter Toggle ===
+  let filterOn = false;
+  function toggleCourseFilter() {
+    if (!filterOn) {
+      document.getElementById('filter-warning').style.display = 'block';
+    } else {
+      filterOn = false;
+      document.getElementById('filter-status').textContent = 'OFF';
+      document.getElementById('filter-toggle-btn').textContent = 'Enable Course Filter';
+      toast('Course filter disabled — all exercises visible');
+    }
+  }
+  function confirmFilter() {
+    filterOn = true;
+    document.getElementById('filter-status').textContent = 'ON';
+    document.getElementById('filter-toggle-btn').textContent = 'Disable Course Filter';
+    document.getElementById('filter-warning').style.display = 'none';
+    toast('Course filter enabled — students see only enrolled courses');
+  }
+  function cancelFilter() {
+    document.getElementById('filter-warning').style.display = 'none';
+  }
+
+  // === Blockly Demo ===
+  function runBlockly() {
+    const out = document.getElementById('blockly-output');
+    out.innerHTML = '> Hello World<br><span style="color:#0a0;">Program completed in 0.01s</span>';
+    toast('Execution complete');
+  }
+
+  // === Python Demo ===
+  function runPython() {
+    const res = document.getElementById('python-results');
+    res.innerHTML = `
+      <table style="width:100%;">
+        <tr><th>Input</th><th>Expected</th><th>Actual</th><th>Result</th></tr>
+        <tr><td>fizzbuzz(3)</td><td>"Fizz"</td><td>None</td><td class="fail">✗ Fail</td></tr>
+        <tr><td>fizzbuzz(5)</td><td>"Buzz"</td><td>None</td><td class="fail">✗ Fail</td></tr>
+      </table>
+      <p><strong>0/2 visible test cases passed</strong></p>
+    `;
+    toast('Execution complete — 0/2 passed');
+  }
+
+  // === Hints ===
+  let hintIdx = 0;
+  const hints = ['Hint 1: Look for the print block in the Text category', 'Hint 2: Connect the text block to the print block'];
+  function showHint() {
+    if (hintIdx < hints.length) {
+      document.getElementById('hint-area').innerHTML += '<div style="border:1px solid #ddd; padding:6px; margin:4px 0; background:#fffde0;">' + hints[hintIdx] + '</div>';
+      hintIdx++;
+      if (hintIdx >= hints.length) {
+        document.getElementById('hint-btn').textContent = 'No more hints';
+        document.getElementById('hint-btn').classList.add('btn-disabled');
+      } else {
+        document.getElementById('hint-btn').textContent = 'Get Hint (' + hintIdx + '/' + hints.length + ')';
+      }
+    }
+  }
+
+  let pyHintIdx = 0;
+  function showPyHint() {
+    if (pyHintIdx === 0) {
+      document.getElementById('py-hint-area').innerHTML = '<div style="border:1px solid #ddd; padding:6px; margin:4px 0; background:#fffde0;">Hint 1: Use the modulo operator %</div>';
+      pyHintIdx = 1;
+      document.getElementById('py-hint-btn').textContent = 'No more hints';
+      document.getElementById('py-hint-btn').classList.add('btn-disabled');
+    }
+  }
+
+  // === Category Management ===
+  const existingCategories = ['loops', 'variables', 'functions', 'conditionals'];
+  function addCategory(inputId) {
+    const input = document.getElementById(inputId);
+    const name = input.value.trim();
+    if (!name) { toast('Please enter a category name'); return; }
+    if (existingCategories.includes(name.toLowerCase())) {
+      toast('Error: This category already exists — "' + name + '"');
+      return;
+    }
+    existingCategories.push(name.toLowerCase());
+    toast('Category added: ' + name);
+    input.value = '';
+  }
+
+  // === Export ===
+  function doExport() {
+    const name = document.getElementById('export-name').value.trim();
+    if (!name) {
+      toast('Please enter your name before exporting');
+      return;
+    }
+    toast('Downloaded: ' + name.replace(/\s/g,'') + '_Exercise.json');
+    hideModal('modal-export');
+  }
+
+  // === Keyboard shortcut ===
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('page-login').classList.contains('active')) {
+      doLogin();
+    }
+  });
+</script>
+
+</body>
+</html>
