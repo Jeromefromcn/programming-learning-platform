@@ -5,7 +5,6 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.Setter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +14,6 @@ import java.util.Date;
 import java.util.UUID;
 
 @Component
-@Setter
 public class JwtUtil {
 
     @Value("${app.jwt.secret}")
