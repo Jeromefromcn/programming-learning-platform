@@ -43,7 +43,7 @@ public class SecurityConfig {
                     res.setStatus(401);
                     res.setContentType("application/json");
                     res.getWriter().write(
-                        "{\"error\":{\"code\":\"INVALID_CREDENTIALS\"," +
+                        "{\"error\":{\"code\":\"TOKEN_EXPIRED\"," +
                         "\"message\":\"Authentication required\"," +
                         "\"timestamp\":\"" + Instant.now() + "\"}}");
                 })

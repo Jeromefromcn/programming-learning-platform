@@ -27,7 +27,7 @@ class SecurityConfigTest {
         mockMvc.perform(post("/v1/auth/login")
                 .contentType("application/json")
                 .content("{}"))
-            .andExpect(status().is4xxClientError()); // not 401 — security permits, MVC handles
+            .andExpect(status().is4xxClientError()); // TODO Task 5: tighten to isBadRequest() once AuthController exists
     }
 
     @Test
