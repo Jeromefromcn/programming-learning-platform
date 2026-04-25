@@ -11,3 +11,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: test-secret-min-32-chars-for-testing-only-1234
+    expiry-minutes: 15
