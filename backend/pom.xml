@@ -125,6 +125,13 @@
             <version>8.7.0</version>
         </dependency>
 
+        <!-- Caffeine cache (bucket eviction) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <!-- version managed by Spring Boot BOM -->
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

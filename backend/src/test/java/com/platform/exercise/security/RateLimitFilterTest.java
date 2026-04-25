@@ -23,6 +23,7 @@ class RateLimitFilterTest {
     void eleventhLoginRequest_returns429() throws Exception {
         String body = "{\"username\":\"x\",\"password\":\"y\"}";
         // First 10 requests pass through to controller (wrong credentials = 4xx, not 429)
+        // TODO Task 5: tighten to isUnauthorized() once AuthController returns 401 for bad credentials
         for (int i = 0; i < 10; i++) {
             mockMvc.perform(post("/v1/auth/login")
                     .header("X-Forwarded-For", "10.0.0.99")

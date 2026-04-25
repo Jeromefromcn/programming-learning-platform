@@ -1,5 +1,7 @@
 package com.platform.exercise.security;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -14,22 +16,30 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
+// Order(1) places this before Spring Security's FilterChainProxy (a single servlet filter).
+// Rate-limiting must fire before JWT validation to block brute-force attempts on public endpoints.
 @Component
 @Order(1)
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterAccess(2, TimeUnit.MINUTES)
+            .build();
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain)
             throws ServletException, IOException {
-        if ("POST".equals(request.getMethod()) && request.getRequestURI().endsWith("/auth/login")) {
+        String uri = request.getRequestURI();
+        // Matches /v1/auth/login (test context) and /api/v1/auth/login (real context)
+        boolean isLoginEndpoint = uri.equals("/v1/auth/login") || uri.equals("/api/v1/auth/login");
+        if ("POST".equals(request.getMethod()) && isLoginEndpoint) {
             String ip = resolveIp(request);
-            Bucket bucket = buckets.computeIfAbsent(ip, k ->
+            Bucket bucket = buckets.get(ip, k ->
                 Bucket.builder()
                     .addLimit(Bandwidth.builder()
                         .capacity(10)
