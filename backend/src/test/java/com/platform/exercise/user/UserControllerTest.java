@@ -34,7 +34,7 @@ class UserControllerTest {
     @BeforeEach
     void seed() {
         User admin = new User();
-        admin.setUsername("admin");
+        admin.setUsername("admin_test");          // avoid collision with V2 Flyway seed (username 'admin')
         admin.setDisplayName("Admin User");
         admin.setPasswordHash(passwordEncoder.encode("password123"));
         admin.setRole(Role.SUPER_ADMIN);
@@ -51,7 +51,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void listUsers_asAdmin_returns200WithPage() throws Exception {
         mockMvc.perform(get("/v1/users"))
             .andExpect(status().isOk())
@@ -67,7 +67,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void createUser_validRequest_returns201() throws Exception {
         mockMvc.perform(post("/v1/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -81,7 +81,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void createUser_duplicateUsername_returns409() throws Exception {
         mockMvc.perform(post("/v1/users")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -94,7 +94,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void patchRole_validRequest_returns200() throws Exception {
         User target = userRepository.findByUsername("student1").orElseThrow();
         mockMvc.perform(patch("/v1/users/" + target.getId() + "/role")
@@ -105,7 +105,7 @@ class UserControllerTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void patchStatus_disableSelf_returns400() throws Exception {
         mockMvc.perform(patch("/v1/users/" + adminId + "/status")
                 .contentType(MediaType.APPLICATION_JSON)
