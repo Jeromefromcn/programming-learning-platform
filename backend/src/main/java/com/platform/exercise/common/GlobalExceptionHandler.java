@@ -1,5 +1,7 @@
 package com.platform.exercise.common;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,5 +27,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(ErrorCode.VALIDATION_ERROR.getHttpStatus())
             .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR, message));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        String msg = ex.getMostSpecificCause().getMessage();
+        if (msg != null && msg.toLowerCase().contains("uk_category_name")) {
+            return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(ErrorCode.CATEGORY_DUPLICATE, "This category already exists"));
+        }
+        return ResponseEntity
+            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR,
+                "Unexpected database constraint violation"));
     }
 }
