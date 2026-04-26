@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/login/LoginPage';
 import StudentPage from './pages/student/StudentPage';
 import TutorPage from './pages/tutor/TutorPage';
+import CategoryManagementPage from './pages/tutor/CategoryManagementPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import GlobalSettingsPage from './pages/admin/GlobalSettingsPage';
@@ -24,6 +25,9 @@ export default function App() {
           } />
           <Route path="/tutor" element={
             <ProtectedRoute requiredRole="TUTOR"><TutorPage /></ProtectedRoute>
+          } />
+          <Route path="/tutor/categories" element={
+            <ProtectedRoute requiredRole="TUTOR"><CategoryManagementPage /></ProtectedRoute>
           } />
           <Route path="/admin" element={
             <ProtectedRoute requiredRole="SUPER_ADMIN"><AdminDashboardPage /></ProtectedRoute>

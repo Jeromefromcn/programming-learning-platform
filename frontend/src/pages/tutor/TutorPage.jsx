@@ -1,3 +1,12 @@
+import { Link } from 'react-router-dom';
+
 export default function TutorPage() {
-  return <div><h1>Tutor Dashboard</h1><p>Coming soon — F-4.</p></div>;
+  return (
+    <div style={{ padding: 32 }}>
+      <h1>Tutor Dashboard</h1>
+      <nav style={{ display: 'flex', gap: 16, marginTop: 24 }}>
+        <Link to="/tutor/categories">Category Management</Link>
+      </nav>
+    </div>
+  );
 }

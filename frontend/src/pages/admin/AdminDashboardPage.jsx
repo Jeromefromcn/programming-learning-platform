@@ -7,7 +7,7 @@ export default function AdminDashboardPage() {
       <nav style={{ display: 'flex', gap: 16, marginTop: 24 }}>
         <Link to="/admin/users">User Management</Link>
         <Link to="/admin/settings">Global Settings</Link>
-        <Link to="/admin/categories">Category Management</Link>
+        <Link to="/tutor/categories">Category Management</Link>
       </nav>
     </div>
   );
