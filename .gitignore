@@ -38,3 +38,4 @@ application-local.properties
 .claude/worktrees/
 __pycache__/
 *.pyc
+.superpowers/
