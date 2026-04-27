@@ -28,7 +28,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     Page<CourseWithCountsView> findAllWithCountsByCreatedBy(@Param("createdBy") Long createdBy, Pageable pageable);
 
     @Query(value = """
-            SELECT e.id, ev.title, e.exercise_type
+            SELECT e.id, ev.title, e.type AS exercise_type
             FROM exercises e
             JOIN exercise_versions ev ON ev.id = e.current_version_id
             JOIN course_exercises ce ON ce.exercise_id = e.id
