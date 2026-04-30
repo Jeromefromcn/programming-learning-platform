@@ -7,6 +7,7 @@ export default function TutorPage() {
       <nav style={{ display: 'flex', gap: 16, marginTop: 24 }}>
         <Link to="/tutor/categories">Category Management</Link>
         <Link to="/tutor/courses">Course Management</Link>
+        <Link to="/tutor/exercises">Exercise Management</Link>
       </nav>
     </div>
   );
