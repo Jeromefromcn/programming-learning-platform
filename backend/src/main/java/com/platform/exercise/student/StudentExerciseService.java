@@ -64,6 +64,9 @@ public class StudentExerciseService {
                     ? objectMapper.readValue(version.getHints(), new TypeReference<>() {})
                     : List.of();
             JsonNode rawConfig = objectMapper.readTree(version.getConfig());
+            if (rawConfig.isTextual()) {
+                rawConfig = objectMapper.readTree(rawConfig.asText());
+            }
             JsonNode strippedConfig = stripConfig(exercise.getType().name(), rawConfig);
 
             StudentExerciseDetailDto.CategoryRef cat = null;

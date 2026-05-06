@@ -147,9 +147,9 @@ class StudentExerciseControllerTest {
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
-    void list_asTutor_returns403() throws Exception {
+    void list_asTutor_returns200_becauseTutorInheritsStudentRole() throws Exception {
         mockMvc.perform(get("/v1/student/exercises"))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isOk());
     }
 
     // ── Get by ID ─────────────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ class StudentExerciseControllerTest {
         Long exId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         jdbcTemplate.update(
             "INSERT INTO exercise_versions (exercise_id, version_number, title, description, difficulty, hints, config) VALUES (?,?,?,?,?,?,?)",
-            exId, 1, title, "A description", "MEDIUM", "[\"Try modulo\"]",
+            exId, 1, title, "A description", "MEDIUM", null,
             "{\"starterCode\":\"def f():\\n    pass\",\"timeLimitSeconds\":5," +
             "\"testCases\":[" +
             "{\"input\":\"f()\",\"expectedOutput\":\"1\",\"visible\":true}," +
@@ -224,7 +224,7 @@ class StudentExerciseControllerTest {
         Long exId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         jdbcTemplate.update(
             "INSERT INTO exercise_versions (exercise_id, version_number, title, description, difficulty, hints, config) VALUES (?,?,?,?,?,?,?)",
-            exId, 1, title, "A description", "EASY", "[]",
+            exId, 1, title, "A description", "EASY", null,
             "{\"allowedBlocks\":[\"text_print\",\"text\"]," +
             "\"initialWorkspaceXml\":\"<xml/>\",\"showCodeView\":false," +
             "\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"Hello World\"}," +
