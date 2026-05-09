@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.exercise.SandboxClient;
 import com.platform.exercise.exercise.VerifyRequest;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,7 @@ public class PythonGrader {
 
     private final SandboxClient sandboxClient;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     public record Result(BigDecimal autoScore, String autoGradeDetailsJson) {}
 
@@ -34,7 +37,14 @@ public class PythonGrader {
                 ));
             }
 
-            JsonNode sandboxResponse = sandboxClient.execute(studentCode, testCases, timeLimitSeconds);
+            Timer.Sample sample = Timer.start(meterRegistry);
+            JsonNode sandboxResponse;
+            try {
+                sandboxResponse = sandboxClient.execute(studentCode, testCases, timeLimitSeconds);
+            } finally {
+                sample.stop(meterRegistry.timer("sandbox.grading.duration"));
+            }
+
             JsonNode results = sandboxResponse.path("results");
 
             int total = 0, passed = 0;

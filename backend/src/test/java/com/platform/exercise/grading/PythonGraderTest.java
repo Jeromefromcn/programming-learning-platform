@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.platform.exercise.exercise.SandboxClient;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ class PythonGraderTest {
     private SandboxClient sandboxClient;
 
     private PythonGrader grader;
+    private SimpleMeterRegistry meterRegistry;
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static final String PYTHON_CONFIG = """
@@ -38,7 +41,8 @@ class PythonGraderTest {
 
     @BeforeEach
     void setUp() {
-        grader = new PythonGrader(sandboxClient, mapper);
+        meterRegistry = new SimpleMeterRegistry();
+        grader = new PythonGrader(sandboxClient, mapper, meterRegistry);
     }
 
     private ObjectNode makeResults(boolean... passes) {
@@ -83,5 +87,26 @@ class PythonGraderTest {
         when(sandboxClient.execute(any(), any(), anyInt())).thenReturn(makeResults(false, false));
         PythonGrader.Result result = grader.grade("def f(n): return n", PYTHON_CONFIG);
         assertThat(result.autoScore()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void grade_recordsSandboxTimerMetric() {
+        when(sandboxClient.execute(any(), any(), anyInt())).thenReturn(makeResults(true, true));
+        grader.grade("def f(n): return n", PYTHON_CONFIG);
+
+        Timer timer = meterRegistry.find("sandbox.grading.duration").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    void grade_sandboxUnavailable_stillRecordsTimer() {
+        when(sandboxClient.execute(any(), any(), anyInt()))
+            .thenThrow(new SandboxClient.SandboxUnavailableException("down"));
+        grader.grade("def f(n): return n", PYTHON_CONFIG);
+
+        Timer timer = meterRegistry.find("sandbox.grading.duration").timer();
+        assertThat(timer).isNotNull();
+        assertThat(timer.count()).isEqualTo(1);
     }
 }
