@@ -1,0 +1,218 @@
+import { useEffect, useRef, useState } from 'react';
+import * as Blockly from 'blockly';
+import 'blockly/blocks';
+import { javascriptGenerator } from 'blockly/javascript';
+import { pythonGenerator } from 'blockly/python';
+
+const OUTPUT_STYLE = {
+  background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
+  fontSize: 13, padding: 12, borderRadius: 4,
+  maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap', margin: 0,
+};
+
+function mapError(msg) {
+  if (!msg) return 'An error occurred.';
+  return msg;
+}
+
+export default function BlocklyPracticePage({ exercise }) {
+  const containerRef = useRef(null);
+  const workspaceRef = useRef(null);
+  const workerRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  const [output, setOutput] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [tle, setTle] = useState(false);
+  const [hintIndex, setHintIndex] = useState(-1);
+  const [exportModal, setExportModal] = useState(false);
+  const [studentName, setStudentName] = useState('');
+  const [pythonCode, setPythonCode] = useState('');
+
+  const version = exercise.version;
+  const config = version.config;
+  const hints = version.hints || [];
+  const showCodeView = config.showCodeView || false;
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const toolboxXml = config.allowedBlocks?.length > 0
+      ? `<xml>${config.allowedBlocks.map(b => `<block type="${b}"></block>`).join('')}</xml>`
+      : '<xml></xml>';
+
+    const workspace = Blockly.inject(containerRef.current, {
+      toolbox: toolboxXml,
+      trashcan: true,
+      scrollbars: true,
+    });
+    workspaceRef.current = workspace;
+
+    if (config.initialWorkspaceXml) {
+      try {
+        const dom = Blockly.utils.xml.textToDom(config.initialWorkspaceXml);
+        Blockly.Xml.domToWorkspace(dom, workspace);
+      } catch { /* invalid XML — start empty */ }
+    }
+
+    if (showCodeView) {
+      workspace.addChangeListener(() => {
+        try {
+          setPythonCode(pythonGenerator.workspaceToCode(workspace));
+        } catch { /* ignore transient errors */ }
+      });
+    }
+
+    return () => { workspace.dispose(); workspaceRef.current = null; };
+  }, []);
+
+  function handleRun() {
+    if (!workspaceRef.current) return;
+    setRunning(true);
+    setOutput(null);
+    setTle(false);
+
+    if (workerRef.current) workerRef.current.terminate();
+    clearTimeout(timeoutRef.current);
+
+    const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+    const worker = new Worker(
+      new URL('../../workers/blocklyRunner.worker.js', import.meta.url)
+    );
+    workerRef.current = worker;
+
+    timeoutRef.current = setTimeout(() => {
+      worker.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+    }, 3000);
+
+    worker.onmessage = ({ data: { output, error } }) => {
+      clearTimeout(timeoutRef.current);
+      workerRef.current = null;
+      setRunning(false);
+      setOutput(error ? `Error: ${mapError(error)}` : (output ?? '(no output)'));
+    };
+
+    worker.onerror = (e) => {
+      clearTimeout(timeoutRef.current);
+      workerRef.current = null;
+      setRunning(false);
+      setOutput(`Error: ${mapError(e.message)}`);
+    };
+
+    worker.postMessage({ code: jsCode });
+  }
+
+  function handleExport() {
+    const name = studentName.trim();
+    if (!name) { alert('Please enter your name.'); return; }
+    const payload = {
+      platformVersion: '1.0',
+      exerciseId: exercise.id,
+      exerciseTitle: exercise.title,
+      exerciseType: 'BLOCKLY',
+      exerciseVersion: version.versionNumber,
+      studentName: name,
+      answer: workspaceRef.current
+        ? Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspaceRef.current))
+        : '',
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/\s+/g, '_')}_${exercise.title.replace(/\s+/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportModal(false);
+    setStudentName('');
+  }
+
+  return (
+    <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <h1>{exercise.title}</h1>
+      <p style={{ color: '#555', marginBottom: 16 }}>{version.description}</p>
+
+      <div ref={containerRef} style={{ height: 400, border: '1px solid #ddd', borderRadius: 4, marginBottom: 16 }} />
+
+      {showCodeView && (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: '0 0 4px', fontSize: 13, color: '#555' }}>Python equivalent (read-only):</p>
+          <pre style={OUTPUT_STYLE}>{pythonCode || '(empty workspace)'}</pre>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <button
+          onClick={handleRun}
+          disabled={running}
+          style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}
+        >
+          {running ? 'Running…' : 'Run'}
+        </button>
+
+        {hints.length > 0 && (
+          <button
+            onClick={() => setHintIndex(i => Math.min(i + 1, hints.length - 1))}
+            disabled={hintIndex >= hints.length - 1}
+            style={{ border: '1px solid #ddd', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}
+          >
+            {hintIndex < 0 ? 'Hint' : `Hint (${hintIndex + 1}/${hints.length})`}
+          </button>
+        )}
+
+        <button
+          onClick={() => setExportModal(true)}
+          style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer', marginLeft: 'auto' }}
+        >
+          Export
+        </button>
+      </div>
+
+      {hintIndex >= 0 && (
+        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 4, padding: 12, marginBottom: 16 }}>
+          {hints[hintIndex]}
+        </div>
+      )}
+
+      {tle && (
+        <div style={{ background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 4, padding: 12, marginBottom: 12 }}>
+          ⚠ Time Limit Exceeded (3 seconds)
+        </div>
+      )}
+      {output !== null && <pre style={OUTPUT_STYLE}>{output}</pre>}
+
+      {exportModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320 }}>
+            <h2 style={{ marginTop: 0 }}>Export Answer</h2>
+            <label style={{ display: 'block', marginBottom: 8 }}>Your name:</label>
+            <input
+              type="text"
+              value={studentName}
+              onChange={e => setStudentName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleExport()}
+              style={{ width: '100%', padding: 8, marginBottom: 16, boxSizing: 'border-box' }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setExportModal(false)}>Cancel</button>
+              <button
+                onClick={handleExport}
+                style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
+              >
+                Download JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
