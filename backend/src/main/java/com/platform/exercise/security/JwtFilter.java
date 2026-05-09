@@ -16,6 +16,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.slf4j.MDC;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -40,15 +42,17 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtUtil.parseToken(token);
                 Long userId = Long.parseLong(claims.getSubject());
+                String role = claims.get("role", String.class);
                 userRepository.findById(userId).ifPresent(user -> {
                     if (user.getStatus() == User.UserStatus.ACTIVE) {
-                        String role = claims.get("role", String.class);
                         var auth = new UsernamePasswordAuthenticationToken(
                             user, null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
                         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(auth);
+                        MDC.put("userId", String.valueOf(userId));
+                        MDC.put("role", role);
                     }
                 });
             } catch (JwtException | IllegalArgumentException ignored) {
