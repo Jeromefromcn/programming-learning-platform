@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+  </appender>
+
+  <!-- Per-package log levels as specified in F-9 -->
+  <logger name="com.platform.exercise.security"   level="INFO"  additivity="false"><appender-ref ref="STDOUT"/></logger>
+  <logger name="com.platform.exercise.grading"    level="INFO"  additivity="false"><appender-ref ref="STDOUT"/></logger>
+  <logger name="com.platform.exercise.submission" level="INFO"  additivity="false"><appender-ref ref="STDOUT"/></logger>
+  <logger name="org.springframework"              level="WARN"  additivity="false"><appender-ref ref="STDOUT"/></logger>
+  <logger name="org.hibernate"                    level="WARN"  additivity="false"><appender-ref ref="STDOUT"/></logger>
+
+  <!-- Dev profile: full DEBUG for application code -->
+  <springProfile name="dev">
+    <logger name="com.platform.exercise" level="DEBUG" additivity="false"><appender-ref ref="STDOUT"/></logger>
+  </springProfile>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+
+</configuration>
