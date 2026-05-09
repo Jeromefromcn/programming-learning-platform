@@ -1,0 +1,237 @@
+package com.platform.exercise.submission;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.platform.exercise.domain.Exercise;
+import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.Submission;
+import com.platform.exercise.domain.User;
+import com.platform.exercise.domain.User.Role;
+import com.platform.exercise.domain.User.UserStatus;
+import com.platform.exercise.exercise.SandboxClient;
+import com.platform.exercise.repository.ExerciseRepository;
+import com.platform.exercise.repository.ExerciseVersionRepository;
+import com.platform.exercise.repository.SubmissionRepository;
+import com.platform.exercise.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class SubmissionControllerTest {
+
+    @Autowired MockMvc mockMvc;
+    @Autowired ExerciseRepository exerciseRepository;
+    @Autowired ExerciseVersionRepository versionRepository;
+    @Autowired SubmissionRepository submissionRepository;
+    @Autowired UserRepository userRepository;
+    @Autowired PasswordEncoder passwordEncoder;
+    @Autowired ObjectMapper objectMapper;
+    @MockBean SandboxClient sandboxClient;
+
+    private Exercise blocklyExercise;
+    private ExerciseVersion blocklyVersion;
+
+    private static final String BLOCKLY_CONFIG =
+        "{\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"Hello\"}}}";
+    private static final String PYTHON_CONFIG =
+        "{\"timeLimitSeconds\":5,\"testCases\":[{\"input\":\"f(1)\",\"expectedOutput\":\"1\",\"visible\":true}]}";
+
+    @BeforeEach
+    void seed() {
+        User tutor = new User();
+        tutor.setUsername("tutor1");
+        tutor.setDisplayName("Tutor One");
+        tutor.setPasswordHash(passwordEncoder.encode("pw"));
+        tutor.setRole(Role.TUTOR);
+        tutor.setStatus(UserStatus.ACTIVE);
+        userRepository.save(tutor);
+
+        blocklyExercise = new Exercise();
+        blocklyExercise.setTitle("Hello Exercise");
+        blocklyExercise.setDescription("desc");
+        blocklyExercise.setType(Exercise.ExerciseType.BLOCKLY);
+        blocklyExercise.setDifficulty(Exercise.Difficulty.EASY);
+        blocklyExercise.setStatus(Exercise.Status.PUBLISHED);
+        blocklyExercise.setCreatedBy(tutor.getId());
+        blocklyExercise = exerciseRepository.save(blocklyExercise);
+
+        blocklyVersion = new ExerciseVersion();
+        blocklyVersion.setExerciseId(blocklyExercise.getId());
+        blocklyVersion.setVersionNumber(1);
+        blocklyVersion.setTitle("Hello Exercise");
+        blocklyVersion.setDescription("desc");
+        blocklyVersion.setDifficulty("EASY");
+        blocklyVersion.setHints("[]");
+        blocklyVersion.setConfig(BLOCKLY_CONFIG);
+        blocklyVersion = versionRepository.save(blocklyVersion);
+
+        blocklyExercise.setCurrentVersionId(blocklyVersion.getId());
+        exerciseRepository.save(blocklyExercise);
+
+        Exercise pythonExercise = new Exercise();
+        pythonExercise.setTitle("Python Exercise");
+        pythonExercise.setDescription("desc");
+        pythonExercise.setType(Exercise.ExerciseType.PYTHON);
+        pythonExercise.setDifficulty(Exercise.Difficulty.MEDIUM);
+        pythonExercise.setStatus(Exercise.Status.PUBLISHED);
+        pythonExercise.setCreatedBy(tutor.getId());
+        pythonExercise = exerciseRepository.save(pythonExercise);
+
+        ExerciseVersion pythonVersion = new ExerciseVersion();
+        pythonVersion.setExerciseId(pythonExercise.getId());
+        pythonVersion.setVersionNumber(1);
+        pythonVersion.setTitle("Python Exercise");
+        pythonVersion.setDescription("desc");
+        pythonVersion.setDifficulty("MEDIUM");
+        pythonVersion.setHints("[]");
+        pythonVersion.setConfig(PYTHON_CONFIG);
+        pythonVersion = versionRepository.save(pythonVersion);
+
+        pythonExercise.setCurrentVersionId(pythonVersion.getId());
+        exerciseRepository.save(pythonExercise);
+    }
+
+    private String blocklyExportJson(long exerciseId, String studentName, int version) {
+        return String.format("""
+            {"platformVersion":"1.0","exerciseId":%d,"exerciseTitle":"Hello Exercise",
+             "exerciseType":"BLOCKLY","exerciseVersion":%d,"studentName":"%s",
+             "answer":"print('Hello');","exportedAt":"2026-05-01T10:00:00Z"}""",
+            exerciseId, version, studentName);
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void importSingleBlocklyJson_valid_returnsImported() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+
+        mockMvc.perform(multipart("/v1/submissions/import").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.summary.imported").value(1))
+            .andExpect(jsonPath("$.results[0].status").value("IMPORTED"))
+            .andExpect(jsonPath("$.results[0].autoScore").exists())
+            .andExpect(jsonPath("$.batchId").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void importDuplicateJson_secondTime_returnsDuplicateStatus() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+
+        // First import
+        mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
+
+        // Second import — same file
+        mockMvc.perform(multipart("/v1/submissions/import")
+                .file(new MockMultipartFile("files", "alex.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.summary.duplicates").value(1))
+            .andExpect(jsonPath("$.results[0].status").value("DUPLICATE"));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void importMissingFields_returnsFailed() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("files", "bad.json", "application/json",
+            "{\"exerciseId\":1}".getBytes());
+
+        mockMvc.perform(multipart("/v1/submissions/import").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.results[0].status").value("FAILED"));
+    }
+
+    @Test
+    void importFiles_unauthenticated_returns401() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+
+        mockMvc.perform(multipart("/v1/submissions/import").file(file))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_noFilter_returnsAll() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        submissionRepository.save(sub);
+
+        mockMvc.perform(get("/v1/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].studentName").value("Alex"))
+            .andExpect(jsonPath("$.content[0].exerciseTitle").value("Hello Exercise"));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void gradeSubmission_validRequest_persistsTutorScore() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        Submission saved = submissionRepository.save(sub);
+
+        mockMvc.perform(put("/v1/submissions/" + saved.getId() + "/grade")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tutorScore\":80.0,\"tutorComment\":\"Good effort!\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.tutorScore").value(80.0))
+            .andExpect(jsonPath("$.tutorComment").value("Good effort!"));
+
+        Submission updated = submissionRepository.findById(saved.getId()).orElseThrow();
+        assertThat(updated.getTutorScore()).isEqualByComparingTo(new BigDecimal("80.00"));
+    }
+
+    @Test
+    void exportCsv_unauthenticated_returns200WithCsv() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setAutoScore(new BigDecimal("100.00"));
+        submissionRepository.save(sub);
+
+        String csv = mockMvc.perform(get("/v1/submissions/export-csv"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", org.hamcrest.Matchers.containsString("text/csv")))
+            .andReturn().getResponse().getContentAsString();
+
+        assertThat(csv).contains("Alex");
+        assertThat(csv).contains("Hello Exercise");
+        assertThat(csv).contains("100.00");
+        assertThat(csv).doesNotContain("null");
+    }
+}
