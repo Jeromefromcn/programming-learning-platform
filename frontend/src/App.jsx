@@ -12,6 +12,9 @@ import CourseFormPage from './pages/tutor/CourseFormPage';
 import CourseDetailPage from './pages/tutor/CourseDetailPage';
 import ExerciseManagementPage from './pages/tutor/ExerciseManagementPage';
 import ExerciseFormPage from './pages/tutor/ExerciseFormPage';
+import SubmissionImportPage from './pages/tutor/SubmissionImportPage';
+import SubmissionListPage from './pages/tutor/SubmissionListPage';
+import SubmissionDetailPage from './pages/tutor/SubmissionDetailPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import GlobalSettingsPage from './pages/admin/GlobalSettingsPage';
@@ -59,6 +62,15 @@ export default function App() {
           } />
           <Route path="/tutor/exercises/:id/edit" element={
             <ProtectedRoute requiredRole="TUTOR"><ExerciseFormPage /></ProtectedRoute>
+          } />
+          <Route path="/tutor/submissions" element={
+            <ProtectedRoute requiredRole="TUTOR"><SubmissionListPage /></ProtectedRoute>
+          } />
+          <Route path="/tutor/submissions/import" element={
+            <ProtectedRoute requiredRole="TUTOR"><SubmissionImportPage /></ProtectedRoute>
+          } />
+          <Route path="/tutor/submissions/:id" element={
+            <ProtectedRoute requiredRole="TUTOR"><SubmissionDetailPage /></ProtectedRoute>
           } />
           <Route path="/admin" element={
             <ProtectedRoute requiredRole="SUPER_ADMIN"><AdminDashboardPage /></ProtectedRoute>

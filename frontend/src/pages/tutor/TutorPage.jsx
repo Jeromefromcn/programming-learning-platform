@@ -8,6 +8,7 @@ export default function TutorPage() {
         <Link to="/tutor/categories">Category Management</Link>
         <Link to="/tutor/courses">Course Management</Link>
         <Link to="/tutor/exercises">Exercise Management</Link>
+        <Link to="/tutor/submissions">Submissions</Link>
       </nav>
     </div>
   );
