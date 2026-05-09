@@ -13,6 +13,9 @@ import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -30,6 +33,8 @@ import java.util.zip.ZipInputStream;
 @Service
 @RequiredArgsConstructor
 public class FileImportService {
+
+    private static final Logger log = LoggerFactory.getLogger(FileImportService.class);
 
     private static final long MAX_ZIP_DECOMPRESSED_BYTES = 100L * 1024 * 1024;
     private static final int MAX_ZIP_FILES = 500;
@@ -105,18 +110,18 @@ public class FileImportService {
                     .existsByStudentNameAndExerciseIdAndExportTimestamp(
                         studentName, exerciseId, exportedAt)) {
                 batchCache.put(batchId, filename, content);
-                return ImportResultDto.duplicate(filename, studentName, null);
+                return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));
             }
 
             Exercise exercise = exerciseRepository.findByIdAndDeletedFalse(exerciseId).orElse(null);
             if (exercise == null) {
-                return ImportResultDto.failed(filename, "Exercise not found or has been deleted.");
+                return logAndReturn(batchId, ImportResultDto.failed(filename, "Exercise not found or has been deleted."));
             }
 
             ExerciseVersion currentVersion = versionRepository
                 .findById(exercise.getCurrentVersionId()).orElse(null);
             if (currentVersion == null) {
-                return ImportResultDto.failed(filename, "Exercise configuration not found.");
+                return logAndReturn(batchId, ImportResultDto.failed(filename, "Exercise configuration not found."));
             }
 
             boolean versionMismatch = studentVersion != null
@@ -133,7 +138,7 @@ public class FileImportService {
                 autoScore = gr.autoScore();
                 autoGradeDetails = gr.autoGradeDetailsJson();
             } else {
-                return ImportResultDto.failed(filename, "Unknown exercise type: " + exerciseType);
+                return logAndReturn(batchId, ImportResultDto.failed(filename, "Unknown exercise type: " + exerciseType));
             }
 
             Submission sub = new Submission();
@@ -150,14 +155,30 @@ public class FileImportService {
             sub.setImportBatchId(batchId);
             Submission saved = submissionRepository.save(sub);
 
-            return ImportResultDto.imported(filename, saved.getId(), studentName,
-                exercise.getTitle(), exerciseType, autoScore, versionMismatch);
+            return logAndReturn(batchId, ImportResultDto.imported(filename, saved.getId(), studentName,
+                exercise.getTitle(), exerciseType, autoScore, versionMismatch));
 
         } catch (PlatformException e) {
             throw e;
         } catch (Exception e) {
-            return ImportResultDto.failed(filename, "Parse error: " + e.getMessage());
+            return logAndReturn(batchId, ImportResultDto.failed(filename, "Parse error: " + e.getMessage()));
         }
+    }
+
+    private ImportResultDto logAndReturn(String batchId, ImportResultDto result) {
+        MDC.put("importBatchId", batchId);
+        MDC.put("importFilename", result.filename());
+        MDC.put("importStatus", result.status());
+        MDC.put("importAutoScore", result.autoScore() != null ? result.autoScore().toPlainString() : "");
+        try {
+            log.info("Import file processed");
+        } finally {
+            MDC.remove("importBatchId");
+            MDC.remove("importFilename");
+            MDC.remove("importStatus");
+            MDC.remove("importAutoScore");
+        }
+        return result;
     }
 
     private LocalDateTime parseTimestamp(String raw) {
