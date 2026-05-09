@@ -1,0 +1,64 @@
+package com.platform.exercise.submission;
+
+import com.platform.exercise.common.PageResponse;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+
+@RestController
+@RequestMapping("/v1/submissions")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('TUTOR')")
+public class SubmissionController {
+
+    private final SubmissionService submissionService;
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResponseDto> importFiles(
+            @RequestParam("files") List<MultipartFile> files) throws IOException {
+        return ResponseEntity.ok(submissionService.importFiles(files));
+    }
+
+    @PostMapping("/import-duplicate")
+    public ResponseEntity<ImportResultDto> forceImport(
+            @RequestBody @Valid ForceImportRequest req) throws IOException {
+        return ResponseEntity.ok(submissionService.forceImport(req));
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<SubmissionListItemDto>> list(
+            @RequestParam(required = false) Long exerciseId,
+            @RequestParam(required = false) String studentName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(submissionService.list(exerciseId, studentName, page, size));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<SubmissionDetailDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(submissionService.getById(id));
+    }
+
+    @PutMapping("/{id}/grade")
+    public ResponseEntity<SubmissionDetailDto> grade(
+            @PathVariable Long id,
+            @RequestBody @Valid GradeRequest req) {
+        return ResponseEntity.ok(submissionService.grade(id, req));
+    }
+
+    @GetMapping("/export-csv")
+    @PreAuthorize("permitAll()")
+    public void exportCsv(
+            @RequestParam(required = false) Long exerciseId,
+            HttpServletResponse response) throws IOException {
+        submissionService.exportCsv(exerciseId, response);
+    }
+}
