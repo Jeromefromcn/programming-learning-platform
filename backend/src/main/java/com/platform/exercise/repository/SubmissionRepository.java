@@ -39,4 +39,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             """,
             nativeQuery = true)
     List<Submission> findAllForExport(@Param("exerciseId") Long exerciseId);
+
+    List<Submission> findByStudentName(String studentName);
 }
