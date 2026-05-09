@@ -5,6 +5,7 @@ import LoginPage from './pages/login/LoginPage';
 import StudentPage from './pages/student/StudentPage';
 import ExerciseListPage from './pages/student/ExerciseListPage';
 import ExercisePracticeRouter from './pages/student/ExercisePracticeRouter';
+import ProgressPage from './pages/student/ProgressPage';
 import TutorPage from './pages/tutor/TutorPage';
 import CategoryManagementPage from './pages/tutor/CategoryManagementPage';
 import CourseManagementPage from './pages/tutor/CourseManagementPage';
@@ -35,6 +36,7 @@ export default function App() {
           }>
             <Route path="exercises" element={<ExerciseListPage />} />
             <Route path="exercises/:id/practice" element={<ExercisePracticeRouter />} />
+            <Route path="progress" element={<ProgressPage />} />
           </Route>
           <Route path="/tutor" element={
             <ProtectedRoute requiredRole="TUTOR"><TutorPage /></ProtectedRoute>

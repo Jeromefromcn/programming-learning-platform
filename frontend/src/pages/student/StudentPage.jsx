@@ -9,6 +9,10 @@ export default function StudentPage() {
           style={{ color: '#fff', textDecoration: 'none', padding: '14px 0', opacity: 0.9 }}>
           Exercises
         </Link>
+        <Link to="/student/progress"
+          style={{ color: '#fff', textDecoration: 'none', padding: '14px 0', opacity: 0.9 }}>
+          My Progress
+        </Link>
       </nav>
       <Outlet />
     </div>
