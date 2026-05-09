@@ -116,7 +116,7 @@ export default function BlocklyPracticePage({ exercise }) {
       exerciseVersion: version.versionNumber,
       studentName: name,
       answer: workspaceRef.current
-        ? Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspaceRef.current))
+        ? javascriptGenerator.workspaceToCode(workspaceRef.current)
         : '',
       exportedAt: new Date().toISOString(),
     };
