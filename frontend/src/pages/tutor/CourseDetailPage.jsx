@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
+import Breadcrumb from '../../components/Breadcrumb';
 
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
@@ -115,6 +116,12 @@ export default function CourseDetailPage() {
 
   return (
     <div style={{ padding: 32 }}>
+      {course && (
+        <Breadcrumb items={[
+          { label: 'Courses', to: '/tutor/courses' },
+          { label: course.name },
+        ]} />
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ margin: 0 }}>{course?.name}</h1>

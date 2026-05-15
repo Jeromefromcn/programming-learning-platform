@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
+import Breadcrumb from '../../components/Breadcrumb';
 
 export default function CourseFormPage() {
   const { id } = useParams();
@@ -48,6 +49,10 @@ export default function CourseFormPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 560 }}>
+      <Breadcrumb items={[
+        { label: 'Courses', to: '/tutor/courses' },
+        { label: isEdit ? 'Edit Course' : 'New Course' },
+      ]} />
       <h1>{isEdit ? 'Edit Course' : 'New Course'}</h1>
 
       <form onSubmit={handleSubmit} style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>

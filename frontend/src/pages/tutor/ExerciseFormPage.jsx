@@ -5,6 +5,7 @@ import { categoryApi } from '../../api/categoryApi';
 import BlocklyAuthoringWorkspace from '../../components/tutor/BlocklyAuthoringWorkspace';
 import PythonAuthoringEditor from '../../components/tutor/PythonAuthoringEditor';
 import VersionHistoryPanel from '../../components/tutor/VersionHistoryPanel';
+import Breadcrumb from '../../components/Breadcrumb';
 
 const EMPTY_BLOCKLY_CONFIG = {
   allowedBlocks: [],
@@ -113,6 +114,10 @@ export default function ExerciseFormPage() {
   if (!isEdit && !exerciseType) {
     return (
       <div style={{ padding: 32, maxWidth: 600 }}>
+        <Breadcrumb items={[
+          { label: 'Exercises', to: '/tutor/exercises' },
+          { label: 'New Exercise' },
+        ]} />
         <h1>New Exercise</h1>
         <p>Select an exercise type to continue:</p>
         <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
@@ -137,6 +142,10 @@ export default function ExerciseFormPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 900 }}>
+      <Breadcrumb items={[
+        { label: 'Exercises', to: '/tutor/exercises' },
+        { label: isEdit ? 'Edit Exercise' : 'New Exercise' },
+      ]} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
         <h1 style={{ margin: 0 }}>
           {isEdit ? 'Edit Exercise' : `New ${exerciseType} Exercise`}

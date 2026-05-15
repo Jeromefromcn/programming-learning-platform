@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
+import Breadcrumb from '../../components/Breadcrumb';
 
 export default function SubmissionDetailPage() {
   const { id } = useParams();
@@ -110,6 +111,10 @@ export default function SubmissionDetailPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <Breadcrumb items={[
+        { label: 'Submissions', to: '/tutor/submissions' },
+        { label: 'Submission Detail' },
+      ]} />
       <button onClick={() => navigate('/tutor/submissions')}
         style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', padding: 0, marginBottom: 16 }}>
         ← Back to Submissions

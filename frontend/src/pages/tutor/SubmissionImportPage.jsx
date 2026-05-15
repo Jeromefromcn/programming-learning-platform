@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
+import Breadcrumb from '../../components/Breadcrumb';
 
 const STATUS_COLOR = { IMPORTED: '#2e7d32', DUPLICATE: '#e65100', FAILED: '#c62828' };
 const STATUS_BG = { IMPORTED: '#e8f5e9', DUPLICATE: '#fff3e0', FAILED: '#ffebee' };
 
 export default function SubmissionImportPage() {
+  const navigate = useNavigate();
   const inputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -66,6 +69,21 @@ export default function SubmissionImportPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <Breadcrumb items={[
+        { label: 'Submissions', to: '/tutor/submissions' },
+        { label: 'Import' },
+      ]} />
+      <div style={{ padding: '12px 20px 0' }}>
+        <button
+          onClick={() => navigate('/tutor/submissions')}
+          style={{
+            background: 'none', border: '1px solid #ccc', borderRadius: 4,
+            padding: '5px 12px', fontSize: 13, cursor: 'pointer', color: '#555',
+          }}
+        >
+          ← Back to Submissions
+        </button>
+      </div>
       <h1>Import Submissions</h1>
 
       <div
