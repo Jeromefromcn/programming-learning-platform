@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/authApi';
 
-const ROLE_ROUTES = { STUDENT: '/student', TUTOR: '/tutor', SUPER_ADMIN: '/admin' };
+const ROLE_ROUTES = { STUDENT: '/app', TUTOR: '/app', SUPER_ADMIN: '/app' };
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
