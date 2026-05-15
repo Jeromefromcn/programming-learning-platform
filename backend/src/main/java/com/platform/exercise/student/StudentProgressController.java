@@ -21,8 +21,9 @@ public class StudentProgressController {
 
     @GetMapping
     public ResponseEntity<StudentProgressDto> getProgress(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
+        User user = (authentication.getPrincipal() instanceof User u) ? u
+                : userRepository.findByUsername(authentication.getName())
+                        .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
         return ResponseEntity.ok(
                 studentProgressService.getProgress(user.getId(), user.getDisplayName()));
     }

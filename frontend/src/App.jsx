@@ -1,8 +1,35 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Component } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/login/LoginPage';
 import AppShell from './components/AppShell';
+
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'monospace' }}>
+          <h2 style={{ color: '#c62828' }}>App Error (Debug)</h2>
+          <pre style={{ background: '#fdecea', padding: 16, borderRadius: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            {String(this.state.error)}
+            {'\n'}
+            {this.state.error?.stack}
+          </pre>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 12 }}>Retry</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function Unauthorized() {
   return (
@@ -15,6 +42,7 @@ function Unauthorized() {
 
 export default function App() {
   return (
+    <AppErrorBoundary>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -32,5 +60,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </AppErrorBoundary>
   );
 }

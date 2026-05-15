@@ -88,7 +88,7 @@ public class AuthService {
     private void addRefreshCookie(HttpServletResponse response, String value, int maxAge) {
         Cookie cookie = new Cookie("refreshToken", value);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         cookie.setPath("/api/v1/auth");
         cookie.setMaxAge(maxAge);
         response.addCookie(cookie);

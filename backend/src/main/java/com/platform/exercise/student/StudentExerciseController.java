@@ -1,8 +1,7 @@
 package com.platform.exercise.student;
 
-import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PageResponse;
-import com.platform.exercise.common.PlatformException;
+import com.platform.exercise.domain.User;
 import com.platform.exercise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -38,8 +37,9 @@ public class StudentExerciseController {
     }
 
     private Long resolveUserId(Authentication authentication) {
+        if (authentication.getPrincipal() instanceof User user) return user.getId();
         return userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND))
-                .getId();
+                .map(User::getId)
+                .orElse(null);
     }
 }

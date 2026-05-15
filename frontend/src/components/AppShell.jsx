@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Component } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { TabProvider, useTab } from '../contexts/TabContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +8,29 @@ import TabBar from './TabBar';
 import Sidebar from './Sidebar';
 import SectionRouter from './SectionRouter';
 
+class TabErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, fontFamily: 'monospace', color: '#c62828' }}>
+          <strong>Tab render error:</strong>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: 8 }}>
+            {String(this.state.error)}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function TabPanel({ tab, isActive, role, collapsed }) {
   const initialPath = getInitialPath(tab.section, role);
   return (
@@ -15,7 +38,9 @@ function TabPanel({ tab, isActive, role, collapsed }) {
       <MemoryRouter initialEntries={[initialPath]}>
         <Sidebar section={tab.section} role={role} collapsed={collapsed} />
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <SectionRouter section={tab.section} role={role} />
+          <TabErrorBoundary>
+            <SectionRouter section={tab.section} role={role} />
+          </TabErrorBoundary>
         </div>
       </MemoryRouter>
     </div>
