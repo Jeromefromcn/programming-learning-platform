@@ -3,6 +3,7 @@ import {
   sectionsForRole,
   sidebarItems,
   getInitialPath,
+  getDefaultSection,
   SECTIONS,
 } from './sectionConfig';
 
@@ -22,6 +23,20 @@ describe('sectionsForRole', () => {
     expect(keys).toEqual([
       'exercises', 'courses', 'categories', 'submissions', 'users', 'settings',
     ]);
+  });
+});
+
+describe('getDefaultSection', () => {
+  test('SUPER_ADMIN defaults to users', () => {
+    expect(getDefaultSection('SUPER_ADMIN')).toBe('users');
+  });
+
+  test('TUTOR defaults to exercises', () => {
+    expect(getDefaultSection('TUTOR')).toBe('exercises');
+  });
+
+  test('STUDENT defaults to exercises', () => {
+    expect(getDefaultSection('STUDENT')).toBe('exercises');
   });
 });
 
@@ -49,6 +64,10 @@ describe('sidebarItems', () => {
       '/tutor/submissions', '/tutor/submissions/import',
     ]);
   });
+
+  test('unknown section returns empty array', () => {
+    expect(sidebarItems('nonexistent', 'TUTOR')).toEqual([]);
+  });
 });
 
 describe('getInitialPath', () => {
@@ -62,5 +81,9 @@ describe('getInitialPath', () => {
 
   test('users starts at /admin/users', () => {
     expect(getInitialPath('users', 'SUPER_ADMIN')).toBe('/admin/users');
+  });
+
+  test('unknown section returns /', () => {
+    expect(getInitialPath('nonexistent', 'TUTOR')).toBe('/');
   });
 });
