@@ -2,26 +2,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/login/LoginPage';
-import StudentPage from './pages/student/StudentPage';
-import ExerciseListPage from './pages/student/ExerciseListPage';
-import ExercisePracticeRouter from './pages/student/ExercisePracticeRouter';
-import ProgressPage from './pages/student/ProgressPage';
-import TutorPage from './pages/tutor/TutorPage';
-import CategoryManagementPage from './pages/tutor/CategoryManagementPage';
-import CourseManagementPage from './pages/tutor/CourseManagementPage';
-import CourseFormPage from './pages/tutor/CourseFormPage';
-import CourseDetailPage from './pages/tutor/CourseDetailPage';
-import ExerciseManagementPage from './pages/tutor/ExerciseManagementPage';
-import ExerciseFormPage from './pages/tutor/ExerciseFormPage';
-import SubmissionImportPage from './pages/tutor/SubmissionImportPage';
-import SubmissionListPage from './pages/tutor/SubmissionListPage';
-import SubmissionDetailPage from './pages/tutor/SubmissionDetailPage';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import GlobalSettingsPage from './pages/admin/GlobalSettingsPage';
+import AppShell from './components/AppShell';
 
 function Unauthorized() {
-  return <div style={{ padding: 32 }}><h2>Access Denied</h2><p>You do not have permission to view this page.</p></div>;
+  return (
+    <div style={{ padding: 32 }}>
+      <h2>Access Denied</h2>
+      <p>You do not have permission to view this page.</p>
+    </div>
+  );
 }
 
 export default function App() {
@@ -31,58 +20,14 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="/student" element={
-            <ProtectedRoute requiredRole="STUDENT"><StudentPage /></ProtectedRoute>
-          }>
-            <Route path="exercises" element={<ExerciseListPage />} />
-            <Route path="exercises/:id/practice" element={<ExercisePracticeRouter />} />
-            <Route path="progress" element={<ProgressPage />} />
-          </Route>
-          <Route path="/tutor" element={
-            <ProtectedRoute requiredRole="TUTOR"><TutorPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/categories" element={
-            <ProtectedRoute requiredRole="TUTOR"><CategoryManagementPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/courses" element={
-            <ProtectedRoute requiredRole="TUTOR"><CourseManagementPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/courses/new" element={
-            <ProtectedRoute requiredRole="TUTOR"><CourseFormPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/courses/:id/edit" element={
-            <ProtectedRoute requiredRole="TUTOR"><CourseFormPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/courses/:id" element={
-            <ProtectedRoute requiredRole="TUTOR"><CourseDetailPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/exercises" element={
-            <ProtectedRoute requiredRole="TUTOR"><ExerciseManagementPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/exercises/new" element={
-            <ProtectedRoute requiredRole="TUTOR"><ExerciseFormPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/exercises/:id/edit" element={
-            <ProtectedRoute requiredRole="TUTOR"><ExerciseFormPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/submissions" element={
-            <ProtectedRoute requiredRole="TUTOR"><SubmissionListPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/submissions/import" element={
-            <ProtectedRoute requiredRole="TUTOR"><SubmissionImportPage /></ProtectedRoute>
-          } />
-          <Route path="/tutor/submissions/:id" element={
-            <ProtectedRoute requiredRole="TUTOR"><SubmissionDetailPage /></ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute requiredRole="SUPER_ADMIN"><AdminDashboardPage /></ProtectedRoute>
-          } />
-          <Route path="/admin/users" element={
-            <ProtectedRoute requiredRole="SUPER_ADMIN"><UserManagementPage /></ProtectedRoute>
-          } />
-          <Route path="/admin/settings" element={
-            <ProtectedRoute requiredRole="SUPER_ADMIN"><GlobalSettingsPage /></ProtectedRoute>
-          } />
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute requiredRole="STUDENT">
+                <AppShell />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
