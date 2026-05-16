@@ -9,4 +9,10 @@ export const userApi = {
     axiosInstance.patch(`/v1/users/${id}/role`, { role }).then(r => r.data),
   updateStatus: (id, status) =>
     axiosInstance.patch(`/v1/users/${id}/status`, { status }).then(r => r.data),
+  importUsers: (users) =>
+    axiosInstance.post('/v1/users/import', { users }).then(r => r.data),
+  changePassword: (data) =>
+    axiosInstance.patch('/v1/users/me/password', data).then(r => r.data),
+  resetPassword: (id) =>
+    axiosInstance.post(`/v1/users/${id}/reset-password`).then(r => r.data),
 };
