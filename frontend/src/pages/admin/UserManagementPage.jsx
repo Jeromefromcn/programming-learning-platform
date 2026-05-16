@@ -18,6 +18,7 @@ export default function UserManagementPage() {
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [resettingId, setResettingId] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -46,6 +47,16 @@ export default function UserManagementPage() {
     if (newStatus === 'DISABLED' && !confirm(`Disable ${u.username}? All active sessions will be invalidated.`)) return;
     await userApi.updateStatus(u.id, newStatus);
     load();
+  }
+
+  async function handleResetPassword(u) {
+    if (!confirm(`Reset ${u.username}'s password to 12345678?`)) return;
+    setResettingId(u.id);
+    try {
+      await userApi.resetPassword(u.id);
+    } finally {
+      setResettingId(null);
+    }
   }
 
   return (
@@ -111,10 +122,17 @@ export default function UserManagementPage() {
                 </td>
                 <td style={{ padding: 8 }}>
                   {u.id !== currentUser?.id && (
-                    <button onClick={() => handleStatusToggle(u)}
-                      style={{ padding: '4px 10px', cursor: 'pointer' }}>
-                      {u.status === 'ACTIVE' ? 'Disable' : 'Enable'}
-                    </button>
+                    <>
+                      <button onClick={() => handleStatusToggle(u)}
+                        style={{ padding: '4px 10px', cursor: 'pointer' }}>
+                        {u.status === 'ACTIVE' ? 'Disable' : 'Enable'}
+                      </button>
+                      <button onClick={() => handleResetPassword(u)}
+                        disabled={resettingId === u.id}
+                        style={{ marginLeft: 8, padding: '4px 10px', cursor: 'pointer', background: '#ef6c00', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12 }}>
+                        {resettingId === u.id ? 'Resetting…' : 'Reset Password'}
+                      </button>
+                    </>
                   )}
                 </td>
               </tr>
