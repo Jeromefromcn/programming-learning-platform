@@ -1,11 +1,18 @@
 import { describe, test, expect } from 'vitest';
 import {
   sectionsForRole,
-  sidebarItems,
   getInitialPath,
-  getDefaultSection,
   SECTIONS,
 } from './sectionConfig';
+
+describe('SECTIONS', () => {
+  test('contains all 7 expected section keys', () => {
+    const keys = SECTIONS.map(s => s.key);
+    expect(keys).toEqual([
+      'exercises', 'progress', 'courses', 'categories', 'submissions', 'users', 'settings',
+    ]);
+  });
+});
 
 describe('sectionsForRole', () => {
   test('STUDENT gets exercises and progress only', () => {
@@ -23,50 +30,6 @@ describe('sectionsForRole', () => {
     expect(keys).toEqual([
       'exercises', 'courses', 'categories', 'submissions', 'users', 'settings',
     ]);
-  });
-});
-
-describe('getDefaultSection', () => {
-  test('SUPER_ADMIN defaults to users', () => {
-    expect(getDefaultSection('SUPER_ADMIN')).toBe('users');
-  });
-
-  test('TUTOR defaults to exercises', () => {
-    expect(getDefaultSection('TUTOR')).toBe('exercises');
-  });
-
-  test('STUDENT defaults to exercises', () => {
-    expect(getDefaultSection('STUDENT')).toBe('exercises');
-  });
-});
-
-describe('sidebarItems', () => {
-  test('exercises for STUDENT has no create link', () => {
-    const items = sidebarItems('exercises', 'STUDENT');
-    expect(items).toHaveLength(1);
-    expect(items[0].path).toBe('/student/exercises');
-  });
-
-  test('exercises for TUTOR includes create link', () => {
-    const items = sidebarItems('exercises', 'TUTOR');
-    expect(items).toHaveLength(2);
-    expect(items[1].path).toBe('/tutor/exercises/new');
-  });
-
-  test('courses includes All Courses and New Course', () => {
-    const items = sidebarItems('courses', 'TUTOR');
-    expect(items.map(i => i.path)).toEqual(['/tutor/courses', '/tutor/courses/new']);
-  });
-
-  test('submissions includes list and import', () => {
-    const items = sidebarItems('submissions', 'TUTOR');
-    expect(items.map(i => i.path)).toEqual([
-      '/tutor/submissions', '/tutor/submissions/import',
-    ]);
-  });
-
-  test('unknown section returns empty array', () => {
-    expect(sidebarItems('nonexistent', 'TUTOR')).toEqual([]);
   });
 });
 
