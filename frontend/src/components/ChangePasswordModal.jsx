@@ -31,8 +31,8 @@ export default function ChangePasswordModal({ onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <form onSubmit={submit} style={{ background: '#fff', borderRadius: 8, padding: 32, width: 400 }}>
-        <h3 style={{ marginBottom: 16 }}>Change Password</h3>
+      <form role="dialog" aria-modal="true" aria-labelledby="cpw-title" onSubmit={submit} style={{ background: '#fff', borderRadius: 8, padding: 32, width: 400 }}>
+        <h3 id="cpw-title" style={{ marginBottom: 16 }}>Change Password</h3>
         {error && <div role="alert" style={{ marginBottom: 12, color: '#c62828' }}>{error}</div>}
         {[
           ['currentPassword', 'Current Password', 'current-password'],

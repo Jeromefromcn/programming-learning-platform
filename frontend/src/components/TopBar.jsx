@@ -36,7 +36,7 @@ export default function TopBar({ username, role, collapsed, onToggleSidebar, onL
             onClick={() => setMenuOpen(o => !o)}
             aria-label="User menu"
             aria-expanded={menuOpen}
-            aria-haspopup="true"
+            aria-haspopup="menu"
             style={{
               background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff',
               padding: '5px 12px', borderRadius: 4, cursor: 'pointer',
