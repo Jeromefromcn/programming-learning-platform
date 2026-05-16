@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import BlocklyAuthoringWorkspace, { AVAILABLE_BLOCKS, BLOCK_CATEGORIES } from './BlocklyAuthoringWorkspace';
 
 function renderWorkspace(overrides = {}) {
@@ -109,5 +109,64 @@ describe('Block category accordion', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Deselect all', hidden: true }));
     const called = props.onAllowedBlocksChange.mock.calls[0][0];
     allControl.forEach(t => expect(called).not.toContain(t));
+  });
+});
+
+describe('Run button', () => {
+  let workerInstance;
+
+  beforeEach(() => {
+    workerInstance = {
+      postMessage: vi.fn(),
+      terminate: vi.fn(),
+      onmessage: null,
+      onerror: null,
+    };
+    // Use a proper constructor function so `new Worker(...)` works in jsdom
+    const WorkerMock = vi.fn(function () { return workerInstance; });
+    vi.stubGlobal('Worker', WorkerMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test('renders a Run button', () => {
+    renderWorkspace();
+    expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
+  });
+
+  test('clicking Run spawns a Worker and posts the JS code', () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    expect(global.Worker).toHaveBeenCalled();
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({ code: expect.any(String) });
+  });
+
+  test('shows output after worker responds', async () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { output: 'hello world', error: null } });
+    });
+    expect(screen.getByText('hello world')).toBeInTheDocument();
+  });
+
+  test('shows error output when worker reports error', async () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { output: null, error: 'ReferenceError: x is not defined' } });
+    });
+    expect(screen.getByText(/ReferenceError/)).toBeInTheDocument();
+  });
+
+  test('shows TLE warning after 3 seconds', async () => {
+    vi.useFakeTimers();
+    renderWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => { vi.advanceTimersByTime(3000); });
+    expect(screen.getByText(/Time Limit Exceeded/i)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Blockly from 'blockly';
 import 'blockly/blocks';
+import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
 
 export const AVAILABLE_BLOCKS = [
@@ -52,6 +53,11 @@ export default function BlocklyAuthoringWorkspace({
   const workspaceRef = useRef(null);
   const preservedXmlRef = useRef(null);
   const [pythonCode, setPythonCode] = useState('');
+  const [output, setOutput] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [tle, setTle] = useState(false);
+  const workerRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   // Rebuild workspace when allowedBlocks changes
   useEffect(() => {
@@ -108,6 +114,13 @@ export default function BlocklyAuthoringWorkspace({
     };
   }, [allowedBlocks]); // Re-run when allowedBlocks changes
 
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+      clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   function toggleBlock(type, checked) {
     const next = checked
       ? [...allowedBlocks, type]
@@ -121,6 +134,44 @@ export default function BlocklyAuthoringWorkspace({
       ? [...new Set([...allowedBlocks, ...catTypes])]
       : allowedBlocks.filter(t => !catTypes.includes(t));
     onAllowedBlocksChange?.(next);
+  }
+
+  function handleRun() {
+    if (!workspaceRef.current) return;
+    setRunning(true);
+    setOutput(null);
+    setTle(false);
+    if (workerRef.current) workerRef.current.terminate();
+    clearTimeout(timeoutRef.current);
+
+    const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+    const worker = new Worker(
+      new URL('../../workers/blocklyRunner.worker.js', import.meta.url)
+    );
+    workerRef.current = worker;
+
+    timeoutRef.current = setTimeout(() => {
+      worker.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+    }, 3000);
+
+    worker.onmessage = ({ data: { output, error } }) => {
+      clearTimeout(timeoutRef.current);
+      workerRef.current = null;
+      setRunning(false);
+      setOutput(error ? `Error: ${error}` : (output ?? '(no output)'));
+    };
+
+    worker.onerror = (e) => {
+      clearTimeout(timeoutRef.current);
+      workerRef.current = null;
+      setRunning(false);
+      setOutput(`Error: ${e.message}`);
+    };
+
+    worker.postMessage({ code: jsCode });
   }
 
   return (
@@ -188,6 +239,37 @@ export default function BlocklyAuthoringWorkspace({
 
       {/* Blockly workspace */}
       <div ref={containerRef} style={{ height: 400, border: '1px solid #ddd', borderRadius: 4 }} />
+
+      {/* Run controls */}
+      <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={handleRun}
+          disabled={running}
+          style={{
+            background: '#1976d2', color: '#fff', border: 'none',
+            borderRadius: 4, padding: '6px 18px', cursor: running ? 'default' : 'pointer', fontSize: 14,
+          }}
+        >
+          {running ? 'Running…' : '▶ Run'}
+        </button>
+      </div>
+
+      {tle && (
+        <div style={{ marginTop: 8, background: '#fff3e0', border: '1px solid #ffb74d', borderRadius: 4, padding: '8px 12px', fontSize: 13 }}>
+          Time Limit Exceeded (3 seconds)
+        </div>
+      )}
+
+      {output !== null && (
+        <pre style={{
+          marginTop: 8, background: '#1e1e1e', color: '#d4d4d4',
+          fontFamily: 'monospace', fontSize: 13, padding: 12,
+          borderRadius: 4, overflow: 'auto', maxHeight: 200,
+        }}>
+          {output}
+        </pre>
+      )}
 
       {/* Python code panel */}
       {showCodeView && (
