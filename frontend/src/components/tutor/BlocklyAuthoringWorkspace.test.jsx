@@ -143,6 +143,14 @@ describe('Run button', () => {
     expect(workerInstance.postMessage).toHaveBeenCalledWith({ code: expect.any(String) });
   });
 
+  test('button is disabled while running', () => {
+    renderWorkspace();
+    const btn = screen.getByRole('button', { name: /▶ Run/i });
+    expect(btn).not.toBeDisabled();
+    fireEvent.click(btn);
+    expect(btn).toBeDisabled();
+  });
+
   test('shows output after worker responds', async () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));

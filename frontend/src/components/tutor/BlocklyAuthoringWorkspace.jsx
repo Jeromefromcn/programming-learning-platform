@@ -157,11 +157,11 @@ export default function BlocklyAuthoringWorkspace({
       setTle(true);
     }, 3000);
 
-    worker.onmessage = ({ data: { output, error } }) => {
+    worker.onmessage = ({ data: { output: msgOutput, error } }) => {
       clearTimeout(timeoutRef.current);
       workerRef.current = null;
       setRunning(false);
-      setOutput(error ? `Error: ${error}` : (output ?? '(no output)'));
+      setOutput(error ? `Error: ${error}` : (msgOutput ?? '(no output)'));
     };
 
     worker.onerror = (e) => {
@@ -248,7 +248,7 @@ export default function BlocklyAuthoringWorkspace({
           disabled={running}
           style={{
             background: '#1976d2', color: '#fff', border: 'none',
-            borderRadius: 4, padding: '6px 18px', cursor: running ? 'default' : 'pointer', fontSize: 14,
+            borderRadius: 4, padding: '6px 18px', cursor: running ? 'not-allowed' : 'pointer', fontSize: 14,
           }}
         >
           {running ? 'Running…' : '▶ Run'}
