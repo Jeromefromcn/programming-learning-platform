@@ -68,6 +68,8 @@ public class UserService {
         for (CreateUserRequest r : req.users()) {
             if (r.username() == null || r.username().isBlank()) {
                 errors.add(new ImportRowError(rowNum, "username", "must not be blank"));
+            } else if (r.username().length() < 3) {
+                errors.add(new ImportRowError(rowNum, "username", "min 3 characters"));
             } else if (r.username().length() > 64) {
                 errors.add(new ImportRowError(rowNum, "username", "max 64 characters"));
             } else if (!seenUsernames.add(r.username())) {
