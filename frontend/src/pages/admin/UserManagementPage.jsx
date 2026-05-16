@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/userApi';
 import CreateUserModal from '../../components/admin/CreateUserModal';
+import ImportUsersModal from '../../components/admin/ImportUsersModal';
 
 const ROLE_BADGE = { STUDENT: '#1976d2', TUTOR: '#388e3c', SUPER_ADMIN: '#7b1fa2' };
 const STATUS_BADGE = { ACTIVE: '#2e7d32', DISABLED: '#c62828' };
@@ -14,6 +15,7 @@ export default function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function load() {
@@ -49,10 +51,16 @@ export default function UserManagementPage() {
     <div style={{ padding: 32 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>User Management</h1>
-        <button onClick={() => setShowCreate(true)}
-          style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}>
-          + New User
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowImport(true)}
+            style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}>
+            Import Users
+          </button>
+          <button onClick={() => setShowCreate(true)}
+            style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}>
+            + New User
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
@@ -121,6 +129,11 @@ export default function UserManagementPage() {
         <CreateUserModal
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); load(); }} />
+      )}
+      {showImport && (
+        <ImportUsersModal
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); load(); }} />
       )}
     </div>
   );
