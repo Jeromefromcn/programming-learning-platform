@@ -93,7 +93,9 @@ describe('Block category accordion', () => {
     // pick the first "Select all" button which belongs to the Control category
     const selectAllButtons = screen.getAllByRole('button', { name: 'Select all', hidden: true });
     fireEvent.click(selectAllButtons[0]);
-    expect(props.onAllowedBlocksChange).toHaveBeenCalledWith(
+    const called = props.onAllowedBlocksChange.mock.calls[0][0];
+    expect(called).toHaveLength(4);
+    expect(called).toEqual(
       expect.arrayContaining(['controls_if', 'controls_repeat_ext', 'controls_for', 'controls_whileUntil'])
     );
   });
@@ -103,6 +105,7 @@ describe('Block category accordion', () => {
     const props = renderWorkspace({ allowedBlocks: allControl });
     fireEvent.click(screen.getByText(/Allowed Blocks/));
     fireEvent.click(screen.getByText(/Control \(4\/4\)/));
+    // hidden: true needed because jsdom renders <details> children regardless of open state
     fireEvent.click(screen.getByRole('button', { name: 'Deselect all', hidden: true }));
     const called = props.onAllowedBlocksChange.mock.calls[0][0];
     allControl.forEach(t => expect(called).not.toContain(t));
