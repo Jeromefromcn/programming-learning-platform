@@ -62,7 +62,7 @@ public class UserController {
             Authentication authentication) {
         Long currentUserId = resolveCurrentUserId(authentication);
         userService.resetPassword(id, currentUserId);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")

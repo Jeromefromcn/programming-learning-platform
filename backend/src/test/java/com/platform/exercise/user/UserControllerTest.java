@@ -210,10 +210,10 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
-    void resetPassword_validTarget_returns200AndSetsKnownHash() throws Exception {
+    void resetPassword_validTarget_returns204AndSetsKnownHash() throws Exception {
         User target = userRepository.findByUsername("student1").orElseThrow();
         mockMvc.perform(post("/v1/users/" + target.getId() + "/reset-password"))
-            .andExpect(status().isOk());
+            .andExpect(status().isNoContent());
         User updated = userRepository.findByUsername("student1").orElseThrow();
         assertTrue(passwordEncoder.matches("12345678", updated.getPasswordHash()));
     }
