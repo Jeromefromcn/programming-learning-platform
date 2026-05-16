@@ -160,13 +160,13 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
-    void changePassword_validRequest_returns200AndUpdatesHash() throws Exception {
+    void changePassword_validRequest_returns204AndUpdatesHash() throws Exception {
         mockMvc.perform(patch("/v1/users/me/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"currentPassword":"password123","newPassword":"newpassword99"}
                         """))
-            .andExpect(status().isOk());
+            .andExpect(status().isNoContent());
         User updated = userRepository.findByUsername("admin_test").orElseThrow();
         assertTrue(passwordEncoder.matches("newpassword99", updated.getPasswordHash()));
     }
@@ -185,13 +185,13 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = "student1", roles = "STUDENT")
-    void changePassword_asStudent_returns200() throws Exception {
+    void changePassword_asStudent_returns204() throws Exception {
         mockMvc.perform(patch("/v1/users/me/password")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"currentPassword":"password123","newPassword":"newpassword99"}
                         """))
-            .andExpect(status().isOk());
+            .andExpect(status().isNoContent());
         User updated = userRepository.findByUsername("student1").orElseThrow();
         assertTrue(passwordEncoder.matches("newpassword99", updated.getPasswordHash()));
     }

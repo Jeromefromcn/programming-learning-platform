@@ -53,7 +53,7 @@ public class UserController {
             Authentication authentication) {
         Long currentUserId = resolveCurrentUserId(authentication);
         userService.changePassword(currentUserId, req);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/status")
