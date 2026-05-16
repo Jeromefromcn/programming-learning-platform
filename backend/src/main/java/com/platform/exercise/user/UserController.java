@@ -34,6 +34,11 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(req));
     }
 
+    @PostMapping("/import")
+    public ResponseEntity<ImportUsersResult> importUsers(@Valid @RequestBody ImportUsersRequest req) {
+        return ResponseEntity.ok(userService.importUsers(req));
+    }
+
     @PatchMapping("/{id}/role")
     public ResponseEntity<UserDto> updateRole(
             @PathVariable Long id,

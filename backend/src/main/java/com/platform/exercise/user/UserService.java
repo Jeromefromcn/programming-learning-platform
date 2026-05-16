@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +58,57 @@ public class UserService {
         user.setRole(Role.valueOf(req.role()));
         user.setStatus(UserStatus.ACTIVE);
         return UserDto.from(userRepository.save(user));
+    }
+
+    @Transactional
+    public ImportUsersResult importUsers(ImportUsersRequest req) {
+        List<ImportRowError> errors = new ArrayList<>();
+        Set<String> seenUsernames = new HashSet<>();
+        int rowNum = 2; // Excel row 1 = header, row 2 = first data row
+        for (CreateUserRequest r : req.users()) {
+            if (r.username() == null || r.username().isBlank()) {
+                errors.add(new ImportRowError(rowNum, "username", "must not be blank"));
+            } else if (r.username().length() > 64) {
+                errors.add(new ImportRowError(rowNum, "username", "max 64 characters"));
+            } else if (!seenUsernames.add(r.username())) {
+                errors.add(new ImportRowError(rowNum, "username", "duplicate within this file"));
+            } else if (userRepository.existsByUsername(r.username())) {
+                errors.add(new ImportRowError(rowNum, "username", "already taken"));
+            }
+            if (r.displayName() == null || r.displayName().isBlank()) {
+                errors.add(new ImportRowError(rowNum, "displayName", "must not be blank"));
+            } else if (r.displayName().length() > 128) {
+                errors.add(new ImportRowError(rowNum, "displayName", "max 128 characters"));
+            }
+            if (r.password() == null || r.password().isBlank()) {
+                errors.add(new ImportRowError(rowNum, "password", "must not be blank"));
+            } else if (r.password().length() < 8) {
+                errors.add(new ImportRowError(rowNum, "password", "min 8 characters"));
+            }
+            if (r.role() == null || r.role().isBlank()) {
+                errors.add(new ImportRowError(rowNum, "role", "must not be blank"));
+            } else {
+                try {
+                    Role.valueOf(r.role());
+                } catch (IllegalArgumentException e) {
+                    errors.add(new ImportRowError(rowNum, "role", "must be STUDENT, TUTOR, or SUPER_ADMIN"));
+                }
+            }
+            rowNum++;
+        }
+        if (!errors.isEmpty()) {
+            throw new ImportValidationException(errors);
+        }
+        for (CreateUserRequest r : req.users()) {
+            User user = new User();
+            user.setUsername(r.username());
+            user.setDisplayName(r.displayName());
+            user.setPasswordHash(passwordEncoder.encode(r.password()));
+            user.setRole(Role.valueOf(r.role()));
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+        }
+        return new ImportUsersResult(req.users().size());
     }
 
     @Transactional

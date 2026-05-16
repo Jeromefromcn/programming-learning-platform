@@ -16,6 +16,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -111,5 +113,48 @@ class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"status\":\"DISABLED\"}"))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void importUsers_validRequest_returns200WithCount() throws Exception {
+        mockMvc.perform(post("/v1/users/import")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"users":[{"username":"imported1","displayName":"Imported One",\
+                        "password":"pass1234","role":"STUDENT"}]}
+                        """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.imported").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void importUsers_duplicateUsername_returns400WithRowErrors() throws Exception {
+        mockMvc.perform(post("/v1/users/import")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"users":[{"username":"student1","displayName":"Dup",\
+                        "password":"pass1234","role":"STUDENT"}]}
+                        """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("IMPORT_VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.error.rows[0].row").value(2))
+            .andExpect(jsonPath("$.error.rows[0].field").value("username"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void importUsers_allOrNothing_noUsersCreatedOnError() throws Exception {
+        mockMvc.perform(post("/v1/users/import")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"users":[
+                          {"username":"valid_new","displayName":"Valid","password":"pass1234","role":"STUDENT"},
+                          {"username":"student1","displayName":"Dup","password":"pass1234","role":"STUDENT"}
+                        ]}
+                        """))
+            .andExpect(status().isBadRequest());
+        assertFalse(userRepository.existsByUsername("valid_new"));
     }
 }
