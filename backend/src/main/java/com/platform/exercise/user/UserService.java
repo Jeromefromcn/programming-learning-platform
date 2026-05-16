@@ -133,6 +133,18 @@ public class UserService {
     }
 
     @Transactional
+    public void resetPassword(Long targetId, Long requesterId) {
+        if (targetId.equals(requesterId)) {
+            throw new PlatformException(ErrorCode.CANNOT_MODIFY_SELF,
+                "Cannot reset your own password via this endpoint");
+        }
+        User user = userRepository.findById(targetId)
+            .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
+        user.setPasswordHash(passwordEncoder.encode("12345678"));
+        userRepository.save(user);
+    }
+
+    @Transactional
     public UserDto updateStatus(Long id, UpdateStatusRequest req, Long currentUserId) {
         if (id.equals(currentUserId)) {
             throw new PlatformException(ErrorCode.VALIDATION_ERROR, "Cannot change your own status");

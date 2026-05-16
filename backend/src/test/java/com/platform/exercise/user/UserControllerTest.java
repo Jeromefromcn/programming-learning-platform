@@ -207,4 +207,29 @@ class UserControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void resetPassword_validTarget_returns200AndSetsKnownHash() throws Exception {
+        User target = userRepository.findByUsername("student1").orElseThrow();
+        mockMvc.perform(post("/v1/users/" + target.getId() + "/reset-password"))
+            .andExpect(status().isOk());
+        User updated = userRepository.findByUsername("student1").orElseThrow();
+        assertTrue(passwordEncoder.matches("12345678", updated.getPasswordHash()));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void resetPassword_self_returns400() throws Exception {
+        mockMvc.perform(post("/v1/users/" + adminId + "/reset-password"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("CANNOT_MODIFY_SELF"));
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void resetPassword_asStudent_returns403() throws Exception {
+        mockMvc.perform(post("/v1/users/1/reset-password"))
+            .andExpect(status().isForbidden());
+    }
 }

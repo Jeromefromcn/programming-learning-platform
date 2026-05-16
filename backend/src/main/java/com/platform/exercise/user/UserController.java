@@ -56,6 +56,15 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<Void> resetPassword(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long currentUserId = resolveCurrentUserId(authentication);
+        userService.resetPassword(id, currentUserId);
+        return ResponseEntity.ok().build();
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<UserDto> updateStatus(
             @PathVariable Long id,
