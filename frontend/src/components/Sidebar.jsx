@@ -1,10 +1,11 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { sidebarItems } from './sectionConfig';
+import { SECTIONS } from './sectionConfig';
 
-export default function Sidebar({ section, role, collapsed }) {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const items = sidebarItems(section, role);
+const SECTION_MAP = Object.fromEntries(SECTIONS.map(s => [s.key, s]));
+
+export default function Sidebar({ menuSections, activeSection, openTabSections, collapsed, onOpen }) {
+  const items = menuSections
+    .map(key => SECTION_MAP[key])
+    .filter(Boolean);
 
   if (collapsed) {
     return (
@@ -14,22 +15,25 @@ export default function Sidebar({ section, role, collapsed }) {
         padding: '8px 0', gap: 4,
       }}>
         {items.map(item => {
-          const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
+          const isActive = item.key === activeSection;
+          const isOpen = openTabSections.has(item.key);
           return (
-            <div
-              key={item.path}
+            <button
+              key={item.key}
               title={item.label}
-              onClick={() => navigate(item.path)}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onOpen(item.key)}
               style={{
                 width: 34, height: 34, display: 'flex', alignItems: 'center',
                 justifyContent: 'center', borderRadius: 6, cursor: 'pointer',
                 background: isActive ? 'rgba(25,118,210,.45)' : 'transparent',
-                color: isActive ? '#fff' : 'rgba(255,255,255,.6)',
-                fontSize: 16,
+                color: isActive ? '#fff' : isOpen ? '#90caf9' : 'rgba(255,255,255,.6)',
+                fontSize: 16, border: 'none',
               }}
             >
               {item.icon ?? '•'}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -42,20 +46,25 @@ export default function Sidebar({ section, role, collapsed }) {
       display: 'flex', flexDirection: 'column',
     }}>
       {items.map(item => {
-        const isActive = pathname === item.path || pathname.startsWith(item.path + '/');
+        const isActive = item.key === activeSection;
+        const isOpen = openTabSections.has(item.key);
         return (
           <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
+            key={item.key}
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => onOpen(item.key)}
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              color: isActive ? '#fff' : 'rgba(255,255,255,.7)',
+              color: isActive ? '#fff' : isOpen ? '#90caf9' : 'rgba(255,255,255,.7)',
               background: isActive ? 'rgba(25,118,210,.35)' : 'transparent',
-              borderLeft: isActive ? '3px solid #42a5f5' : '3px solid transparent',
+              borderLeft: isActive
+                ? '3px solid #42a5f5'
+                : isOpen ? '3px solid rgba(25,118,210,.35)' : '3px solid transparent',
               fontSize: 13, padding: '10px 13px',
               border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left',
             }}
           >
+            <span aria-hidden="true">{item.icon}</span>
             {item.label}
           </button>
         );
