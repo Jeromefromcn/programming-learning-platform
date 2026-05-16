@@ -64,4 +64,63 @@ class SettingsControllerTest {
             .andExpect(jsonPath("$.currentState").isBoolean())
             .andExpect(jsonPath("$.unenrolledStudentCount").isNumber());
     }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void getMenuConfig_asStudent_returnsSections() throws Exception {
+        mockMvc.perform(get("/v1/settings/menu-config"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sections").isArray())
+            .andExpect(jsonPath("$.sections[0]").value("exercises"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    void getMenuConfigAll_asAdmin_returnsAllRoles() throws Exception {
+        mockMvc.perform(get("/v1/settings/menu-config/all"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.STUDENT").isArray())
+            .andExpect(jsonPath("$.TUTOR").isArray())
+            .andExpect(jsonPath("$.SUPER_ADMIN").isArray());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void getMenuConfigAll_asTutor_returns403() throws Exception {
+        mockMvc.perform(get("/v1/settings/menu-config/all"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    void putMenuConfig_asAdmin_returns204() throws Exception {
+        String body = "{\"STUDENT\":[\"exercises\",\"progress\"]," +
+            "\"TUTOR\":[\"exercises\",\"courses\",\"categories\",\"submissions\"]," +
+            "\"SUPER_ADMIN\":[\"exercises\",\"courses\",\"categories\",\"submissions\",\"users\",\"settings\"]}";
+        mockMvc.perform(put("/v1/settings/menu-config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void putMenuConfig_asTutor_returns403() throws Exception {
+        mockMvc.perform(put("/v1/settings/menu-config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"TUTOR\":[\"exercises\"]}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    void putMenuConfig_missingExercises_returns400() throws Exception {
+        String body = "{\"STUDENT\":[\"progress\"]," +
+            "\"TUTOR\":[\"exercises\",\"courses\"]," +
+            "\"SUPER_ADMIN\":[\"exercises\",\"users\",\"settings\"]}";
+        mockMvc.perform(put("/v1/settings/menu-config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+    }
 }
