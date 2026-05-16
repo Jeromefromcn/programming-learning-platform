@@ -84,6 +84,9 @@ export default function GlobalSettingsPage() {
       setFullConfig(JSON.parse(JSON.stringify(editConfig)));
       setToast('Menu configuration saved');
       setTimeout(() => setToast(''), 4000);
+    } catch {
+      setToast('Failed to save — please try again');
+      setTimeout(() => setToast(''), 4000);
     } finally {
       setMenuSaving(false);
     }
