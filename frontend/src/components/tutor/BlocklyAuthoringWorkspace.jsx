@@ -3,6 +3,7 @@ import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
+import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 
 export const AVAILABLE_BLOCKS = [
   { type: 'controls_if', label: 'If/Else', category: 'Control' },
@@ -107,6 +108,10 @@ export default function BlocklyAuthoringWorkspace({
         // Ignore transient errors during block drag
       }
     });
+
+    setTimeout(() => {
+      if (containerRef.current) applyTrashcanStyles(containerRef.current);
+    }, 0);
 
     return () => {
       workspace.dispose();
