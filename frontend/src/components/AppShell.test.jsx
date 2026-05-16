@@ -60,25 +60,16 @@ function setup(role, menuSections) {
   return render(<AppShell />);
 }
 
-test('opens first section in menuSections as default tab', async () => {
+test('no tab is opened by default after login', () => {
   setup('TUTOR', ['exercises', 'courses']);
-  // Tab with section name should appear in TabBar
-  expect(await screen.findByTestId('tab')).toHaveTextContent('exercises');
-});
-
-test('SUPER_ADMIN default tab is first in their menuSections', async () => {
-  setup('SUPER_ADMIN', ['exercises', 'courses', 'users', 'settings']);
-  // First tab should be exercises (first in menuSections)
-  const tabs = await screen.findAllByTestId('tab');
-  expect(tabs[0]).toHaveTextContent('exercises');
+  expect(screen.queryAllByTestId('tab')).toHaveLength(0);
 });
 
 test('clicking sidebar section opens tab', async () => {
   setup('TUTOR', ['exercises', 'courses']);
-  await screen.findByTestId('tab'); // wait for initial tab
-  await userEvent.click(screen.getByText('courses'));
+  await userEvent.click(screen.getByText('exercises'));
   const tabs = screen.getAllByTestId('tab');
-  expect(tabs.some(t => t.textContent === 'courses')).toBe(true);
+  expect(tabs.some(t => t.textContent === 'exercises')).toBe(true);
 });
 
 test('renders username from auth context', async () => {
@@ -86,8 +77,7 @@ test('renders username from auth context', async () => {
   expect(await screen.findByTestId('username')).toHaveTextContent('alice');
 });
 
-test('sidebar is rendered at AppShell level (not per tab)', async () => {
+test('sidebar is rendered at AppShell level (not per tab)', () => {
   setup('TUTOR', ['exercises', 'courses']);
-  await screen.findByTestId('tab'); // wait for initial tab to render
   expect(screen.getByTestId('sidebar')).toBeInTheDocument();
 });

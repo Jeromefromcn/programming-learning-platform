@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, Component } from 'react';
-import { MemoryRouter, UNSAFE_LocationContext } from 'react-router-dom';
+import { useState, Component } from 'react';
+import { MemoryRouter, UNSAFE_LocationContext, UNSAFE_RouteContext } from 'react-router-dom';
 import { TabProvider, useTab } from '../contexts/TabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { getInitialPath } from './sectionConfig';
@@ -35,6 +35,7 @@ function TabPanel({ tab, isActive, role }) {
   const initialPath = getInitialPath(tab.section, role);
   return (
     <div style={{ display: isActive ? 'flex' : 'none', flex: 1, overflow: 'hidden' }}>
+      <UNSAFE_RouteContext.Provider value={{ outlet: null, matches: [], isDataRoute: false }}>
       <UNSAFE_LocationContext.Provider value={null}>
         <MemoryRouter initialEntries={[initialPath]}>
           <div style={{ flex: 1, overflow: 'auto' }}>
@@ -44,6 +45,7 @@ function TabPanel({ tab, isActive, role }) {
           </div>
         </MemoryRouter>
       </UNSAFE_LocationContext.Provider>
+      </UNSAFE_RouteContext.Provider>
     </div>
   );
 }
@@ -54,14 +56,6 @@ function AppShellInner() {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar_collapsed') === 'true'
   );
-  const initializedRef = useRef(false);
-
-  useEffect(() => {
-    if (user && !initializedRef.current && menuSections.length > 0) {
-      initializedRef.current = true;
-      openTab(menuSections[0]);
-    }
-  }, [user, menuSections]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleToggle() {
     setCollapsed(v => {
