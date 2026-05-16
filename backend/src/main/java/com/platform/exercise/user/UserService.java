@@ -122,6 +122,17 @@ public class UserService {
     }
 
     @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest req) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
+            throw new PlatformException(ErrorCode.WRONG_CURRENT_PASSWORD, "Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        userRepository.save(user);
+    }
+
+    @Transactional
     public UserDto updateStatus(Long id, UpdateStatusRequest req, Long currentUserId) {
         if (id.equals(currentUserId)) {
             throw new PlatformException(ErrorCode.VALIDATION_ERROR, "Cannot change your own status");

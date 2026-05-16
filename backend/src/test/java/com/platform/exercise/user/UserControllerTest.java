@@ -157,4 +157,40 @@ class UserControllerTest {
             .andExpect(status().isBadRequest());
         assertFalse(userRepository.existsByUsername("valid_new"));
     }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void changePassword_validRequest_returns200AndUpdatesHash() throws Exception {
+        mockMvc.perform(patch("/v1/users/me/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"currentPassword":"password123","newPassword":"newpassword99"}
+                        """))
+            .andExpect(status().isOk());
+        User updated = userRepository.findByUsername("admin_test").orElseThrow();
+        assertTrue(passwordEncoder.matches("newpassword99", updated.getPasswordHash()));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void changePassword_wrongCurrentPassword_returns400() throws Exception {
+        mockMvc.perform(patch("/v1/users/me/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"currentPassword":"wrongpassword","newPassword":"newpassword99"}
+                        """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("WRONG_CURRENT_PASSWORD"));
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void changePassword_asStudent_returns200() throws Exception {
+        mockMvc.perform(patch("/v1/users/me/password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"currentPassword":"password123","newPassword":"newpassword99"}
+                        """))
+            .andExpect(status().isOk());
+    }
 }

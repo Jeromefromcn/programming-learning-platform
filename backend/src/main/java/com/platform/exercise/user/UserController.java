@@ -46,6 +46,16 @@ public class UserController {
         return ResponseEntity.ok(userService.updateRole(id, req));
     }
 
+    @PatchMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest req,
+            Authentication authentication) {
+        Long currentUserId = resolveCurrentUserId(authentication);
+        userService.changePassword(currentUserId, req);
+        return ResponseEntity.ok().build();
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<UserDto> updateStatus(
             @PathVariable Long id,
