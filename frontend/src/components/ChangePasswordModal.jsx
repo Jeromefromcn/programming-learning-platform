@@ -4,6 +4,7 @@ import { userApi } from '../api/userApi';
 export default function ChangePasswordModal({ onClose }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
 
   function update(field) {
@@ -20,7 +21,8 @@ export default function ChangePasswordModal({ onClose }) {
     setSaving(true);
     try {
       await userApi.changePassword({ currentPassword: form.currentPassword, newPassword: form.newPassword });
-      onClose();
+      setSuccess(true);
+      setTimeout(onClose, 800);
     } catch (err) {
       const code = err.response?.data?.error?.code;
       setError(code === 'WRONG_CURRENT_PASSWORD' ? 'Current password is incorrect' : 'Failed to change password');
@@ -33,6 +35,7 @@ export default function ChangePasswordModal({ onClose }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
       <form role="dialog" aria-modal="true" aria-labelledby="cpw-title" onSubmit={submit} style={{ background: '#fff', borderRadius: 8, padding: 32, width: 400 }}>
         <h3 id="cpw-title" style={{ marginBottom: 16 }}>Change Password</h3>
+        {success && <div role="status" style={{ marginBottom: 12, color: '#2e7d32' }}>Password changed successfully</div>}
         {error && <div role="alert" style={{ marginBottom: 12, color: '#c62828' }}>{error}</div>}
         {[
           ['currentPassword', 'Current Password', 'current-password'],

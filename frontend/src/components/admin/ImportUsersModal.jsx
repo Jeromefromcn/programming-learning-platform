@@ -16,7 +16,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
     XLSX.utils.book_append_sheet(wb, usersSheet, 'Users');
     const instrSheet = XLSX.utils.aoa_to_sheet([
       ['Field', 'Required', 'Rules', 'Valid Values'],
-      ['username', 'Yes', 'Unique, max 64 characters', ''],
+      ['username', 'Yes', 'Unique, min 3 chars, max 64 chars', ''],
       ['displayName', 'Yes', 'Max 128 characters', ''],
       ['password', 'Yes', 'Min 8 characters', ''],
       ['role', 'Yes', 'One of the valid values', 'STUDENT / TUTOR / SUPER_ADMIN'],
