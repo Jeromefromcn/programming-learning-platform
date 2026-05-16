@@ -54,6 +54,11 @@ export default function UserManagementPage() {
     setResettingId(u.id);
     try {
       await userApi.resetPassword(u.id);
+      setToast(`${u.username}'s password has been reset`);
+      setTimeout(() => setToast(''), 4000);
+    } catch {
+      setToast('Failed to reset password — please try again');
+      setTimeout(() => setToast(''), 4000);
     } finally {
       setResettingId(null);
     }
