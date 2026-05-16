@@ -3,6 +3,7 @@ import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
+import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -62,6 +63,10 @@ export default function BlocklyPracticePage({ exercise }) {
         } catch { /* ignore transient errors */ }
       });
     }
+
+    setTimeout(() => {
+      if (containerRef.current) applyTrashcanStyles(containerRef.current);
+    }, 0);
 
     return () => { workspace.dispose(); workspaceRef.current = null; };
   }, []);
