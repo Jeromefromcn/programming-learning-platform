@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Component } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, UNSAFE_LocationContext } from 'react-router-dom';
 import { TabProvider, useTab } from '../contexts/TabContext';
 import { useAuth } from '../contexts/AuthContext';
 import { sectionsForRole, getInitialPath, getDefaultSection } from './sectionConfig';
@@ -33,16 +33,20 @@ class TabErrorBoundary extends Component {
 
 function TabPanel({ tab, isActive, role, collapsed }) {
   const initialPath = getInitialPath(tab.section, role);
+  // UNSAFE_LocationContext is set to null so MemoryRouter does not see the outer
+  // BrowserRouter and avoids the "cannot render Router inside another Router" error.
   return (
     <div style={{ display: isActive ? 'flex' : 'none', flex: 1, overflow: 'hidden' }}>
-      <MemoryRouter initialEntries={[initialPath]}>
-        <Sidebar section={tab.section} role={role} collapsed={collapsed} />
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <TabErrorBoundary>
-            <SectionRouter section={tab.section} role={role} />
-          </TabErrorBoundary>
-        </div>
-      </MemoryRouter>
+      <UNSAFE_LocationContext.Provider value={null}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <Sidebar section={tab.section} role={role} collapsed={collapsed} />
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            <TabErrorBoundary>
+              <SectionRouter section={tab.section} role={role} />
+            </TabErrorBoundary>
+          </div>
+        </MemoryRouter>
+      </UNSAFE_LocationContext.Provider>
     </div>
   );
 }
@@ -76,11 +80,6 @@ function AppShellInner() {
 
   if (!user) return null;
 
-  const availableSections = sectionsForRole(user.role);
-  const openSections = availableSections
-    .map(s => s.key)
-    .filter(key => !tabs.some(t => t.section === key));
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <TopBar
@@ -93,10 +92,8 @@ function AppShellInner() {
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
-        openSections={openSections}
         onSwitch={switchTab}
         onClose={closeTab}
-        onOpen={openTab}
       />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {tabs.map(tab => (
