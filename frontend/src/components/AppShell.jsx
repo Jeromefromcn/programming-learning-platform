@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Component } from 'react';
 import { MemoryRouter, UNSAFE_LocationContext } from 'react-router-dom';
 import { TabProvider, useTab } from '../contexts/TabContext';
 import { useAuth } from '../contexts/AuthContext';
-import { sectionsForRole, getInitialPath, getDefaultSection } from './sectionConfig';
+import { getInitialPath } from './sectionConfig';
 import TopBar from './TopBar';
 import TabBar from './TabBar';
 import Sidebar from './Sidebar';
@@ -31,15 +31,12 @@ class TabErrorBoundary extends Component {
   }
 }
 
-function TabPanel({ tab, isActive, role, collapsed }) {
+function TabPanel({ tab, isActive, role }) {
   const initialPath = getInitialPath(tab.section, role);
-  // UNSAFE_LocationContext is set to null so MemoryRouter does not see the outer
-  // BrowserRouter and avoids the "cannot render Router inside another Router" error.
   return (
     <div style={{ display: isActive ? 'flex' : 'none', flex: 1, overflow: 'hidden' }}>
       <UNSAFE_LocationContext.Provider value={null}>
         <MemoryRouter initialEntries={[initialPath]}>
-          <Sidebar section={tab.section} role={role} collapsed={collapsed} />
           <div style={{ flex: 1, overflow: 'auto' }}>
             <TabErrorBoundary>
               <SectionRouter section={tab.section} role={role} />
@@ -52,7 +49,7 @@ function TabPanel({ tab, isActive, role, collapsed }) {
 }
 
 function AppShellInner() {
-  const { user, logout } = useAuth();
+  const { user, logout, menuSections } = useAuth();
   const { tabs, activeTabId, openTab, closeTab, switchTab } = useTab();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar_collapsed') === 'true'
@@ -60,11 +57,11 @@ function AppShellInner() {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (user && !initializedRef.current) {
+    if (user && !initializedRef.current && menuSections.length > 0) {
       initializedRef.current = true;
-      openTab(getDefaultSection(user.role));
+      openTab(menuSections[0]);
     }
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, menuSections]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleToggle() {
     setCollapsed(v => {
@@ -79,6 +76,9 @@ function AppShellInner() {
   }
 
   if (!user) return null;
+
+  const activeSection = tabs.find(t => t.id === activeTabId)?.section ?? null;
+  const openTabSections = new Set(tabs.map(t => t.section));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -96,20 +96,28 @@ function AppShellInner() {
         onClose={closeTab}
       />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {tabs.map(tab => (
-          <TabPanel
-            key={tab.id}
-            tab={tab}
-            isActive={tab.id === activeTabId}
-            role={user.role}
-            collapsed={collapsed}
-          />
-        ))}
-        {tabs.length === 0 && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-            Use + to open a section
-          </div>
-        )}
+        <Sidebar
+          menuSections={menuSections}
+          activeSection={activeSection}
+          openTabSections={openTabSections}
+          collapsed={collapsed}
+          onOpen={openTab}
+        />
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {tabs.map(tab => (
+            <TabPanel
+              key={tab.id}
+              tab={tab}
+              isActive={tab.id === activeTabId}
+              role={user.role}
+            />
+          ))}
+          {tabs.length === 0 && (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+              Select a section from the menu
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

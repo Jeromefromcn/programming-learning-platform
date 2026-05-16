@@ -1,8 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { useEffect } from 'react';
 
 vi.mock('../api/axiosInstance', () => ({
   default: {
@@ -12,9 +10,15 @@ vi.mock('../api/axiosInstance', () => ({
   setAuthHandlers: vi.fn(),
 }));
 
+vi.mock('../contexts/AuthContext', () => ({
+  AuthProvider: ({ children }) => children,
+  useAuth: vi.fn(),
+}));
+
 vi.mock('./SectionRouter', () => ({
   default: ({ section }) => <div data-testid="section-router" data-section={section} />,
 }));
+
 vi.mock('./TopBar', () => ({
   default: ({ onLogout, onToggleSidebar, username }) => (
     <div>
@@ -24,54 +28,66 @@ vi.mock('./TopBar', () => ({
     </div>
   ),
 }));
+
 vi.mock('./TabBar', () => ({
-  default: ({ tabs, onOpen }) => (
+  default: ({ tabs }) => (
     <div>
       {tabs.map(t => <span key={t.id} data-testid="tab">{t.section}</span>)}
-      <button onClick={() => onOpen('courses')}>Open Courses</button>
     </div>
   ),
 }));
+
 vi.mock('./Sidebar', () => ({
-  default: () => <div data-testid="sidebar" />,
+  default: ({ menuSections, onOpen }) => (
+    <div data-testid="sidebar">
+      {(menuSections ?? []).map(s => (
+        <button key={s} onClick={() => onOpen(s)}>{s}</button>
+      ))}
+    </div>
+  ),
 }));
 
+import { useAuth } from '../contexts/AuthContext';
 import AppShell from './AppShell';
 
-function WithAuth({ role, children }) {
-  const { login } = useAuth();
-  useEffect(() => { login('tok', { username: 'alice', role }); }, []);
-  return children;
+function setup(role, menuSections) {
+  useAuth.mockReturnValue({
+    user: { username: 'alice', role },
+    menuSections,
+    logout: vi.fn(),
+    accessToken: 'tok',
+  });
+  return render(<AppShell />);
 }
 
-function wrap(role = 'TUTOR') {
-  return render(
-    <AuthProvider>
-      <WithAuth role={role}>
-        <AppShell />
-      </WithAuth>
-    </AuthProvider>
-  );
-}
-
-test('TUTOR default tab is exercises', async () => {
-  wrap('TUTOR');
-  expect(await screen.findByText('exercises')).toBeInTheDocument();
+test('opens first section in menuSections as default tab', async () => {
+  setup('TUTOR', ['exercises', 'courses']);
+  // Tab with section name should appear in TabBar
+  expect(await screen.findByTestId('tab')).toHaveTextContent('exercises');
 });
 
-test('SUPER_ADMIN default tab is users', async () => {
-  wrap('SUPER_ADMIN');
-  expect(await screen.findByText('users')).toBeInTheDocument();
+test('SUPER_ADMIN default tab is first in their menuSections', async () => {
+  setup('SUPER_ADMIN', ['exercises', 'courses', 'users', 'settings']);
+  // First tab should be exercises (first in menuSections)
+  const tabs = await screen.findAllByTestId('tab');
+  expect(tabs[0]).toHaveTextContent('exercises');
 });
 
-test('opening a tab renders its section', async () => {
-  wrap('TUTOR');
-  await screen.findByText('exercises'); // wait for mount
-  await userEvent.click(screen.getByText('Open Courses'));
-  expect(screen.getByText('courses')).toBeInTheDocument();
+test('clicking sidebar section opens tab', async () => {
+  setup('TUTOR', ['exercises', 'courses']);
+  await screen.findByTestId('tab'); // wait for initial tab
+  await userEvent.click(screen.getByText('courses'));
+  const tabs = screen.getAllByTestId('tab');
+  expect(tabs.some(t => t.textContent === 'courses')).toBe(true);
 });
 
 test('renders username from auth context', async () => {
-  wrap('TUTOR');
+  setup('TUTOR', ['exercises']);
   expect(await screen.findByTestId('username')).toHaveTextContent('alice');
+});
+
+test('sidebar is rendered at AppShell level (not per tab)', async () => {
+  setup('TUTOR', ['exercises', 'courses']);
+  await screen.findByTestId('tab'); // wait for initial tab to render
+  expect(screen.getByTestId('sidebar')).toBeInTheDocument();
 });
