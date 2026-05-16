@@ -17,6 +17,7 @@ export default function UserManagementPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState('');
 
   async function load() {
     setLoading(true);
@@ -49,6 +50,11 @@ export default function UserManagementPage() {
 
   return (
     <div style={{ padding: 32 }}>
+      {toast && (
+        <div role="status" style={{ marginBottom: 16, padding: 12, background: '#e8f5e9', borderRadius: 4, color: '#2e7d32' }}>
+          {toast}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1>User Management</h1>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -133,7 +139,12 @@ export default function UserManagementPage() {
       {showImport && (
         <ImportUsersModal
           onClose={() => setShowImport(false)}
-          onImported={() => { setShowImport(false); load(); }} />
+          onImported={(count) => {
+            setShowImport(false);
+            setToast(`${count} user${count !== 1 ? 's' : ''} imported successfully`);
+            setTimeout(() => setToast(''), 4000);
+            load();
+          }} />
       )}
     </div>
   );
