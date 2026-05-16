@@ -20,7 +20,10 @@ public enum ErrorCode {
     IMPORT_DUPLICATE(HttpStatus.CONFLICT),
     ZIP_PATH_TRAVERSAL(HttpStatus.BAD_REQUEST),
     ZIP_TOO_LARGE(HttpStatus.BAD_REQUEST),
-    RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS);
+    RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
+    IMPORT_VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
+    WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST),
+    CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST);
 
     private final HttpStatus httpStatus;
 

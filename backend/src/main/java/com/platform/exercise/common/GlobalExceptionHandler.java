@@ -1,5 +1,7 @@
 package com.platform.exercise.common;
 
+import com.platform.exercise.user.ImportValidationException;
+import com.platform.exercise.user.ImportValidationErrorResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +29,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(ErrorCode.VALIDATION_ERROR.getHttpStatus())
             .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR, message));
+    }
+
+    @ExceptionHandler(ImportValidationException.class)
+    public ResponseEntity<ImportValidationErrorResponse> handleImportValidation(ImportValidationException ex) {
+        return ResponseEntity
+            .status(ErrorCode.IMPORT_VALIDATION_ERROR.getHttpStatus())
+            .body(ImportValidationErrorResponse.of(ex.getErrors()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
