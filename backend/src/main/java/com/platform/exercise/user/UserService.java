@@ -142,6 +142,7 @@ public class UserService {
             .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
         user.setPasswordHash(passwordEncoder.encode("12345678"));
         userRepository.save(user);
+        refreshTokenRepository.deleteByUserId(targetId);
     }
 
     @Transactional

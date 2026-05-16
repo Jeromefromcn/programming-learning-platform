@@ -232,4 +232,12 @@ class UserControllerTest {
         mockMvc.perform(post("/v1/users/1/reset-password"))
             .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void resetPassword_unknownId_returns404() throws Exception {
+        mockMvc.perform(post("/v1/users/999999/reset-password"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("USER_NOT_FOUND"));
+    }
 }
