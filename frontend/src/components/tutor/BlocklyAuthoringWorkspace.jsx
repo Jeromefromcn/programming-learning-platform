@@ -115,6 +115,14 @@ export default function BlocklyAuthoringWorkspace({
     onAllowedBlocksChange?.(next);
   }
 
+  function toggleCategory(cat, selectAll) {
+    const catTypes = AVAILABLE_BLOCKS.filter(b => b.category === cat).map(b => b.type);
+    const next = selectAll
+      ? [...new Set([...allowedBlocks, ...catTypes])]
+      : allowedBlocks.filter(t => !catTypes.includes(t));
+    onAllowedBlocksChange?.(next);
+  }
+
   return (
     <div>
       {/* Block checklist */}
@@ -122,21 +130,49 @@ export default function BlocklyAuthoringWorkspace({
         <summary style={{ cursor: 'pointer', fontWeight: 600, padding: '4px 0' }}>
           Allowed Blocks ({allowedBlocks.length} selected)
         </summary>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-          {AVAILABLE_BLOCKS.map(b => (
-            <label key={b.type} style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              border: '1px solid #ddd', borderRadius: 4, padding: '2px 8px', cursor: 'pointer',
-              background: allowedBlocks.includes(b.type) ? '#e3f2fd' : '#fff',
-            }}>
-              <input
-                type="checkbox"
-                checked={allowedBlocks.includes(b.type)}
-                onChange={e => toggleBlock(b.type, e.target.checked)}
-              />
-              {b.label}
-            </label>
-          ))}
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {BLOCK_CATEGORIES.map(cat => {
+            const catBlocks = AVAILABLE_BLOCKS.filter(b => b.category === cat);
+            const selectedCount = catBlocks.filter(b => allowedBlocks.includes(b.type)).length;
+            const allSelected = selectedCount === catBlocks.length;
+            return (
+              <details key={cat}>
+                <summary style={{
+                  cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                  padding: '3px 8px', background: '#e8eaf6', borderRadius: 3,
+                  display: 'flex', alignItems: 'center', listStyle: 'none',
+                }}>
+                  {cat} ({selectedCount}/{catBlocks.length})
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); toggleCategory(cat, !allSelected); }}
+                    style={{
+                      marginLeft: 'auto', fontSize: 12, color: '#1976d2',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    {allSelected ? 'Deselect all' : 'Select all'}
+                  </button>
+                </summary>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '8px 4px 4px' }}>
+                  {catBlocks.map(b => (
+                    <label key={b.type} style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      border: '1px solid #ddd', borderRadius: 4, padding: '2px 8px', cursor: 'pointer',
+                      background: allowedBlocks.includes(b.type) ? '#e3f2fd' : '#fff',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={allowedBlocks.includes(b.type)}
+                        onChange={e => toggleBlock(b.type, e.target.checked)}
+                      />
+                      {b.label}
+                    </label>
+                  ))}
+                </div>
+              </details>
+            );
+          })}
         </div>
       </details>
 
