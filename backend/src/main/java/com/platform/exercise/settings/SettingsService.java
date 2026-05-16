@@ -21,6 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SettingsService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SettingsService.class);
+
     private static final String KEY_COURSE_FILTER = "course_filter_enabled";
     private static final String KEY_MENU_CONFIG = "menu_config";
 
@@ -79,6 +81,10 @@ public class SettingsService {
         } catch (JsonProcessingException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to serialize menu config");
         }
+        if (json.length() > 1000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Menu configuration exceeds maximum allowed size");
+        }
         GlobalSetting setting = settingRepository.findById(KEY_MENU_CONFIG)
             .orElseGet(() -> { GlobalSetting s = new GlobalSetting(); s.setKey(KEY_MENU_CONFIG); return s; });
         setting.setValue(json);
@@ -89,6 +95,7 @@ public class SettingsService {
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, List<String>>>() {});
         } catch (JsonProcessingException e) {
+            log.warn("Failed to parse menu_config from DB, using defaults: {}", e.getMessage());
             return new HashMap<>(DEFAULT_MENU_CONFIG);
         }
     }
@@ -101,7 +108,7 @@ public class SettingsService {
         for (Map.Entry<String, List<String>> entry : config.entrySet()) {
             String role = entry.getKey();
             List<String> sections = entry.getValue();
-            if (!sections.contains("exercises")) {
+            if (sections == null || !sections.contains("exercises")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "exercises must be present for role: " + role);
             }

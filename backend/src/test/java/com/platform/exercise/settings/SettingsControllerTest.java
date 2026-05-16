@@ -123,4 +123,26 @@ class SettingsControllerTest {
                 .content(body))
             .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void getMenuConfig_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/v1/settings/menu-config"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "SUPER_ADMIN")
+    void putMenuConfig_persists_and_canBeRead() throws Exception {
+        String body = "{\"STUDENT\":[\"exercises\"]," +
+            "\"TUTOR\":[\"exercises\",\"courses\"]," +
+            "\"SUPER_ADMIN\":[\"exercises\",\"courses\",\"users\",\"settings\"]}";
+        mockMvc.perform(put("/v1/settings/menu-config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get("/v1/settings/menu-config/all"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.STUDENT[0]").value("exercises"))
+            .andExpect(jsonPath("$.TUTOR").isArray());
+    }
 }

@@ -34,6 +34,7 @@ public class SettingsController {
     }
 
     @GetMapping("/menu-config")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, List<String>>> getMenuConfig(Authentication authentication) {
         String role = extractRole(authentication);
         return ResponseEntity.ok(Map.of("sections", settingsService.getMenuConfig(role)));
@@ -54,6 +55,7 @@ public class SettingsController {
     }
 
     private String extractRole(Authentication authentication) {
+        if (authentication == null) return "STUDENT";
         return authentication.getAuthorities().stream()
                 .findFirst()
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
