@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { progressApi } from '../../api/progressApi';
+import Pagination from '../../components/Pagination';
 
 function chipStyle(status, score) {
   if (status === 'GRADED') {
@@ -25,15 +26,17 @@ function SummaryCard({ label, value }) {
 
 export default function ProgressPage() {
   const [data, setData] = useState(null);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    progressApi.getProgress()
+    setLoading(true);
+    progressApi.getProgress(page, 20)
       .then(setData)
       .catch(() => setError('Failed to load progress.'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   if (loading) return <div style={{ padding: 32 }}>Loading...</div>;
   if (error)   return <div style={{ padding: 32, color: 'red' }}>{error}</div>;
@@ -54,7 +57,7 @@ export default function ProgressPage() {
         />
       </div>
 
-      {exercises.length === 0 ? (
+      {exercises.totalElements === 0 ? (
         <p style={{ color: '#888' }}>No exercises available.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -67,7 +70,7 @@ export default function ProgressPage() {
             </tr>
           </thead>
           <tbody>
-            {exercises.map(ex => {
+            {exercises.content.map(ex => {
               const chip = chipStyle(ex.status, ex.score);
               return (
                 <tr key={ex.exerciseId} style={{ borderBottom: '1px solid #f0f0f0' }}>
@@ -105,6 +108,8 @@ export default function ProgressPage() {
           </tbody>
         </table>
       )}
+
+      <Pagination page={page} totalPages={exercises.totalPages} onPageChange={setPage} />
     </div>
   );
 }

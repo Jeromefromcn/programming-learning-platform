@@ -1,5 +1,6 @@
 package com.platform.exercise.student;
 
+import com.platform.exercise.common.PageResponse;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,13 +19,12 @@ public class StudentProgressService {
     private final StudentExerciseService studentExerciseService;
     private final SubmissionRepository submissionRepository;
 
-    public StudentProgressDto getProgress(Long userId, String displayName) {
+    public StudentProgressDto getProgress(Long userId, String displayName, int page, int size) {
         List<StudentExerciseListDto> exercises =
                 studentExerciseService.listExercises(null, null, null, 0, 1000, userId).content();
 
         List<Submission> submissions = submissionRepository.findByStudentNameAndDeletedFalse(displayName);
 
-        // Group submissions by exerciseId, keeping the one with the highest effective score
         Map<Long, Submission> bestByExercise = new HashMap<>();
         for (Submission s : submissions) {
             bestByExercise.merge(s.getExerciseId(), s, (existing, candidate) -> {
@@ -66,10 +66,18 @@ public class StudentProgressService {
         double passRate = gradedCount > 0
                 ? Math.round(((double) passCount / gradedCount * 100) * 10.0) / 10.0 : 0.0;
 
+        // Manually paginate the result list; summary is computed over all exercises
+        int total = result.size();
+        int fromIdx = Math.min(page * size, total);
+        int toIdx = Math.min(fromIdx + size, total);
+        int totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 1;
+        PageResponse<ProgressExerciseDto> pageResponse =
+                new PageResponse<>(result.subList(fromIdx, toIdx), page, size, total, totalPages);
+
         return new StudentProgressDto(
                 new StudentProgressDto.SummaryDto(
                         exercises.size(), attemptedCount, gradedCount, averageScore, passRate),
-                result);
+                pageResponse);
     }
 
     private BigDecimal effectiveScore(Submission s) {

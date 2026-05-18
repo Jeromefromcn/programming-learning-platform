@@ -20,11 +20,14 @@ public class StudentProgressController {
     private final UserRepository userRepository;
 
     @GetMapping
-    public ResponseEntity<StudentProgressDto> getProgress(Authentication authentication) {
+    public ResponseEntity<StudentProgressDto> getProgress(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         User user = (authentication.getPrincipal() instanceof User u) ? u
                 : userRepository.findByUsername(authentication.getName())
                         .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
         return ResponseEntity.ok(
-                studentProgressService.getProgress(user.getId(), user.getDisplayName()));
+                studentProgressService.getProgress(user.getId(), user.getDisplayName(), page, size));
     }
 }

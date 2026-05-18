@@ -1,10 +1,10 @@
 package com.platform.exercise.student;
 
-import java.util.List;
+import com.platform.exercise.common.PageResponse;
 
 public record StudentProgressDto(
         SummaryDto summary,
-        List<ProgressExerciseDto> exercises) {
+        PageResponse<ProgressExerciseDto> exercises) {
 
     public record SummaryDto(
             int totalExercises,

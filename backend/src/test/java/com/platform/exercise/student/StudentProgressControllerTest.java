@@ -123,8 +123,8 @@ class StudentProgressControllerTest {
             .andExpect(jsonPath("$.summary.gradedCount").value(0))
             .andExpect(jsonPath("$.summary.averageScore").value(0.0))
             .andExpect(jsonPath("$.summary.passRate").value(0.0))
-            .andExpect(jsonPath("$.exercises[0].status").value("NOT_ATTEMPTED"))
-            .andExpect(jsonPath("$.exercises[1].status").value("NOT_ATTEMPTED"));
+            .andExpect(jsonPath("$.exercises.content[0].status").value("NOT_ATTEMPTED"))
+            .andExpect(jsonPath("$.exercises.content[1].status").value("NOT_ATTEMPTED"));
     }
 
     @Test
@@ -136,9 +136,9 @@ class StudentProgressControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.summary.attemptedCount").value(1))
             .andExpect(jsonPath("$.summary.gradedCount").value(0))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].status")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].status")
                 .value("ATTEMPTED"))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].score",
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].score",
                 hasItem(nullValue())));
     }
 
@@ -150,11 +150,11 @@ class StudentProgressControllerTest {
         mockMvc.perform(get("/v1/student/progress"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.summary.gradedCount").value(1))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].status")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].status")
                 .value("GRADED"))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].score")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].score")
                 .value(80.0))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].scoreSource")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].scoreSource")
                 .value("AUTO"));
     }
 
@@ -165,9 +165,9 @@ class StudentProgressControllerTest {
 
         mockMvc.perform(get("/v1/student/progress"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].score")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].score")
                 .value(90.0))
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].scoreSource")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].scoreSource")
                 .value("TUTOR"));
     }
 
@@ -179,7 +179,7 @@ class StudentProgressControllerTest {
 
         mockMvc.perform(get("/v1/student/progress"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.exercises[?(@.exerciseId == " + exercise1.getId() + ")].score")
+            .andExpect(jsonPath("$.exercises.content[?(@.exerciseId == " + exercise1.getId() + ")].score")
                 .value(95.0));
     }
 
@@ -204,7 +204,7 @@ class StudentProgressControllerTest {
         mockMvc.perform(get("/v1/student/progress"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.summary.totalExercises").value(0))
-            .andExpect(jsonPath("$.exercises").isEmpty());
+            .andExpect(jsonPath("$.exercises.content").isEmpty());
     }
 
     @Test
