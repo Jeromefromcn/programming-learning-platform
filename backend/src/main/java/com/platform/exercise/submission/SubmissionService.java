@@ -89,7 +89,7 @@ public class SubmissionService {
     public SubmissionDetailDto getById(Long id) {
         Submission sub = submissionRepository.findById(id)
             .filter(s -> !s.isDeleted())
-            .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND,
+            .orElseThrow(() -> new PlatformException(ErrorCode.SUBMISSION_NOT_FOUND,
                 "Submission not found."));
         String exerciseTitle = exerciseRepository.findById(sub.getExerciseId())
             .map(Exercise::getTitle).orElse("Unknown");
@@ -102,7 +102,7 @@ public class SubmissionService {
     public SubmissionDetailDto grade(Long id, GradeRequest req) {
         Submission sub = submissionRepository.findById(id)
             .filter(s -> !s.isDeleted())
-            .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND,
+            .orElseThrow(() -> new PlatformException(ErrorCode.SUBMISSION_NOT_FOUND,
                 "Submission not found."));
         sub.setTutorScore(req.tutorScore());
         sub.setTutorComment(req.tutorComment());
@@ -114,7 +114,7 @@ public class SubmissionService {
     public void delete(Long id) {
         Submission sub = submissionRepository.findById(id)
             .filter(s -> !s.isDeleted())
-            .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND,
+            .orElseThrow(() -> new PlatformException(ErrorCode.SUBMISSION_NOT_FOUND,
                 "Submission not found."));
         sub.setDeleted(true);
         submissionRepository.save(sub);

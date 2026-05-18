@@ -125,10 +125,13 @@ describe('Run button', () => {
     // Use a proper constructor function so `new Worker(...)` works in jsdom
     const WorkerMock = vi.fn(function () { return workerInstance; });
     vi.stubGlobal('Worker', WorkerMock);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   test('renders a Run button', () => {
@@ -136,11 +139,12 @@ describe('Run button', () => {
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
   });
 
-  test('clicking Run spawns a Worker and posts the JS code', () => {
+  test('clicking Run spawns a Worker from a blob URL without eval', () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
-    expect(global.Worker).toHaveBeenCalled();
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({ code: expect.any(String) });
+    expect(global.Worker).toHaveBeenCalledWith('blob:mock-url');
+    // Code is embedded in the blob — no postMessage needed
+    expect(workerInstance.postMessage).not.toHaveBeenCalled();
   });
 
   test('button is disabled while running', () => {

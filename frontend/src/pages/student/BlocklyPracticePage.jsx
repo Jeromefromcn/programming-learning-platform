@@ -4,6 +4,7 @@ import 'blockly/blocks';
 import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
+import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -49,13 +50,6 @@ export default function BlocklyPracticePage({ exercise }) {
     });
     workspaceRef.current = workspace;
 
-    if (config.initialWorkspaceXml) {
-      try {
-        const dom = Blockly.utils.xml.textToDom(config.initialWorkspaceXml);
-        Blockly.Xml.domToWorkspace(dom, workspace);
-      } catch { /* invalid XML — start empty */ }
-    }
-
     if (showCodeView) {
       workspace.addChangeListener(() => {
         try {
@@ -81,9 +75,7 @@ export default function BlocklyPracticePage({ exercise }) {
     clearTimeout(timeoutRef.current);
 
     const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = new Worker(
-      new URL('../../workers/blocklyRunner.worker.js', import.meta.url)
-    );
+    const worker = createBlocklyBlobWorker(jsCode);
     workerRef.current = worker;
 
     timeoutRef.current = setTimeout(() => {
@@ -106,8 +98,6 @@ export default function BlocklyPracticePage({ exercise }) {
       setRunning(false);
       setOutput(`Error: ${mapError(e.message)}`);
     };
-
-    worker.postMessage({ code: jsCode });
   }
 
   function handleExport() {

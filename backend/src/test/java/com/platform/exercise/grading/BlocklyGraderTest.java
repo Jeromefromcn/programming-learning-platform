@@ -45,4 +45,22 @@ class BlocklyGraderTest {
         assertThat(result.autoScore()).isNull();
         assertThat(result.autoGradeDetailsJson()).contains("No grading rules");
     }
+
+    @Test
+    void grade_blocklyGeneratedCode_windowAlertMapped_returns100() {
+        // Blockly's javascriptGenerator emits window.alert() for text_print blocks.
+        // This test uses the same code shape a real student export would contain.
+        String code = "window.alert('Hello World');";
+        BlocklyGrader.Result result = grader.grade(code, BLOCKLY_CONFIG_OUTPUT_MATCH_ON);
+        assertThat(result.autoScore()).isEqualByComparingTo(new BigDecimal("100.00"));
+    }
+
+    @Test
+    void grade_blocklyGeneratedCode_windowPromptReturnsEmpty() {
+        // window.prompt() is emitted for text_prompt blocks; it must not throw.
+        String code = "var x = window.prompt('Enter value'); print(x === '' ? 'ok' : 'fail');";
+        String config = "{\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"ok\"}}}";
+        BlocklyGrader.Result result = grader.grade(code, config);
+        assertThat(result.autoScore()).isEqualByComparingTo(new BigDecimal("100.00"));
+    }
 }

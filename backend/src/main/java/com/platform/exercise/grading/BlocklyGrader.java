@@ -70,7 +70,8 @@ public class BlocklyGrader {
         try {
             cx.setOptimizationLevel(-1);
             Scriptable scope = cx.initSafeStandardObjects();
-            scope.put("print", scope, new BaseFunction() {
+
+            BaseFunction printFn = new BaseFunction() {
                 @Override
                 public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
                     if (args.length > 0) {
@@ -78,7 +79,21 @@ public class BlocklyGrader {
                     }
                     return Context.getUndefinedValue();
                 }
+            };
+            scope.put("print", scope, printFn);
+
+            // Blockly's javascriptGenerator emits window.alert() for text_print and
+            // window.prompt() for text_prompt — neither exists in Rhino by default.
+            ScriptableObject window = (ScriptableObject) cx.newObject(scope);
+            window.put("alert", window, printFn);
+            window.put("prompt", window, new BaseFunction() {
+                @Override
+                public Object call(Context cx, Scriptable scope, Scriptable thisObj, Object[] args) {
+                    return "";
+                }
             });
+            scope.put("window", scope, window);
+
             cx.evaluateString(scope, code, "student", 1, null);
         } finally {
             Context.exit();

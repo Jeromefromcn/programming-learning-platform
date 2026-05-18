@@ -235,6 +235,24 @@ class SubmissionControllerTest {
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void deleteSubmission_notFound_returns404() throws Exception {
         mockMvc.perform(delete("/v1/submissions/99999"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("SUBMISSION_NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void deleteSubmission_alreadyDeleted_returns404() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setDeleted(true);
+        Submission saved = submissionRepository.save(sub);
+
+        mockMvc.perform(delete("/v1/submissions/" + saved.getId()))
             .andExpect(status().isNotFound());
     }
 
@@ -266,7 +284,7 @@ class SubmissionControllerTest {
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
         // Soft-delete it
-        Submission sub = submissionRepository.findAll().get(0);
+        Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("Alex").get(0);
         sub.setDeleted(true);
         submissionRepository.save(sub);
 

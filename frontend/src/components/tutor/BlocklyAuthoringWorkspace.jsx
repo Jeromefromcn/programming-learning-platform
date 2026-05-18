@@ -4,6 +4,7 @@ import 'blockly/blocks';
 import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
+import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
 
 export const AVAILABLE_BLOCKS = [
   { type: 'controls_if', label: 'If/Else', category: 'Control' },
@@ -150,9 +151,7 @@ export default function BlocklyAuthoringWorkspace({
     clearTimeout(timeoutRef.current);
 
     const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = new Worker(
-      new URL('../../workers/blocklyRunner.worker.js', import.meta.url)
-    );
+    const worker = createBlocklyBlobWorker(jsCode);
     workerRef.current = worker;
 
     timeoutRef.current = setTimeout(() => {
@@ -175,8 +174,6 @@ export default function BlocklyAuthoringWorkspace({
       setRunning(false);
       setOutput(`Error: ${e.message}`);
     };
-
-    worker.postMessage({ code: jsCode });
   }
 
   return (
