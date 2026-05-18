@@ -14,6 +14,7 @@ export default function SubmissionDetailPage() {
   const [tutorComment, setTutorComment] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     submissionApi.getById(id).then(data => {
@@ -62,11 +63,13 @@ export default function SubmissionDetailPage() {
 
   async function handleDelete() {
     if (!window.confirm('Delete this submission? This cannot be undone.')) return;
+    setDeleting(true);
     try {
       await submissionApi.delete(id);
       navigate('/tutor/submissions');
     } catch {
       alert('Failed to delete submission.');
+      setDeleting(false);
     }
   }
 
@@ -200,12 +203,15 @@ export default function SubmissionDetailPage() {
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #eee' }}>
         <button
           onClick={handleDelete}
+          disabled={deleting}
           style={{
             background: 'none', color: '#c62828', border: '1px solid #c62828',
-            borderRadius: 4, padding: '8px 20px', cursor: 'pointer',
+            borderRadius: 4, padding: '8px 20px',
+            cursor: deleting ? 'default' : 'pointer',
+            opacity: deleting ? 0.5 : 1,
           }}
         >
-          Delete Submission
+          {deleting ? 'Deleting…' : 'Delete Submission'}
         </button>
       </div>
     </div>

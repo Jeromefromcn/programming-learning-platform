@@ -16,6 +16,7 @@ export default function SubmissionListPage() {
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const fetchSubmissions = useCallback(async (params) => {
     setLoading(true);
@@ -43,16 +44,21 @@ export default function SubmissionListPage() {
   async function handleDelete(e, id) {
     e.stopPropagation();
     if (!window.confirm('Delete this submission? This cannot be undone.')) return;
+    setDeletingId(id);
     try {
       await submissionApi.delete(id);
-      const newPage = submissions.length === 1 && page > 0 ? page - 1 : page;
-      setPage(newPage);
-      const params = { page: newPage, size: 20 };
-      if (studentName.trim()) params.studentName = studentName.trim();
-      if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
-      fetchSubmissions(params);
+      if (submissions.length === 1 && page > 0) {
+        setPage(page - 1); // useEffect will fetch the previous page
+      } else {
+        const params = { page, size: 20 };
+        if (studentName.trim()) params.studentName = studentName.trim();
+        if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
+        fetchSubmissions(params);
+      }
     } catch {
       alert('Failed to delete submission.');
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -137,12 +143,15 @@ export default function SubmissionListPage() {
                 <td style={{ padding: '10px 12px' }}>
                   <button
                     onClick={e => handleDelete(e, sub.id)}
+                    disabled={deletingId === sub.id}
                     style={{
                       padding: '3px 10px', color: '#c62828', background: 'none',
-                      border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                      border: '1px solid #c62828', borderRadius: 4,
+                      cursor: deletingId === sub.id ? 'default' : 'pointer', fontSize: 12,
+                      opacity: deletingId === sub.id ? 0.5 : 1,
                     }}
                   >
-                    Delete
+                    {deletingId === sub.id ? 'Deleting…' : 'Delete'}
                   </button>
                 </td>
               </tr>
