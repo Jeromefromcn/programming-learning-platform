@@ -98,11 +98,10 @@ export default function ExerciseFormPage() {
 
       if (isEdit) {
         await exerciseApi.update(id, payload);
-        await loadVersions();
-        alert('Exercise saved as new version.');
+        navigate('/tutor/exercises');
       } else {
-        const created = await exerciseApi.create({ ...payload, type: exerciseType });
-        navigate(`/tutor/exercises/${created.id}/edit`);
+        await exerciseApi.create({ ...payload, type: exerciseType });
+        navigate('/tutor/exercises');
       }
     } catch (e) {
       setError(e.response?.data?.error?.message || 'Save failed.');
