@@ -5,6 +5,7 @@ import com.platform.exercise.domain.User;
 import com.platform.exercise.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,11 +67,13 @@ public class CourseController {
     }
 
     @GetMapping("/{id}/exercises")
-    public ResponseEntity<List<ExerciseSummaryDto>> listExercises(
+    public ResponseEntity<PageResponse<ExerciseSummaryDto>> listExercises(
             @PathVariable Long id,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long userId = resolveUserId(authentication);
-        return ResponseEntity.ok(courseService.listExercises(id, userId));
+        return ResponseEntity.ok(courseService.listExercises(id, userId, PageRequest.of(page, size)));
     }
 
     @PostMapping("/{id}/exercises")
@@ -93,11 +96,13 @@ public class CourseController {
     }
 
     @GetMapping("/{id}/students")
-    public ResponseEntity<List<UserSummaryDto>> listStudents(
+    public ResponseEntity<PageResponse<UserSummaryDto>> listStudents(
             @PathVariable Long id,
-            Authentication authentication) {
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long userId = resolveUserId(authentication);
-        return ResponseEntity.ok(courseService.listStudents(id, userId));
+        return ResponseEntity.ok(courseService.listStudents(id, userId, PageRequest.of(page, size)));
     }
 
     @PostMapping("/{id}/students")

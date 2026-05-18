@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
 import Breadcrumb from '../../components/Breadcrumb';
+import Pagination from '../../components/Pagination';
 
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
@@ -21,6 +22,9 @@ export default function CourseDetailPage() {
 
   // Students state
   const [students, setStudents] = useState([]);
+  const [studentsTotalElements, setStudentsTotalElements] = useState(0);
+  const [studentsPage, setStudentsPage] = useState(0);
+  const [studentsTotalPages, setStudentsTotalPages] = useState(0);
   const [searchQ, setSearchQ] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -28,8 +32,10 @@ export default function CourseDetailPage() {
   const [enrollError, setEnrollError] = useState('');
   const debouncedQ = useDebounce(searchQ, 300);
 
-  // Exercises state (placeholder — F4 not yet built)
+  // Exercises state
   const [exercises, setExercises] = useState([]);
+  const [exercisesTotalPages, setExercisesTotalPages] = useState(0);
+  const [exercisesPage, setExercisesPage] = useState(0);
 
   useEffect(() => {
     courseApi.get(id)
@@ -39,18 +45,23 @@ export default function CourseDetailPage() {
   }, [id, navigate]);
 
   useEffect(() => {
-    if (tab === 'students') loadStudents();
-    if (tab === 'exercises') loadExercises();
+    if (tab === 'students') loadStudents(0);
+    if (tab === 'exercises') loadExercises(0);
   }, [tab, id]);
 
-  async function loadStudents() {
-    const data = await courseApi.listStudents(id).catch(() => []);
-    setStudents(data);
+  async function loadStudents(p) {
+    const data = await courseApi.listStudents(id, p, 20).catch(() => ({ content: [], totalPages: 0, totalElements: 0 }));
+    setStudents(data.content);
+    setStudentsTotalPages(data.totalPages);
+    setStudentsTotalElements(data.totalElements);
+    setStudentsPage(p);
   }
 
-  async function loadExercises() {
-    const data = await courseApi.listExercises(id).catch(() => []);
-    setExercises(data);
+  async function loadExercises(p) {
+    const data = await courseApi.listExercises(id, p, 20).catch(() => ({ content: [], totalPages: 0 }));
+    setExercises(data.content);
+    setExercisesTotalPages(data.totalPages);
+    setExercisesPage(p);
   }
 
   useEffect(() => {
@@ -70,7 +81,7 @@ export default function CourseDetailPage() {
       if (result.enrolled > 0) {
         setSearchQ('');
         setSearchResults([]);
-        loadStudents();
+        loadStudents(studentsPage);
       } else {
         setEnrollError(result.errors?.[0] || 'Could not enroll student.');
       }
@@ -85,7 +96,7 @@ export default function CourseDetailPage() {
     if (!confirm('Remove this student from the course?')) return;
     try {
       await courseApi.removeStudent(id, studentId);
-      loadStudents();
+      loadStudents(students.length === 1 && studentsPage > 0 ? studentsPage - 1 : studentsPage);
     } catch {
       alert('Failed to remove student.');
     }
@@ -95,7 +106,7 @@ export default function CourseDetailPage() {
     if (!confirm('Remove this exercise from the course?')) return;
     try {
       await courseApi.removeExercise(id, exerciseId);
-      loadExercises();
+      loadExercises(exercises.length === 1 && exercisesPage > 0 ? exercisesPage - 1 : exercisesPage);
     } catch {
       alert('Failed to remove exercise.');
     }
@@ -104,14 +115,9 @@ export default function CourseDetailPage() {
   if (loadingCourse) return <div style={{ padding: 32 }}>Loading…</div>;
 
   const tabStyle = (active) => ({
-    padding: '8px 20px',
-    cursor: 'pointer',
-    background: 'none',
-    border: 'none',
+    padding: '8px 20px', cursor: 'pointer', background: 'none', border: 'none',
     borderBottom: active ? '2px solid #1976d2' : '2px solid transparent',
-    color: active ? '#1976d2' : '#333',
-    fontWeight: active ? 600 : 400,
-    fontSize: 15,
+    color: active ? '#1976d2' : '#333', fontWeight: active ? 600 : 400, fontSize: 15,
   });
 
   return (
@@ -125,9 +131,7 @@ export default function CourseDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 style={{ margin: 0 }}>{course?.name}</h1>
-          {course?.description && (
-            <p style={{ color: '#666', marginTop: 4 }}>{course.description}</p>
-          )}
+          {course?.description && <p style={{ color: '#666', marginTop: 4 }}>{course.description}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => navigate(`/tutor/courses/${id}/edit`)}
@@ -165,9 +169,7 @@ export default function CourseDetailPage() {
                 {searchResults.map(u => (
                   <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #f0f0f0' }}>
                     <span>{u.displayName} <span style={{ color: '#999', fontSize: 13 }}>@{u.username}</span></span>
-                    <button
-                      disabled={enrolling}
-                      onClick={() => handleEnroll(u.id)}
+                    <button disabled={enrolling} onClick={() => handleEnroll(u.id)}
                       style={{ padding: '2px 10px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
                       Enroll
                     </button>
@@ -178,7 +180,7 @@ export default function CourseDetailPage() {
           </div>
           {enrollError && <p style={{ color: '#c62828', marginTop: 8 }}>{enrollError}</p>}
 
-          <h3 style={{ marginTop: 32, marginBottom: 12 }}>Enrolled Students ({students.length})</h3>
+          <h3 style={{ marginTop: 32, marginBottom: 12 }}>Enrolled Students ({studentsTotalElements})</h3>
           {students.length === 0 ? (
             <p style={{ color: '#999' }}>No students enrolled yet.</p>
           ) : (
@@ -196,8 +198,7 @@ export default function CourseDetailPage() {
                     <td style={{ padding: 8 }}>{s.displayName}</td>
                     <td style={{ padding: 8 }}>@{s.username}</td>
                     <td style={{ padding: 8 }}>
-                      <button
-                        onClick={() => handleRemoveStudent(s.id)}
+                      <button onClick={() => handleRemoveStudent(s.id)}
                         style={{ padding: '3px 10px', color: '#c62828', background: 'none', border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer' }}>
                         Remove
                       </button>
@@ -207,13 +208,14 @@ export default function CourseDetailPage() {
               </tbody>
             </table>
           )}
+          <Pagination page={studentsPage} totalPages={studentsTotalPages} onPageChange={(p) => loadStudents(p)} />
         </div>
       )}
 
       {tab === 'exercises' && (
         <div style={{ marginTop: 24 }}>
           {exercises.length === 0 ? (
-            <p style={{ color: '#999' }}>No exercises linked to this course yet. Exercise management will be available in a future release.</p>
+            <p style={{ color: '#999' }}>No exercises linked to this course yet.</p>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -229,8 +231,7 @@ export default function CourseDetailPage() {
                     <td style={{ padding: 8 }}>{ex.title}</td>
                     <td style={{ padding: 8 }}>{ex.exerciseType}</td>
                     <td style={{ padding: 8 }}>
-                      <button
-                        onClick={() => handleRemoveExercise(ex.id)}
+                      <button onClick={() => handleRemoveExercise(ex.id)}
                         style={{ padding: '3px 10px', color: '#c62828', background: 'none', border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer' }}>
                         Remove
                       </button>
@@ -240,6 +241,7 @@ export default function CourseDetailPage() {
               </tbody>
             </table>
           )}
+          <Pagination page={exercisesPage} totalPages={exercisesTotalPages} onPageChange={(p) => loadExercises(p)} />
         </div>
       )}
     </div>

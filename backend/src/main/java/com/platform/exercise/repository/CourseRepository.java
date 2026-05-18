@@ -47,6 +47,37 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<UserSummaryView> findStudentsByCourse(@Param("courseId") Long courseId);
 
     @Query(value = """
+            SELECT e.id, ev.title, e.type AS exercise_type
+            FROM exercises e
+            JOIN exercise_versions ev ON ev.id = e.current_version_id
+            JOIN course_exercises ce ON ce.exercise_id = e.id
+            WHERE ce.course_id = :courseId AND e.is_deleted = false
+            ORDER BY ev.title
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM course_exercises ce
+            JOIN exercises e ON ce.exercise_id = e.id
+            WHERE ce.course_id = :courseId AND e.is_deleted = false
+            """,
+            nativeQuery = true)
+    Page<ExerciseSummaryView> findPagedExercisesByCourse(
+            @Param("courseId") Long courseId, Pageable pageable);
+
+    @Query(value = """
+            SELECT u.id, u.username, u.display_name
+            FROM users u
+            JOIN course_students cs ON cs.user_id = u.id
+            WHERE cs.course_id = :courseId
+            ORDER BY u.display_name
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM course_students WHERE course_id = :courseId
+            """,
+            nativeQuery = true)
+    Page<UserSummaryView> findPagedStudentsByCourse(
+            @Param("courseId") Long courseId, Pageable pageable);
+
+    @Query(value = """
             SELECT u.id, u.username, u.display_name
             FROM users u
             WHERE u.role = 'STUDENT' AND u.status = 'ACTIVE'

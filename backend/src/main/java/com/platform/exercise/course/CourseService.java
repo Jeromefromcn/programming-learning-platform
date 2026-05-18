@@ -10,6 +10,7 @@ import com.platform.exercise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,10 +66,11 @@ public class CourseService {
         courseRepository.save(course);
     }
 
-    public List<ExerciseSummaryDto> listExercises(Long courseId, Long userId) {
+    public PageResponse<ExerciseSummaryDto> listExercises(Long courseId, Long userId, Pageable pageable) {
         findAndValidateOwnership(courseId, userId);
-        return courseRepository.findExercisesByCourse(courseId)
-                .stream().map(ExerciseSummaryDto::from).toList();
+        return PageResponse.of(
+                courseRepository.findPagedExercisesByCourse(courseId, pageable)
+                        .map(ExerciseSummaryDto::from));
     }
 
     @Transactional
@@ -97,10 +99,11 @@ public class CourseService {
         courseRepository.deleteCourseExercise(courseId, exerciseId);
     }
 
-    public List<UserSummaryDto> listStudents(Long courseId, Long userId) {
+    public PageResponse<UserSummaryDto> listStudents(Long courseId, Long userId, Pageable pageable) {
         findAndValidateOwnership(courseId, userId);
-        return courseRepository.findStudentsByCourse(courseId)
-                .stream().map(UserSummaryDto::from).toList();
+        return PageResponse.of(
+                courseRepository.findPagedStudentsByCourse(courseId, pageable)
+                        .map(UserSummaryDto::from));
     }
 
     @Transactional

@@ -16,14 +16,14 @@ export const courseApi = {
   delete: (id) =>
     axiosInstance.delete(`/v1/courses/${id}`),
 
-  listExercises: (id) =>
-    axiosInstance.get(`/v1/courses/${id}/exercises`).then(r => r.data),
+  listExercises: (id, page = 0, size = 20) =>
+    axiosInstance.get(`/v1/courses/${id}/exercises`, { params: { page, size } }).then(r => r.data),
 
   removeExercise: (courseId, exerciseId) =>
     axiosInstance.delete(`/v1/courses/${courseId}/exercises/${exerciseId}`),
 
-  listStudents: (id) =>
-    axiosInstance.get(`/v1/courses/${id}/students`).then(r => r.data),
+  listStudents: (id, page = 0, size = 20) =>
+    axiosInstance.get(`/v1/courses/${id}/students`, { params: { page, size } }).then(r => r.data),
 
   enrollStudents: (id, userIds) =>
     axiosInstance.post(`/v1/courses/${id}/students`, { userIds }).then(r => r.data),
