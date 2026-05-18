@@ -39,7 +39,7 @@ export default function ExerciseManagementPage() {
   }
 
   useEffect(() => {
-    categoryApi.list().then(setCategories);
+    categoryApi.list(0, 200).then(d => setCategories(d.content));
     load(0);
   }, []);
 

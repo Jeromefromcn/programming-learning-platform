@@ -46,7 +46,7 @@ export default function ExerciseFormPage() {
   const [pythonConfig, setPythonConfig] = useState(EMPTY_PYTHON_CONFIG);
 
   useEffect(() => {
-    categoryApi.list().then(setCategories);
+    categoryApi.list(0, 200).then(d => setCategories(d.content));
     if (isEdit) {
       loadExercise();
       loadVersions();
