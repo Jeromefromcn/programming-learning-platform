@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -100,7 +101,9 @@ export default function PythonPracticePage({ exercise }) {
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <h1>{exercise.title}</h1>
-      <p style={{ color: '#555', marginBottom: 16 }}>{version.description}</p>
+      <div style={{ color: '#555', marginBottom: 16 }}>
+        <MarkdownRenderer content={version.description} />
+      </div>
 
       <Editor
         height="320px"

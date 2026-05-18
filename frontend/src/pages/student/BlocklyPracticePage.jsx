@@ -5,6 +5,7 @@ import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -129,7 +130,9 @@ export default function BlocklyPracticePage({ exercise }) {
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <h1>{exercise.title}</h1>
-      <p style={{ color: '#555', marginBottom: 16 }}>{version.description}</p>
+      <div style={{ color: '#555', marginBottom: 16 }}>
+        <MarkdownRenderer content={version.description} />
+      </div>
 
       <div ref={containerRef} style={{ height: 400, border: '1px solid #ddd', borderRadius: 4, marginBottom: 16 }} />
 
