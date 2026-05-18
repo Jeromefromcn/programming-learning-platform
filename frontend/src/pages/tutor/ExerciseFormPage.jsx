@@ -6,6 +6,7 @@ import BlocklyAuthoringWorkspace from '../../components/tutor/BlocklyAuthoringWo
 import PythonAuthoringEditor from '../../components/tutor/PythonAuthoringEditor';
 import VersionHistoryPanel from '../../components/tutor/VersionHistoryPanel';
 import Breadcrumb from '../../components/Breadcrumb';
+import MarkdownEditor from '../../components/MarkdownEditor';
 
 const EMPTY_BLOCKLY_CONFIG = {
   allowedBlocks: [],
@@ -211,8 +212,7 @@ export default function ExerciseFormPage() {
 
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Description *</label>
-            <textarea required value={description} onChange={e => setDescription(e.target.value)} rows={4}
-              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }} />
+            <MarkdownEditor value={description} onChange={setDescription} required />
           </div>
 
           <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
