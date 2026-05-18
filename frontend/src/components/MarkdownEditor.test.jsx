@@ -25,4 +25,9 @@ describe('MarkdownEditor', () => {
     await userEvent.type(screen.getByRole('textbox'), 'x');
     expect(onChange).toHaveBeenCalledWith('x');
   });
+
+  it('sets required attribute on textarea when required prop is true', () => {
+    render(<MarkdownEditor value="" onChange={() => {}} required={true} />);
+    expect(screen.getByRole('textbox')).toBeRequired();
+  });
 });
