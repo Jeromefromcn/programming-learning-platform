@@ -213,6 +213,72 @@ class SubmissionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void deleteSubmission_returns204() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        Submission saved = submissionRepository.save(sub);
+
+        mockMvc.perform(delete("/v1/submissions/" + saved.getId()))
+            .andExpect(status().isNoContent());
+
+        Submission updated = submissionRepository.findById(saved.getId()).orElseThrow();
+        assertThat(updated.isDeleted()).isTrue();
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void deleteSubmission_notFound_returns404() throws Exception {
+        mockMvc.perform(delete("/v1/submissions/99999"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_excludesDeletedSubmissions() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setDeleted(true);
+        submissionRepository.save(sub);
+
+        mockMvc.perform(get("/v1/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void importAfterDelete_treatedAsNewSubmission() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+
+        // Import once
+        mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
+
+        // Soft-delete it
+        Submission sub = submissionRepository.findAll().get(0);
+        sub.setDeleted(true);
+        submissionRepository.save(sub);
+
+        // Re-import same file — should succeed as new import, not duplicate
+        mockMvc.perform(multipart("/v1/submissions/import")
+                .file(new MockMultipartFile("files", "alex.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.results[0].status").value("IMPORTED"));
+    }
+
+    @Test
     void exportCsv_unauthenticated_returns200WithCsv() throws Exception {
         Submission sub = new Submission();
         sub.setExerciseId(blocklyExercise.getId());

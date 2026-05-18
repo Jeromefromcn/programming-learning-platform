@@ -54,6 +54,12 @@ public class SubmissionController {
         return ResponseEntity.ok(submissionService.grade(id, req));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        submissionService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/export-csv")
     @PreAuthorize("permitAll()")
     public void exportCsv(

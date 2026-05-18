@@ -107,7 +107,7 @@ public class FileImportService {
             LocalDateTime exportedAt = parseTimestamp(exportedAtStr);
 
             if (!skipDuplicateCheck && submissionRepository
-                    .existsByStudentNameAndExerciseIdAndExportTimestamp(
+                    .existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
                         studentName, exerciseId, exportedAt)) {
                 batchCache.put(batchId, filename, content);
                 return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));

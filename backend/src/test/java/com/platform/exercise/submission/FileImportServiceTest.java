@@ -73,7 +73,7 @@ class FileImportServiceTest {
     @Test
     void processSingleFile_validJson_returnsImported() {
         stubExercise(1L, 10L);
-        when(submissionRepository.existsByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
             .thenReturn(false);
         Submission saved = new Submission();
         saved.setId(42L);
@@ -100,7 +100,7 @@ class FileImportServiceTest {
     @Test
     void processSingleFile_exerciseNotFound_returnsFailed() {
         when(exerciseRepository.findByIdAndDeletedFalse(99L)).thenReturn(Optional.empty());
-        when(submissionRepository.existsByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
             .thenReturn(false);
         ImportResultDto result = service.processSingleFile("missing.json", validBlocklyJson(99L), "batch-1", false);
         assertThat(result.status()).isEqualTo("FAILED");
@@ -109,7 +109,7 @@ class FileImportServiceTest {
 
     @Test
     void processSingleFile_duplicate_returnsDuplicateAndCachesBytes() {
-        when(submissionRepository.existsByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
             .thenReturn(true);
         byte[] content = validBlocklyJson(1L);
 

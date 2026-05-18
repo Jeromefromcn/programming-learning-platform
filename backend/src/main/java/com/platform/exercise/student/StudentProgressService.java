@@ -22,7 +22,7 @@ public class StudentProgressService {
         List<StudentExerciseListDto> exercises =
                 studentExerciseService.listExercises(null, null, null, 0, 1000, userId).content();
 
-        List<Submission> submissions = submissionRepository.findByStudentName(displayName);
+        List<Submission> submissions = submissionRepository.findByStudentNameAndDeletedFalse(displayName);
 
         // Group submissions by exerciseId, keeping the one with the highest effective score
         Map<Long, Submission> bestByExercise = new HashMap<>();

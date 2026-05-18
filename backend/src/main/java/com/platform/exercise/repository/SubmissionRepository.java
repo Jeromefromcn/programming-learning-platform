@@ -12,19 +12,30 @@ import java.util.List;
 
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
-    boolean existsByStudentNameAndExerciseIdAndExportTimestamp(
-            String studentName, Long exerciseId, LocalDateTime exportTimestamp);
+    @Query("""
+            SELECT COUNT(s) > 0 FROM Submission s
+            WHERE s.studentName = :studentName
+              AND s.exerciseId = :exerciseId
+              AND s.exportTimestamp = :exportTimestamp
+              AND s.deleted = false
+            """)
+    boolean existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
+            @Param("studentName") String studentName,
+            @Param("exerciseId") Long exerciseId,
+            @Param("exportTimestamp") LocalDateTime exportTimestamp);
 
     @Query(value = """
             SELECT * FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
+              AND is_deleted = false
             ORDER BY created_at DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
+              AND is_deleted = false
             """,
             nativeQuery = true)
     Page<Submission> findFiltered(
@@ -35,10 +46,11 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Query(value = """
             SELECT * FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
+              AND is_deleted = false
             ORDER BY created_at DESC
             """,
             nativeQuery = true)
     List<Submission> findAllForExport(@Param("exerciseId") Long exerciseId);
 
-    List<Submission> findByStudentName(String studentName);
+    List<Submission> findByStudentNameAndDeletedFalse(String studentName);
 }
