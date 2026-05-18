@@ -32,4 +32,13 @@ describe('MarkdownRenderer', () => {
     const { container } = render(<MarkdownRenderer content="" />);
     expect(container).toBeTruthy();
   });
+
+  it('renders fenced code block inside pre without inline-code background', () => {
+    const { container } = render(<MarkdownRenderer content={'```python\nprint("hi")\n```'} />);
+    const pre = container.querySelector('pre');
+    const code = container.querySelector('pre code');
+    expect(pre).toBeTruthy();
+    expect(code).toBeTruthy();
+    expect(code.style.background).toBe('');
+  });
 });

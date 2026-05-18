@@ -212,7 +212,7 @@ export default function ExerciseFormPage() {
 
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Description *</label>
-            <MarkdownEditor value={description} onChange={setDescription} required />
+            <MarkdownEditor value={description} onChange={setDescription} rows={4} required />
           </div>
 
           <hr style={{ margin: '20px 0', borderColor: '#eee' }} />

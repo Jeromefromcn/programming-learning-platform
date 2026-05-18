@@ -17,14 +17,16 @@ const COMPONENTS = {
       {children}
     </pre>
   ),
-  code: ({ children, className }) => (
-    <code
-      className={className}
-      style={{ fontFamily: 'monospace', fontSize: '0.9em', background: '#f0f0f0', padding: '1px 4px', borderRadius: 3 }}
-    >
-      {children}
-    </code>
-  ),
+  code: ({ children, className }) => {
+    if (className) {
+      return <code className={className} style={{ fontFamily: 'monospace', fontSize: 13 }}>{children}</code>;
+    }
+    return (
+      <code style={{ fontFamily: 'monospace', fontSize: '0.9em', background: '#f0f0f0', padding: '1px 4px', borderRadius: 3 }}>
+        {children}
+      </code>
+    );
+  },
 };
 
 export default function MarkdownRenderer({ content }) {
