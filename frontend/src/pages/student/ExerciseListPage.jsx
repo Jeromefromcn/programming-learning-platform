@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentApi } from '../../api/studentApi';
 import { categoryApi } from '../../api/categoryApi';
+import Pagination from '../../components/Pagination';
 
 const DIFFICULTY_LABELS = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard' };
 const TYPE_LABELS = { BLOCKLY: 'Blockly', PYTHON: 'Python' };
@@ -105,19 +106,7 @@ export default function ExerciseListPage() {
         </table>
       )}
 
-      {totalPages > 1 && (
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-          <button onClick={() => load(page - 1)} disabled={page === 0}
-            style={{ padding: '4px 12px', cursor: page === 0 ? 'default' : 'pointer' }}>
-            ← Prev
-          </button>
-          <span>Page {page + 1} of {totalPages}</span>
-          <button onClick={() => load(page + 1)} disabled={page >= totalPages - 1}
-            style={{ padding: '4px 12px', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => load(p)} />
     </div>
   );
 }

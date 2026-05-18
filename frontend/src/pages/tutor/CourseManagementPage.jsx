@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
+import Pagination from '../../components/Pagination';
 
 export default function CourseManagementPage() {
   const [courses, setCourses] = useState([]);
@@ -87,19 +88,7 @@ export default function CourseManagementPage() {
         </table>
       )}
 
-      {totalPages > 1 && (
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => load(page - 1)} disabled={page === 0}
-            style={{ padding: '4px 12px', cursor: page === 0 ? 'default' : 'pointer' }}>
-            ← Prev
-          </button>
-          <span>Page {page + 1} of {totalPages}</span>
-          <button onClick={() => load(page + 1)} disabled={page >= totalPages - 1}
-            style={{ padding: '4px 12px', cursor: page >= totalPages - 1 ? 'default' : 'pointer' }}>
-            Next →
-          </button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => load(p)} />
     </div>
   );
 }

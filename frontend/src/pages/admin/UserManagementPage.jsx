@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/userApi';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import ImportUsersModal from '../../components/admin/ImportUsersModal';
+import Pagination from '../../components/Pagination';
 
 const ROLE_BADGE = { STUDENT: '#1976d2', TUTOR: '#388e3c', SUPER_ADMIN: '#7b1fa2' };
 const STATUS_BADGE = { ACTIVE: '#2e7d32', DISABLED: '#c62828' };
@@ -146,13 +147,7 @@ export default function UserManagementPage() {
         </table>
       )}
 
-      {totalPages > 1 && (
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Prev</button>
-          <span>Page {page + 1} / {totalPages}</span>
-          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next →</button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => setPage(p)} />
 
       {showCreate && (
         <CreateUserModal
