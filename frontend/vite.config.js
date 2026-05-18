@@ -32,6 +32,8 @@ export default defineConfig({
           /devlop/,
           /decode-named-character-reference/,
           /character-entities/,
+          /hast/,
+          /unist/,
         ],
       },
     },
