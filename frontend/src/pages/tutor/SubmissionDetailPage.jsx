@@ -60,6 +60,16 @@ export default function SubmissionDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!window.confirm('Delete this submission? This cannot be undone.')) return;
+    try {
+      await submissionApi.delete(id);
+      navigate('/tutor/submissions');
+    } catch {
+      alert('Failed to delete submission.');
+    }
+  }
+
   function renderAutoGrade(details) {
     if (!details) return null;
     try {
@@ -184,6 +194,18 @@ export default function SubmissionDetailPage() {
           }}
         >
           {saving ? 'Saving…' : 'Save Grade'}
+        </button>
+      </div>
+
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #eee' }}>
+        <button
+          onClick={handleDelete}
+          style={{
+            background: 'none', color: '#c62828', border: '1px solid #c62828',
+            borderRadius: 4, padding: '8px 20px', cursor: 'pointer',
+          }}
+        >
+          Delete Submission
         </button>
       </div>
     </div>

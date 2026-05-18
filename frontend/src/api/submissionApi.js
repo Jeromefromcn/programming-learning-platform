@@ -17,6 +17,9 @@ export const submissionApi = {
 
   grade: (id, payload) =>
     axiosInstance.put(`/v1/submissions/${id}/grade`, payload).then(r => r.data),
+
+  delete: (id) =>
+    axiosInstance.delete(`/v1/submissions/${id}`).then(r => r.data),
 };
 
 // CSV export uses a plain <a href> — no Axios call needed; the endpoint is unauthenticated.

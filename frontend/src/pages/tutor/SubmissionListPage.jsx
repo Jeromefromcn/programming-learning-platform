@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submissionApi, csvExportUrl } from '../../api/submissionApi';
+import Pagination from '../../components/Pagination';
 
 function debounce(fn, ms) {
   let t;
@@ -38,6 +39,22 @@ export default function SubmissionListPage() {
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
     debouncedFetch(params);
   }, [page, studentName, exerciseId, debouncedFetch]);
+
+  async function handleDelete(e, id) {
+    e.stopPropagation();
+    if (!window.confirm('Delete this submission? This cannot be undone.')) return;
+    try {
+      await submissionApi.delete(id);
+      const newPage = submissions.length === 1 && page > 0 ? page - 1 : page;
+      setPage(newPage);
+      const params = { page: newPage, size: 20 };
+      if (studentName.trim()) params.studentName = studentName.trim();
+      if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
+      fetchSubmissions(params);
+    } catch {
+      alert('Failed to delete submission.');
+    }
+  }
 
   const csvHref = csvExportUrl(exerciseId.trim() || null);
 
@@ -85,14 +102,14 @@ export default function SubmissionListPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Mismatch', 'Date'].map(h => (
+              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Mismatch', 'Date', ''].map(h => (
                 <th key={h} style={{ padding: '10px 12px', borderBottom: '2px solid #ddd' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {submissions.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
+              <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
             ) : submissions.map(sub => (
               <tr
                 key={sub.id}
@@ -117,21 +134,24 @@ export default function SubmissionListPage() {
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
                   {new Date(sub.createdAt).toLocaleDateString()}
                 </td>
+                <td style={{ padding: '10px 12px' }}>
+                  <button
+                    onClick={e => handleDelete(e, sub.id)}
+                    style={{
+                      padding: '3px 10px', color: '#c62828', background: 'none',
+                      border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                    }}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-            style={{ padding: '4px 12px' }}>←</button>
-          <span style={{ padding: '4px 8px' }}>Page {page + 1} of {totalPages}</span>
-          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}
-            style={{ padding: '4px 12px' }}>→</button>
-        </div>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
