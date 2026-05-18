@@ -1,23 +1,28 @@
 import { useEffect, useState } from 'react';
 import { categoryApi } from '../../api/categoryApi';
+import Pagination from '../../components/Pagination';
 
 export default function CategoryManagementPage() {
   const [categories, setCategories] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [newName, setNewName] = useState('');
   const [addError, setAddError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function load() {
+  async function load(p = page) {
     setLoading(true);
     try {
-      const data = await categoryApi.list();
-      setCategories(data);
+      const data = await categoryApi.list(p, 20);
+      setCategories(data.content);
+      setTotalPages(data.totalPages);
+      setPage(p);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(0); }, []);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -26,7 +31,7 @@ export default function CategoryManagementPage() {
     try {
       await categoryApi.create(newName.trim());
       setNewName('');
-      load();
+      load(0);
     } catch (err) {
       const code = err.response?.data?.error?.code;
       setAddError(code === 'CATEGORY_DUPLICATE'
@@ -39,7 +44,7 @@ export default function CategoryManagementPage() {
     if (!confirm(`Delete category "${cat.name}"?`)) return;
     try {
       await categoryApi.delete(cat.id);
-      load();
+      load(page);
     } catch (err) {
       const code = err.response?.data?.error?.code;
       alert(code === 'CATEGORY_HAS_EXERCISES'
@@ -105,6 +110,8 @@ export default function CategoryManagementPage() {
           </tbody>
         </table>
       )}
+
+      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => load(p)} />
     </div>
   );
 }

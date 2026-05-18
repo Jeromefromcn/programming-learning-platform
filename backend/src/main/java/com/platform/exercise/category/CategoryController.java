@@ -1,13 +1,13 @@
 package com.platform.exercise.category;
 
+import com.platform.exercise.common.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/v1/categories")
@@ -18,8 +18,10 @@ public class CategoryController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<CategoryDto>> listCategories() {
-        return ResponseEntity.ok(categoryService.listAll());
+    public ResponseEntity<PageResponse<CategoryDto>> listCategories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(categoryService.listAll(PageRequest.of(page, size)));
     }
 
     @PostMapping

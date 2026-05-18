@@ -53,9 +53,11 @@ class CategoryControllerTest {
         categoryRepository.save(new Category("Loops"));
         mockMvc.perform(get("/v1/categories"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].name").value("Loops"))
-                .andExpect(jsonPath("$[0].exerciseCount").value(0));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].name").value("Loops"))
+                .andExpect(jsonPath("$.content[0].exerciseCount").value(0))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
     }
 
     @Test

@@ -1,14 +1,14 @@
 package com.platform.exercise.category;
 
 import com.platform.exercise.common.ErrorCode;
+import com.platform.exercise.common.PageResponse;
 import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Category;
 import com.platform.exercise.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -17,10 +17,10 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
 
     @Transactional(readOnly = true)
-    public List<CategoryDto> listAll() {
-        return categoryRepository.findAllWithExerciseCount().stream()
-                .map(CategoryDto::from)
-                .toList();
+    public PageResponse<CategoryDto> listAll(Pageable pageable) {
+        return PageResponse.of(
+            categoryRepository.findPagedWithExerciseCount(pageable)
+                .map(CategoryDto::from));
     }
 
     @Transactional
