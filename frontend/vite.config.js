@@ -15,5 +15,25 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.js',
+    server: {
+      deps: {
+        inline: [
+          'react-markdown',
+          'remark-gfm',
+          /unified/,
+          /remark/,
+          /rehype/,
+          /micromark/,
+          /mdast/,
+          /vfile/,
+          /bail/,
+          /trough/,
+          /zwitch/,
+          /devlop/,
+          /decode-named-character-reference/,
+          /character-entities/,
+        ],
+      },
+    },
   },
 })
