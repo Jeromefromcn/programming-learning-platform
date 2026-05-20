@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Component } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/login/LoginPage';
@@ -43,23 +44,24 @@ function Unauthorized() {
 export default function App() {
   return (
     <AppErrorBoundary>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute requiredRole="STUDENT">
-                <AppShell />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute requiredRole="STUDENT">
+                  <AppShell />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </AppErrorBoundary>
   );
 }
