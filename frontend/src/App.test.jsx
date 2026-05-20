@@ -9,6 +9,11 @@ vi.mock('./api/axiosInstance', () => ({
   },
   setAuthHandlers: vi.fn(),
 }));
+vi.mock('./api/authApi', () => ({
+  authApi: {
+    refresh: vi.fn().mockRejectedValue(new Error('no session')),
+  },
+}));
 vi.mock('./components/AppShell', () => ({
   default: () => <div data-testid="app-shell">AppShell</div>,
 }));
@@ -19,9 +24,10 @@ test('/login renders LoginPage', () => {
   expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
 });
 
-test('/app redirects to /login when unauthenticated', () => {
+test('/app redirects to /login when unauthenticated', async () => {
   window.history.pushState({}, '', '/app');
   render(<App />);
-  // Unauthenticated: ProtectedRoute redirects to /login
-  expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+  // Wait for AuthProvider to finish initializing (authApi.refresh rejects → initializing becomes false)
+  // then ProtectedRoute redirects unauthenticated user to /login
+  expect(await screen.findByRole('button', { name: /login/i })).toBeInTheDocument();
 });

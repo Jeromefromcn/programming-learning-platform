@@ -42,3 +42,16 @@ test('renders children when user has required role', () => {
   );
   expect(screen.getByText('protected')).toBeInTheDocument();
 });
+
+test('redirects to /unauthorized when user has insufficient role', () => {
+  vi.mocked(useAuth).mockReturnValue({
+    user: { role: 'STUDENT' },
+    initializing: false,
+  });
+  render(
+    <MemoryRouter initialEntries={['/app']}>
+      <ProtectedRoute requiredRole="TUTOR"><span>protected</span></ProtectedRoute>
+    </MemoryRouter>
+  );
+  expect(screen.queryByText('protected')).not.toBeInTheDocument();
+});
