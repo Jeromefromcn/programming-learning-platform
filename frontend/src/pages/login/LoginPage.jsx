@@ -21,7 +21,8 @@ export default function LoginPage() {
       const data = await authApi.login(username, password);
       login(data.accessToken, data.user);
       const returnUrl = sessionStorage.getItem('returnUrl');
-      if (returnUrl) {
+      const isSafeReturnUrl = returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//');
+      if (isSafeReturnUrl) {
         sessionStorage.removeItem('returnUrl');
         navigate(returnUrl, { replace: true });
       } else {
