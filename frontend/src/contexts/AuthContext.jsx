@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import axiosInstance, { setAuthHandlers } from '../api/axiosInstance';
+import { authApi } from '../api/authApi';
 import { settingsApi } from '../api/settingsApi';
 import { SECTIONS } from '../components/sectionConfig';
 
@@ -9,9 +11,33 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [menuSections, setMenuSections] = useState([]);
+  const [initializing, setInitializing] = useState(true);
   const tokenRef = useRef(null);
 
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
+
+  // Silently restore session from HttpOnly refresh cookie on mount
+  useEffect(() => {
+    authApi.refresh()
+      .then(async ({ accessToken: tok, user: userData }) => {
+        tokenRef.current = tok;
+        setAccessToken(tok);
+        setUser(userData);
+        try {
+          const data = await settingsApi.getMenuConfig();
+          setMenuSections(data.sections);
+        } catch {
+          const fallback = SECTIONS
+            .filter(s => s.roles.includes(userData.role))
+            .map(s => s.key);
+          setMenuSections(fallback);
+        }
+      })
+      .catch(() => {
+        // No valid session — user must log in
+      })
+      .finally(() => setInitializing(false));
+  }, []);
 
   const login = useCallback(async (token, userData) => {
     tokenRef.current = token;
@@ -38,12 +64,21 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setAuthHandlers(
       () => tokenRef.current,
-      () => { setAccessToken(null); setUser(null); setMenuSections([]); }
+      () => {
+        const currentPath = window.location.pathname + window.location.search;
+        if (currentPath !== '/login') {
+          sessionStorage.setItem('returnUrl', currentPath);
+        }
+        toast.error('Your session has expired. Please log in again.');
+        setAccessToken(null);
+        setUser(null);
+        setMenuSections([]);
+      }
     );
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, menuSections, login, logout }}>
+    <AuthContext.Provider value={{ user, accessToken, menuSections, login, logout, initializing }}>
       {children}
     </AuthContext.Provider>
   );
