@@ -83,6 +83,25 @@ class AuthControllerTest {
     }
 
     @Test
+    void refresh_validCookie_returnsAccessTokenAndUser() throws Exception {
+        // First login to obtain a refresh cookie
+        var loginResult = mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"testuser\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        jakarta.servlet.http.Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
+
+        // Now call refresh with that cookie
+        mockMvc.perform(post("/v1/auth/refresh").cookie(refreshCookie))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.user.username").value("testuser"))
+            .andExpect(jsonPath("$.user.role").value("STUDENT"));
+    }
+
+    @Test
     void logout_returns204() throws Exception {
         mockMvc.perform(post("/v1/auth/logout"))
             .andExpect(status().isNoContent());

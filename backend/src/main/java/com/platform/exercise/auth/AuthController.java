@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -28,12 +27,12 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refresh(
+    public ResponseEntity<AuthResponse> refresh(
             @CookieValue(name = "refreshToken", required = false) String refreshToken) {
         if (refreshToken == null) {
             throw new PlatformException(ErrorCode.TOKEN_EXPIRED, "No refresh token");
         }
-        return ResponseEntity.ok(Map.of("accessToken", authService.refresh(refreshToken)));
+        return ResponseEntity.ok(authService.refresh(refreshToken));
     }
 
     @PostMapping("/logout")

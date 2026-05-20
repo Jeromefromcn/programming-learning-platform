@@ -60,7 +60,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String refresh(String rawToken) {
+    public AuthResponse refresh(String rawToken) {
         String hash = sha256(rawToken);
         RefreshToken rt = refreshTokenRepository.findByTokenHash(hash)
             .orElseThrow(() -> new PlatformException(ErrorCode.TOKEN_EXPIRED, "Refresh token invalid or expired"));
@@ -73,7 +73,8 @@ public class AuthService {
         User user = userRepository.findById(rt.getUserId())
             .orElseThrow(() -> new PlatformException(ErrorCode.TOKEN_EXPIRED, "User not found"));
 
-        return jwtUtil.generateToken(user.getId(), user.getRole().name());
+        String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
+        return new AuthResponse(accessToken, UserDto.from(user));
     }
 
     @Transactional
