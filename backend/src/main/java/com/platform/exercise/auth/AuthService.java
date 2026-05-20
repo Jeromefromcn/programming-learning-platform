@@ -73,6 +73,11 @@ public class AuthService {
         User user = userRepository.findById(rt.getUserId())
             .orElseThrow(() -> new PlatformException(ErrorCode.TOKEN_EXPIRED, "User not found"));
 
+        if (user.getStatus() == User.UserStatus.DISABLED) {
+            throw new PlatformException(ErrorCode.ACCOUNT_DISABLED,
+                "Account disabled — please contact an administrator");
+        }
+
         String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
         return new AuthResponse(accessToken, UserDto.from(user));
     }

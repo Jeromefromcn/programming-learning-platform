@@ -102,6 +102,28 @@ class AuthControllerTest {
     }
 
     @Test
+    void refresh_disabledUser_returns403() throws Exception {
+        // Login as a normal user first to get their refresh cookie
+        var loginResult = mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"testuser\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        jakarta.servlet.http.Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
+
+        // Disable the user in the DB
+        User user = userRepository.findByUsername("testuser").orElseThrow();
+        user.setStatus(User.UserStatus.DISABLED);
+        userRepository.save(user);
+
+        // Refresh should now be denied
+        mockMvc.perform(post("/v1/auth/refresh").cookie(refreshCookie))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("ACCOUNT_DISABLED"));
+    }
+
+    @Test
     void logout_returns204() throws Exception {
         mockMvc.perform(post("/v1/auth/logout"))
             .andExpect(status().isNoContent());
