@@ -20,7 +20,13 @@ export default function LoginPage() {
     try {
       const data = await authApi.login(username, password);
       login(data.accessToken, data.user);
-      navigate(ROLE_ROUTES[data.user.role] ?? '/student', { replace: true });
+      const returnUrl = sessionStorage.getItem('returnUrl');
+      if (returnUrl) {
+        sessionStorage.removeItem('returnUrl');
+        navigate(returnUrl, { replace: true });
+      } else {
+        navigate(ROLE_ROUTES[data.user.role] ?? '/app', { replace: true });
+      }
     } catch (err) {
       const code = err.response?.data?.error?.code;
       if (code === 'ACCOUNT_DISABLED') {
