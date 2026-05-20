@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import toast from 'react-hot-toast';
 import { AuthProvider, useAuth } from './AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
@@ -16,6 +17,10 @@ vi.mock('../api/axiosInstance', () => ({
     },
   },
   setAuthHandlers: vi.fn(),
+}));
+
+vi.mock('react-hot-toast', () => ({
+  default: { error: vi.fn(), success: vi.fn() },
 }));
 
 function ShowAuth() {
@@ -125,5 +130,6 @@ test('onUnauthorized: clears user state and saves returnUrl to sessionStorage', 
   unauthorizedHandler();
 
   expect(setItemSpy).toHaveBeenCalledWith('returnUrl', expect.stringContaining('/'));
+  expect(toast.error).toHaveBeenCalledWith('Your session has expired. Please log in again.');
   setItemSpy.mockRestore();
 });
