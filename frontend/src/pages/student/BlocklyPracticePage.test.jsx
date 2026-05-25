@@ -24,6 +24,12 @@ vi.mock('blockly/python', () => ({
   pythonGenerator: { workspaceToCode: vi.fn(() => '') },
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 function makeExercise(configOverrides = {}) {
   return {
     id: 42,
@@ -44,6 +50,7 @@ function makeExercise(configOverrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockNavigate.mockClear();
 });
 
 describe('Clean student workspace', () => {
@@ -120,5 +127,15 @@ describe('Run button', () => {
     await act(async () => { vi.advanceTimersByTime(3000); });
     expect(screen.getByText(/Time Limit Exceeded/i)).toBeInTheDocument();
     vi.useRealTimers();
+  });
+});
+
+describe('Back button', () => {
+  test('renders a back button that navigates to /student/exercises', () => {
+    render(<BlocklyPracticePage exercise={makeExercise()} />);
+    const backBtn = screen.getByRole('button', { name: /back to exercises/i });
+    expect(backBtn).toBeInTheDocument();
+    fireEvent.click(backBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/student/exercises');
   });
 });

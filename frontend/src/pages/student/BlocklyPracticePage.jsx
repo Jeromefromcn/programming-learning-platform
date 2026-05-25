@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import { javascriptGenerator } from 'blockly/javascript';
@@ -19,6 +20,7 @@ function mapError(msg) {
 }
 
 export default function BlocklyPracticePage({ exercise }) {
+  const navigate = useNavigate();
   const containerRef = useRef(null);
   const workspaceRef = useRef(null);
   const workerRef = useRef(null);
@@ -129,6 +131,12 @@ export default function BlocklyPracticePage({ exercise }) {
 
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <button
+        onClick={() => navigate('/student/exercises')}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginBottom: 16, fontSize: 14 }}
+      >
+        ← Back to exercises
+      </button>
       <h1>{exercise.title}</h1>
       <div style={{ color: '#555', marginBottom: 16 }}>
         <MarkdownRenderer content={version.description} />
