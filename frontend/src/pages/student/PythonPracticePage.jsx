@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 
@@ -9,6 +10,7 @@ const OUTPUT_STYLE = {
 };
 
 export default function PythonPracticePage({ exercise }) {
+  const navigate = useNavigate();
   const version = exercise.version;
   const config = version.config;
   const visibleTestCases = config.visibleTestCases || [];
@@ -100,6 +102,12 @@ export default function PythonPracticePage({ exercise }) {
 
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <button
+        onClick={() => navigate('/student/exercises')}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginBottom: 16, fontSize: 14 }}
+      >
+        ← Back to exercises
+      </button>
       <h1>{exercise.title}</h1>
       <div style={{ color: '#555', marginBottom: 16 }}>
         <MarkdownRenderer content={version.description} />
