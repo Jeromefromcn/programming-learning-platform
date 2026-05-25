@@ -50,7 +50,6 @@ function makeExercise(configOverrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockNavigate.mockClear();
 });
 
 describe('Clean student workspace', () => {
