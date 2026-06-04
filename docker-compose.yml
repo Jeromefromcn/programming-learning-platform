@@ -94,7 +94,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
-      - /var/backups/exercise-platform:/backups
+      - ${BACKUP_DIR:-/var/backups/exercise-platform}:/backups
     depends_on:
       mysql:
         condition: service_healthy

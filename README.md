@@ -93,6 +93,9 @@ JWT_SECRET=<minimum-32-character-random-secret>
 
 # Monitoring
 GRAFANA_ADMIN_PASSWORD=<strong-password>
+
+# Backups — host directory where database dumps are stored
+BACKUP_DIR=/var/backups/exercise-platform
 ```
 
 | Setting | What it is |
@@ -101,6 +104,7 @@ GRAFANA_ADMIN_PASSWORD=<strong-password>
 | `DB_ROOT_PASSWORD` | Root (administrator) password for the database itself. Choose a different strong password. |
 | `JWT_SECRET` | A secret key used to sign login tokens. Must be at least 32 random characters. |
 | `GRAFANA_ADMIN_PASSWORD` | Password for the Grafana monitoring dashboard. |
+| `BACKUP_DIR` | Host directory where daily database dumps are stored. Change this if `/var/backups` is not writable on your server (e.g. set to `/home/ubuntu/backups/exercise-platform`). The directory is created automatically by Docker if it does not exist. |
 | `DB_URL`, `DB_USERNAME`, `MYSQL_HOST`, `MYSQL_DATABASE` | Leave these unchanged unless you have a specific reason to modify them. |
 
 To generate a secure random value for `JWT_SECRET`, run:
@@ -232,10 +236,10 @@ docker compose logs api-server | grep '"level":"ERROR"'
 
 ### Database Backups
 
-**Automatic backups** run daily via the `backup` service. Backups are compressed MySQL dumps stored at:
+**Automatic backups** run daily via the `backup` service. Backups are compressed MySQL dumps stored in the directory defined by `BACKUP_DIR` in your `.env` file (default: `/var/backups/exercise-platform`):
 
 ```
-/var/backups/exercise-platform/backup_YYYY-MM-DD_HH-MM.sql.gz
+$BACKUP_DIR/backup_YYYY-MM-DD_HH-MM.sql.gz
 ```
 
 Backups older than 30 days are automatically deleted.
@@ -249,8 +253,10 @@ docker compose exec backup /backup.sh
 **Restore from a backup:**
 
 ```bash
-# Copy the backup file out of the container if needed
-gunzip -c /var/backups/exercise-platform/backup_2026-06-04_02-00.sql.gz \
+# Load BACKUP_DIR from your .env
+source .env
+
+gunzip -c $BACKUP_DIR/backup_2026-06-04_02-00.sql.gz \
   | docker compose exec -T mysql \
     mysql -u${DB_USERNAME} -p${DB_PASSWORD} ${MYSQL_DATABASE}
 ```
@@ -260,8 +266,9 @@ gunzip -c /var/backups/exercise-platform/backup_2026-06-04_02-00.sql.gz \
 **Verify backup integrity** by checking that the file is non-empty and can be decompressed:
 
 ```bash
-ls -lh /var/backups/exercise-platform/
-gunzip -t /var/backups/exercise-platform/backup_2026-06-04_02-00.sql.gz && echo "OK"
+source .env
+ls -lh $BACKUP_DIR/
+gunzip -t $BACKUP_DIR/backup_2026-06-04_02-00.sql.gz && echo "OK"
 ```
 
 ---
@@ -384,12 +391,14 @@ docker compose exec prometheus wget -qO- http://api-server:8080/api/actuator/pro
 Old backups accumulate if the automatic cleanup is not running. Check disk usage and backup age:
 
 ```bash
-df -h /var/backups/exercise-platform
-ls -lh /var/backups/exercise-platform/
+source .env
+df -h $BACKUP_DIR
+ls -lh $BACKUP_DIR/
 ```
 
 Manually delete backups older than your retention window if needed:
 
 ```bash
-find /var/backups/exercise-platform -name "*.sql.gz" -mtime +30 -delete
+source .env
+find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
 ```
