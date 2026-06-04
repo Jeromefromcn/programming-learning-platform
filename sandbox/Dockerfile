@@ -14,7 +14,7 @@ RUN git clone --depth=1 --branch 3.4 https://github.com/google/nsjail.git /nsjai
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libnl-3-200 libprotobuf32 libcap2 libseccomp2 \
+        libnl-3-200 libnl-route-3-200 libprotobuf32 libcap2 libseccomp2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=nsjail-builder /nsjail-src/nsjail /usr/local/bin/nsjail
