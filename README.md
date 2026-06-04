@@ -6,19 +6,27 @@ A standalone web platform for university programming exercises. Supports Blockly
 
 ## Table of Contents
 
-- [Part 1: Deployment](#part-1-deployment)
-  - [Prerequisites](#prerequisites)
-  - [Clone and Configure](#clone-and-configure)
-  - [First-Time Launch](#first-time-launch)
-  - [Initial Admin Account](#initial-admin-account)
-  - [Verify the Deployment](#verify-the-deployment)
-- [Part 2: Operations](#part-2-operations)
-  - [Starting and Stopping Services](#starting-and-stopping-services)
-  - [Viewing Logs](#viewing-logs)
-  - [Database Backups](#database-backups)
-  - [Monitoring](#monitoring)
-  - [Upgrading](#upgrading)
-  - [Troubleshooting](#troubleshooting)
+- [Programming Learning Platform](#programming-learning-platform)
+  - [Table of Contents](#table-of-contents)
+  - [Part 1: Deployment](#part-1-deployment)
+    - [Prerequisites](#prerequisites)
+    - [Clone and Configure](#clone-and-configure)
+      - [Create the environment configuration file](#create-the-environment-configuration-file)
+    - [First-Time Launch](#first-time-launch)
+    - [Initial Admin Account](#initial-admin-account)
+    - [Verify the Deployment](#verify-the-deployment)
+  - [Part 2: Operations](#part-2-operations)
+    - [Starting and Stopping Services](#starting-and-stopping-services)
+    - [Viewing Logs](#viewing-logs)
+    - [Database Backups](#database-backups)
+    - [Monitoring](#monitoring)
+    - [Upgrading](#upgrading)
+    - [Troubleshooting](#troubleshooting)
+      - [Application returns 502 Bad Gateway](#application-returns-502-bad-gateway)
+      - [Database connection refused](#database-connection-refused)
+      - [Sandbox does not execute code / returns errors](#sandbox-does-not-execute-code--returns-errors)
+      - [Grafana shows no data](#grafana-shows-no-data)
+      - [Disk space exhaustion](#disk-space-exhaustion)
 
 ---
 
@@ -43,7 +51,7 @@ The server must expose **port 80** (application) to users. Ports **9090** (Prome
 On the server, open a terminal and run:
 
 ```bash
-git clone <repository-url> programming-learning-platform
+git clone https://github.com/Jeromefromcn/programming-learning-platform.git programming-learning-platform
 cd programming-learning-platform
 ```
 
