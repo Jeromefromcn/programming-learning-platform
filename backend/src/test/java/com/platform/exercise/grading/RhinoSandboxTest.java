@@ -39,7 +39,7 @@ class RhinoSandboxTest {
 
     @Test
     void execute_largeButFiniteLoop_completes() {
-        // 50K iterations is well within the 500K instruction limit
+        // 50K iterations ≈ 1.1M Rhino bytecode ops, well within the 5M limit
         String result = sandbox.execute(
                 "var x = 0; for (var i = 0; i < 50000; i++) { x = i; } print(x);");
         assertThat(result).isEqualTo("49999");
