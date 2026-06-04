@@ -4,7 +4,7 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
-RUN NODE_OPTIONS="--max-old-space-size=1024" npm run build
+RUN NODE_OPTIONS="--max-old-space-size=1536" npm run build
 
 # Stage 2: Nginx serve
 FROM nginx:1.25-alpine
