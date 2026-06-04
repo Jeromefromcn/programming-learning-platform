@@ -40,18 +40,36 @@ The server must expose **port 80** (application) to users. Ports **9090** (Prome
 
 ### Clone and Configure
 
+On the server, open a terminal and run:
+
 ```bash
 git clone <repository-url> programming-learning-platform
 cd programming-learning-platform
 ```
 
-Copy the example environment file and fill in all values:
+This downloads the project code into a folder called `programming-learning-platform` and opens that folder.
+
+#### Create the environment configuration file
+
+The platform needs a configuration file called `.env` to know things like database passwords and secret keys. This file is **not included in the repository** because it contains sensitive credentials that must never be shared publicly. Instead, the repository provides a template file called `.env.example` that lists all the required settings with placeholder values.
+
+**Step 1 — Copy the template to create your own configuration file.**
+
+Run this command from inside the `programming-learning-platform` folder:
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+This creates a new file `.env` in the same folder. The template file `.env.example` is left untouched.
+
+**Step 2 — Open `.env` in a text editor and replace every placeholder with real values.**
+
+```bash
+nano .env
+```
+
+The file looks like this. Replace the values in `< >` with your own:
 
 ```env
 # Database
@@ -69,12 +87,29 @@ JWT_SECRET=<minimum-32-character-random-secret>
 GRAFANA_ADMIN_PASSWORD=<strong-password>
 ```
 
+| Setting | What it is |
+|---|---|
+| `DB_PASSWORD` | Password the application uses to connect to the database. Choose any strong password. |
+| `DB_ROOT_PASSWORD` | Root (administrator) password for the database itself. Choose a different strong password. |
+| `JWT_SECRET` | A secret key used to sign login tokens. Must be at least 32 random characters. |
+| `GRAFANA_ADMIN_PASSWORD` | Password for the Grafana monitoring dashboard. |
+| `DB_URL`, `DB_USERNAME`, `MYSQL_HOST`, `MYSQL_DATABASE` | Leave these unchanged unless you have a specific reason to modify them. |
+
+To generate a secure random value for `JWT_SECRET`, run:
+
+```bash
+openssl rand -hex 32
+```
+
+Copy the output and paste it as the value of `JWT_SECRET` in `.env`.
+
+Save and close the file (in nano: press `Ctrl+O`, then `Enter` to save, then `Ctrl+X` to exit).
+
 **Security checklist before going live:**
-- Replace every `changeme` placeholder with a strong, unique value.
-- `JWT_SECRET` must be at least 32 characters of random data. Generate one with:
-  ```bash
-  openssl rand -hex 32
-  ```
+- Every `<...>` placeholder in `.env` must be replaced with a real value.
+- `DB_PASSWORD`, `DB_ROOT_PASSWORD`, and `GRAFANA_ADMIN_PASSWORD` should each be a unique, strong password — do not reuse the same password for all three.
+- `JWT_SECRET` must be at least 32 characters of random data (use the `openssl` command above).
+- Do not commit `.env` to git or share it with anyone outside the operations team.
 - Restrict firewall access to ports 9090 and 3001 so only admins can reach the monitoring dashboards.
 
 ---
