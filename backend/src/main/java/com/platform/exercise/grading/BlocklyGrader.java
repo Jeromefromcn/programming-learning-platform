@@ -3,6 +3,7 @@ package com.platform.exercise.grading;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+import jakarta.annotation.PreDestroy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -67,9 +68,20 @@ public class BlocklyGrader {
 
             return new Result(score, details);
         } catch (Exception e) {
+            String errorJson;
+            try {
+                errorJson = mapper.writeValueAsString(e.getMessage() != null ? e.getMessage() : "EXECUTION_ERROR");
+            } catch (Exception ignored) {
+                errorJson = "\"EXECUTION_ERROR\"";
+            }
             return new Result(null,
                 "{\"type\":\"BLOCKLY\",\"rule\":\"outputMatch\",\"passed\":false," +
-                "\"error\":\"" + e.getMessage() + "\"}");
+                "\"error\":" + errorJson + "}");
         }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        executor.shutdown();
     }
 }
