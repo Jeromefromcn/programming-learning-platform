@@ -92,7 +92,7 @@ Error codes: `INVALID_CREDENTIALS` · `ACCOUNT_DISABLED` · `TOKEN_EXPIRED` · `
 - Python: Pyodide in Web Worker + hard kill timeout
 
 **Server-side (auto-grading on import):**
-- Blockly → Rhino JS engine: instruction count limit 500K, `initSafeStandardObjects()`
+- Blockly → Rhino JS engine: instruction count limit 5M bytecode ops (≈50K source iterations), `initSafeStandardObjects()`
 - Python → `POST http://sandbox:5000/execute` via nsjail: no network, RO filesystem, blocked imports (os, sys, subprocess, socket)
 
 ## Auth Model

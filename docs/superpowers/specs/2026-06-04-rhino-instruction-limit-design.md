@@ -32,7 +32,7 @@ Responsibilities:
 Instruction observer logic:
 - `setInstructionObserverThreshold(10_000)` — observer called every 10,000 instructions (low call overhead)
 - Observer reads cumulative count from `cx.getThreadLocal(COUNT_KEY)`, adds the current delta, writes back
-- When total exceeds **500,000**, throws `InstructionLimitExceededException` (a `RuntimeException`)
+- When total exceeds **5,000,000**, throws `InstructionLimitExceededException` (a `RuntimeException`). Note: Rhino counts bytecode-level operations, not source statements — a 50K-iteration `for` loop consumes ~1.1M Rhino instructions, so 500K was too low.
 - Counter is stored per-`Context` (thread-local), so concurrent executions are fully independent
 
 The `execute()` method:
@@ -68,13 +68,13 @@ The 3-second `Future.get()` timeout is kept as a belt-and-suspenders fallback in
 | Parameter | Value | Rationale |
 |---|---|---|
 | Instruction observer threshold | 10,000 | Low overhead; observer overhead is negligible at this granularity |
-| Instruction limit | 500,000 | Enough for any reasonable Blockly program; kills tight loops within milliseconds |
+| Instruction limit | 5,000,000 | Rhino counts bytecode ops; 50K source iterations ≈ 1.1M Rhino instructions. 5M allows reasonable programs while killing tight infinite loops in <2s |
 | Grading thread pool size | 4 | Matches CPU cores for compute-bound work; prevents unbounded thread creation |
 | Wall-clock timeout (existing) | 3 seconds | Safety fallback only |
 
 ## Testing
 
-- Unit test: `BlocklyGraderTest` — add cases for `while(true){}` and a 500K-instruction-exceeding loop; assert result contains `INSTRUCTION_LIMIT_EXCEEDED` and completes in < 1 second
+- Unit test: `BlocklyGraderTest` — add cases for `while(true){}`; assert result contains `INSTRUCTION_LIMIT_EXCEEDED` and completes in < 2 seconds
 - Unit test: `RhinoSandboxTest` — test `execute()` directly: normal code returns output, infinite loop throws `InstructionLimitExceededException`
 - Existing passing tests must remain green
 
