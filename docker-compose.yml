@@ -31,7 +31,7 @@ services:
     build:
       context: ./sandbox
     security_opt:
-      - no-new-privileges:true
+      - seccomp:unconfined
     cap_drop:
       - ALL
     cap_add:
