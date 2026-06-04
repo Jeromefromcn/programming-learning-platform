@@ -11,7 +11,11 @@ public class RhinoSandbox {
     private static final Object COUNT_KEY = new Object();
 
     static {
-        ContextFactory.initGlobal(new LimitedContextFactory());
+        try {
+            ContextFactory.initGlobal(new LimitedContextFactory());
+        } catch (IllegalStateException ignored) {
+            // Already registered — expected when multiple tests share the same JVM
+        }
     }
 
     public String execute(String code) {
