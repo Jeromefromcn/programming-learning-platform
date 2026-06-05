@@ -6,7 +6,7 @@
 
 **Architecture:** Extract Rhino execution into a new `RhinoSandbox` Spring component that installs a custom `ContextFactory` with an instruction counter. `BlocklyGrader` delegates all JS execution to `RhinoSandbox` and maps `InstructionLimitExceededException` to the `INSTRUCTION_LIMIT_EXCEEDED` error string. The unbounded thread pool is replaced with a fixed pool of 4.
 
-**Tech Stack:** Java 17, Rhino 1.7.15 (`org.mozilla:rhino`), JUnit 5, AssertJ, Spring Boot 3.
+**Tech Stack:** Java 25, Rhino 1.7.15 (`org.mozilla:rhino`), JUnit 5, AssertJ, Spring Boot 3.5.0.
 
 ---
 

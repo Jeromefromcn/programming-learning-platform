@@ -6,7 +6,7 @@
 
 **Architecture:** Two-query + Java merge: fetch visible exercises via existing `StudentExerciseService` (reuses course-filter logic), bulk-fetch submissions by `student_name`, merge in `StudentProgressService` to derive NOT_ATTEMPTED / ATTEMPTED / GRADED status and compute summary stats. One new controller, one service, two DTO records. Frontend: `progressApi.js` + `ProgressPage.jsx` + route + nav link.
 
-**Tech Stack:** Java 17 · Spring Boot 3.2.5 · Spring Data JPA · H2 (tests) · React 18 · Axios
+**Tech Stack:** Java 25 · Spring Boot 3.5.0 · Spring Data JPA · H2 (tests) · React 18 · Axios
 
 ---
 

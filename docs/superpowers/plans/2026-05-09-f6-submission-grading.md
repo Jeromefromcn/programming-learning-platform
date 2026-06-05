@@ -6,7 +6,7 @@
 
 **Architecture:** `FileImportService` parses and validates each JSON/ZIP file, calls `BlocklyGrader` (Rhino JS execution) or `PythonGrader` (REST to sandbox), and persists results. `SubmissionService` orchestrates list/detail/grade/CSV. Three new tutor pages (import, list, detail) connect to a new `submissionApi.js` client.
 
-**Tech Stack:** Java 17 · Spring Boot 3.2.5 · Rhino 1.7.15 · Apache Commons CSV 1.11 · Caffeine · React 18 · Monaco Editor · Axios
+**Tech Stack:** Java 25 · Spring Boot 3.5.0 · Rhino 1.7.15 · Apache Commons CSV 1.11 · Caffeine · React 18 · Monaco Editor · Axios
 
 ---
 

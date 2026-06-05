@@ -34,7 +34,7 @@
 
 #### T1.1.1 — Backend project skeleton `[P0]`
 
-**Description:** Initialise a Spring Boot 3.2.5 Maven project with all required dependencies declared. No business logic — just a runnable application with health endpoint.
+**Description:** Initialise a Spring Boot 3.5.0 Maven project with all required dependencies declared. No business logic — just a runnable application with health endpoint.
 
 **Acceptance Criteria:**
 - Given the repository is cloned
@@ -45,7 +45,7 @@
   Then it declares: Spring Boot Starter Web, Security, Data JPA, Actuator, Validation; JJWT 0.12.6; Flyway; Lombok; Logback Logstash Encoder; H2 (test scope); MySQL Connector; Micrometer Prometheus; Apache Commons CSV; Rhino 1.7.x
 
 **Technical constraints:**
-- Java 17 (Eclipse Temurin), Maven 3.9.x
+- Java 25 (Eclipse Temurin), Maven 3.9.x
 - Package root: `com.platform.exercise`
 - `application.yml` for config (not `.properties`)
 - Lombok annotation processing must be configured

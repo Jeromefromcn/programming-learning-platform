@@ -6,7 +6,7 @@
 
 **Architecture:** A single `Sidebar` component sits at the `AppShellInner` level (outside `TabPanel`), reads `menuSections` from `AuthContext`, and calls `openTab(section)` on click. `AuthContext` fetches the section list from `GET /v1/settings/menu-config` on login. Admin edits the config via a new checkbox grid in `GlobalSettingsPage`, persisted as JSON in `global_settings` under key `menu_config`.
 
-**Tech Stack:** React 18 · Vitest · Spring Boot 3.2.5 · JPA · Jackson · Flyway 9 · H2 (tests)
+**Tech Stack:** React 18 · Vitest · Spring Boot 3.5.0 · JPA · Jackson · Flyway 9 · H2 (tests)
 
 ---
 

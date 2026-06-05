@@ -6,7 +6,7 @@
 
 **Architecture:** Shared `<Pagination>` component handles all pagination UI. Four backend endpoints gain `page`/`size` params and return `PageResponse<T>`. Submissions get a `is_deleted` column via Flyway migration; all queries filter it out. Existing paginated pages swap inline buttons for the shared component and fix the `totalPages > 1` → `totalPages >= 1` condition.
 
-**Tech Stack:** React 18, Spring Boot 3.2, Spring Data JPA, MySQL 8 / H2 (test), Flyway, MockMvc, React Testing Library.
+**Tech Stack:** React 18, Spring Boot 3.5.0, Spring Data JPA, MySQL 8 / H2 (test), Flyway, MockMvc, React Testing Library.
 
 ---
 

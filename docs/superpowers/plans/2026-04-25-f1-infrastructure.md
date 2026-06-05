@@ -6,7 +6,7 @@
 
 **Architecture:** Single-server Docker Compose deployment on `exercise-platform-net` bridge network. Spring Boot (port 8080 internal) behind Nginx (port 80 external). Python sandbox (port 5000 internal) connected only to the API. nsjail binary copied from `gcr.io/nsjail/nsjail` image — no compilation step. Backup via `mysql:8.0` base with `cron`.
 
-**Tech Stack:** Java 17 (Eclipse Temurin) · Spring Boot 3.2.5 · Maven 3.9 · Flyway 9 · H2 (test) · MySQL 8.0 · React 18.3.1 · Vite 5 · Nginx 1.25-alpine · Python 3.12-slim · nsjail 3.4 · Flask · Prometheus 2.51 · Grafana 10.4
+**Tech Stack:** Java 25 (Eclipse Temurin) · Spring Boot 3.5.0 · Maven 3.9 · Flyway 9 · H2 (test) · MySQL 8.0 · React 18.3.1 · Vite 5 · Nginx 1.25-alpine · Python 3.12-slim · nsjail 3.4 · Flask · Prometheus 2.51 · Grafana 10.4
 
 **Design decisions from brainstorming:**
 - nsjail: pre-built binary copied from `gcr.io/nsjail/nsjail` (no compilation)

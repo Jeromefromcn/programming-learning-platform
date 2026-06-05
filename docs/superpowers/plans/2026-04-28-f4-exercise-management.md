@@ -6,7 +6,7 @@
 
 **Architecture:** Spring Boot backend with `Exercise` + `ExerciseVersion` entities (config stored as JSON text); service layer serializes/deserializes via Jackson; controller exposes a TUTOR-secured REST API. React frontend: a list page with filters, a form page that branches into a Blockly workspace or Monaco Python editor, and a version history panel. No new DB migration needed — `exercises` and `exercise_versions` tables already exist in V1.
 
-**Tech Stack:** Java 17 · Spring Boot 3.2.5 · Spring Data JPA · Jackson ObjectMapper · RestTemplate (sandbox calls) · React 18 · Blockly 12.5.0 · @monaco-editor/react
+**Tech Stack:** Java 25 · Spring Boot 3.5.0 · Spring Data JPA · Jackson ObjectMapper · RestTemplate (sandbox calls) · React 18 · Blockly 12.5.0 · @monaco-editor/react
 
 ---
 

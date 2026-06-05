@@ -6,7 +6,7 @@
 
 **Architecture:** Native SQL projection computes `exerciseCount` per category via a single LEFT JOIN (no Exercise JPA entity yet). `DataIntegrityViolationException` in `GlobalExceptionHandler` maps DB unique constraint violations to `CATEGORY_DUPLICATE`. All error codes pre-exist in `ErrorCode.java`; categories table pre-exists in V1 migration.
 
-**Tech Stack:** Spring Boot 3.2.5 · Spring Data JPA · H2 (test) · React 18 · Axios · React Router 6
+**Tech Stack:** Spring Boot 3.5.0 · Spring Data JPA · H2 (test) · React 18 · Axios · React Router 6
 
 ---
 

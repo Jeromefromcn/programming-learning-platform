@@ -6,7 +6,7 @@
 
 **Architecture:** SheetJS parses `.xlsx` client-side and sends rows as JSON to `POST /v1/users/import`; backend validates all rows first then inserts in a single `@Transactional` method, throwing `ImportValidationException` if any row fails. Change password (`PATCH /v1/users/me/password`) and reset password (`POST /v1/users/{id}/reset-password`) are two new endpoints on the existing `UserController`/`UserService`. `TopBar` gains a dropdown using a `useRef`-based click-outside handler. `ImportUsersModal` and `ChangePasswordModal` follow the same fixed-overlay inline-style modal pattern as `CreateUserModal`.
 
-**Tech Stack:** React 18 + Vitest + @testing-library/react (frontend); Spring Boot 3.2 + Spring Security + JUnit 5 + MockMvc (backend); `xlsx` npm package (SheetJS) for client-side Excel read/write.
+**Tech Stack:** React 18 + Vitest + @testing-library/react (frontend); Spring Boot 3.5.0 + Spring Security + JUnit 5 + MockMvc (backend); `xlsx` npm package (SheetJS) for client-side Excel read/write.
 
 ---
 

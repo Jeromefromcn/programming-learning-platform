@@ -6,7 +6,7 @@
 
 **Architecture:** `Course` entity with no `@ManyToMany` mappings; join tables (`course_exercises`, `course_students`) managed via `@Modifying @Query` native SQL in `CourseRepository`. Interface projections (`CourseWithCountsView`) return per-course counts in a single JOIN query, matching the existing `CategoryView` pattern.
 
-**Tech Stack:** Spring Boot 3.2.5 · Spring Data JPA · H2 (test, MySQL mode) · React 18 · Axios
+**Tech Stack:** Spring Boot 3.5.0 · Spring Data JPA · H2 (test, MySQL mode) · React 18 · Axios
 
 ---
 

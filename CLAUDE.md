@@ -21,7 +21,7 @@ Browser ──:80──▶ Nginx ──/api/*──▶ Spring Boot API ──POS
 ```
 
 **Frontend:** React 18.3.1 · Vite 5 · Blockly 12.5.0 · Monaco Editor · Pyodide (WASM) · Nginx 1.25
-**Backend:** Java 17 · Spring Boot 3.2.5 · Spring Security + JWT (JJWT 0.12.6) · Spring Data JPA · Flyway 9 · Rhino 1.7 · Maven 3.9
+**Backend:** Java 25 · Spring Boot 3.5.0 · Spring Security + JWT (JJWT 0.12.6) · Spring Data JPA · Flyway 9 · Rhino 1.7 · Maven 3.9
 **Sandbox:** Python 3.12 + nsjail 3.4 (network disabled, memory 128MB, PID limit 32)
 **DB:** MySQL 8.0 (prod) · H2 (test) | **Monitoring:** Prometheus · Grafana · Actuator
 

@@ -6,7 +6,7 @@
 
 **Architecture:** Backend refresh endpoint is extended to return full `AuthResponse` (accessToken + user). `AuthContext` bootstraps on mount by calling `authApi.refresh()` to silently restore the session; a new `initializing` flag prevents premature login redirects. When both tokens expire, `onUnauthorized` saves the current path to `sessionStorage`, shows a `react-hot-toast` toast, and clears state — `ProtectedRoute` then redirects to `/login`. After re-login, `LoginPage` reads `sessionStorage` and navigates back to the saved path.
 
-**Tech Stack:** Java 17 / Spring Boot 3.2.5 / MockMvc (backend); React 18 / Vitest / @testing-library/react / react-hot-toast (frontend)
+**Tech Stack:** Java 25 / Spring Boot 3.5.0 / MockMvc (backend); React 18 / Vitest / @testing-library/react / react-hot-toast (frontend)
 
 ---
 

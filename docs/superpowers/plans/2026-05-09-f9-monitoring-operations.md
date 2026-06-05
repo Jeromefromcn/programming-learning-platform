@@ -6,7 +6,7 @@
 
 **Architecture:** A new `TraceFilter` (servlet filter, `@Order(0)`) generates a UUID `traceId` per request, seeds MDC, sets `X-Trace-ID` response header, and logs one completion line after the request. `JwtFilter` adds `userId` and `role` to MDC once auth succeeds. `logback-spring.xml` uses Logstash JSON encoder so every log line is structured JSON with all MDC fields. The Grafana dashboard, Prometheus config, and Docker Compose wiring are already in place.
 
-**Tech Stack:** Spring Boot 3.2.5 · SLF4J 2.x / Logback · Logstash Logback Encoder 7.4 · Micrometer 1.12 · MDC · JUnit 5 · Mockito
+**Tech Stack:** Spring Boot 3.5.0 · SLF4J 2.x / Logback · Logstash Logback Encoder 7.4 · Micrometer 1.12 · MDC · JUnit 5 · Mockito
 
 ---
 

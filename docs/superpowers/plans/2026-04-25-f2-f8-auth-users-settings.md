@@ -6,7 +6,7 @@
 
 **Architecture:** Backend: Spring Security + JwtFilter validates Bearer tokens on every request; per-request DB status check enables instant user disable. Refresh tokens stored as SHA-256 hashes in `refresh_tokens` table, raw value in HttpOnly cookie. Settings cached 30 s via Caffeine; F-8 impact assessment is stubbed (returns empty list) until F-3.2 adds enrollment data. Frontend: React Context holds access token in JS memory only; Axios interceptor retries on 401 with silent refresh.
 
-**Tech Stack:** Spring Boot 3.2.5 · JJWT 0.12.6 · Bucket4j 8.7.0 · Caffeine · Spring Security role hierarchy · React 18 · Vite 5 · Axios · Vitest + React Testing Library
+**Tech Stack:** Spring Boot 3.5.0 · JJWT 0.12.6 · Bucket4j 8.7.0 · Caffeine · Spring Security role hierarchy · React 18 · Vite 5 · Axios · Vitest + React Testing Library
 
 ---
 

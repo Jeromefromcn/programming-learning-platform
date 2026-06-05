@@ -6,7 +6,7 @@
 
 **Architecture:** Three vertical slices built in order — (1) Browse: new `student` backend package with two STUDENT-secured endpoints + React list page; (2) Blockly Practice: page + classic Web Worker that runs Blockly-generated JS with an overridden `print()`; (3) Python Practice: page + classic Web Worker loading Pyodide from CDN. Course filter reads the cached `SettingsService`. Config stripping (hidden test cases, gradingRules) is done in the service layer via Jackson `ObjectNode` manipulation. No new DB migrations.
 
-**Tech Stack:** Java 17 · Spring Boot 3.2.5 · Jackson ObjectMapper · React 18 · Blockly 12.5.0 (`blockly/javascript` generator) · `@monaco-editor/react` · Pyodide 0.26.x (CDN)
+**Tech Stack:** Java 25 · Spring Boot 3.5.0 · Jackson ObjectMapper · React 18 · Blockly 12.5.0 (`blockly/javascript` generator) · `@monaco-editor/react` · Pyodide 0.26.x (CDN)
 
 ---
 
