@@ -40,6 +40,19 @@ test('redirects to /app after login when no returnUrl saved', async () => {
   expect(mockNavigate).toHaveBeenCalledWith('/app', { replace: true });
 });
 
+test('shows expired error when ACCOUNT_EXPIRED is returned', async () => {
+  vi.mocked(authApi.login).mockRejectedValue({
+    response: { data: { error: { code: 'ACCOUNT_EXPIRED' } } },
+  });
+  render(<MemoryRouter><LoginPage /></MemoryRouter>);
+  await userEvent.type(screen.getByLabelText('Username'), 'expireduser');
+  await userEvent.type(screen.getByLabelText('Password'), 'pass');
+  await userEvent.click(screen.getByRole('button', { name: /login/i }));
+  await waitFor(() => {
+    expect(screen.getByText(/account expired/i)).toBeInTheDocument();
+  });
+});
+
 test('redirects to returnUrl after login when one is saved in sessionStorage', async () => {
   sessionStorage.setItem('returnUrl', '/app/exercises/42');
   render(<MemoryRouter><LoginPage /></MemoryRouter>);

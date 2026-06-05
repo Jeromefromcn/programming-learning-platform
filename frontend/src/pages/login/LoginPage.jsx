@@ -32,6 +32,8 @@ export default function LoginPage() {
       const code = err.response?.data?.error?.code;
       if (code === 'ACCOUNT_DISABLED') {
         setError('Account disabled — please contact an administrator');
+      } else if (code === 'ACCOUNT_EXPIRED') {
+        setError('Account expired — please contact an administrator');
       } else {
         setError('Invalid username or password');
       }
