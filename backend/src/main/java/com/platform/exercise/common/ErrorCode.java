@@ -24,7 +24,8 @@ public enum ErrorCode {
     RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS),
     IMPORT_VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST),
-    CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST);
+    CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST),
+    ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN);
 
     private final HttpStatus httpStatus;
 

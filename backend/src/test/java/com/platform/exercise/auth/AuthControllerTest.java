@@ -44,6 +44,15 @@ class AuthControllerTest {
         disabled.setRole(Role.STUDENT);
         disabled.setStatus(UserStatus.DISABLED);
         userRepository.save(disabled);
+
+        User expired = new User();
+        expired.setUsername("expireduser");
+        expired.setDisplayName("Expired");
+        expired.setPasswordHash(passwordEncoder.encode("password123"));
+        expired.setRole(Role.STUDENT);
+        expired.setStatus(UserStatus.ACTIVE);
+        expired.setExpirationDate(java.time.LocalDateTime.now().minusDays(1));
+        userRepository.save(expired);
     }
 
     @Test
@@ -127,5 +136,46 @@ class AuthControllerTest {
     void logout_returns204() throws Exception {
         mockMvc.perform(post("/v1/auth/logout"))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void login_expiredUser_returns403() throws Exception {
+        mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"expireduser\",\"password\":\"password123\"}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("ACCOUNT_EXPIRED"));
+    }
+
+    @Test
+    void refresh_expiredUser_returns403() throws Exception {
+        var loginResult = mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"testuser\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        jakarta.servlet.http.Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
+
+        User user = userRepository.findByUsername("testuser").orElseThrow();
+        user.setExpirationDate(java.time.LocalDateTime.now().minusDays(1));
+        userRepository.save(user);
+
+        mockMvc.perform(post("/v1/auth/refresh").cookie(refreshCookie))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("ACCOUNT_EXPIRED"));
+    }
+
+    @Test
+    void login_expirationCleared_returns200() throws Exception {
+        User user = userRepository.findByUsername("expireduser").orElseThrow();
+        user.setExpirationDate(null);
+        userRepository.save(user);
+
+        mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"expireduser\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty());
     }
 }

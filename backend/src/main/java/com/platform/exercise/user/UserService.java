@@ -57,6 +57,7 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setRole(Role.valueOf(req.role()));
         user.setStatus(UserStatus.ACTIVE);
+        user.setExpirationDate(req.expirationDate());
         return UserDto.from(userRepository.save(user));
     }
 
@@ -159,5 +160,13 @@ public class UserService {
             refreshTokenRepository.deleteByUserId(id);
         }
         return UserDto.from(user);
+    }
+
+    @Transactional
+    public UserDto updateExpiration(Long id, UpdateExpirationRequest req) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
+        user.setExpirationDate(req.expirationDate());
+        return UserDto.from(userRepository.save(user));
     }
 }

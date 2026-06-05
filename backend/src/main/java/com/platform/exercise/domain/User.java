@@ -35,6 +35,13 @@ public class User {
     @Column(nullable = false, columnDefinition = "VARCHAR(20)")
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(name = "expiration_date")
+    private LocalDateTime expirationDate;
+
+    public boolean isExpired() {
+        return expirationDate != null && expirationDate.isBefore(LocalDateTime.now());
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

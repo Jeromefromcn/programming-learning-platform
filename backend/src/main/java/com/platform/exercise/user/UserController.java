@@ -74,6 +74,13 @@ public class UserController {
         return ResponseEntity.ok(userService.updateStatus(id, req, currentUserId));
     }
 
+    @PatchMapping("/{id}/expiration")
+    public ResponseEntity<UserDto> updateExpiration(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateExpirationRequest req) {
+        return ResponseEntity.ok(userService.updateExpiration(id, req));
+    }
+
     private Long resolveCurrentUserId(Authentication authentication) {
         Object principal = authentication.getPrincipal();
         if (principal instanceof User user) {

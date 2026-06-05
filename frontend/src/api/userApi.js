@@ -15,4 +15,6 @@ export const userApi = {
     axiosInstance.patch('/v1/users/me/password', data).then(r => r.data),
   resetPassword: (id) =>
     axiosInstance.post(`/v1/users/${id}/reset-password`).then(r => r.data),
+  updateExpiration: (id, expirationDate) =>
+    axiosInstance.patch(`/v1/users/${id}/expiration`, { expirationDate }).then(r => r.data),
 };

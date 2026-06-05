@@ -16,7 +16,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -239,5 +242,61 @@ class UserControllerTest {
         mockMvc.perform(post("/v1/users/999999/reset-password"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.error.code").value("USER_NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void patchExpiration_validRequest_returns200WithExpirationDate() throws Exception {
+        User target = userRepository.findByUsername("student1").orElseThrow();
+        String futureDate = LocalDateTime.now().plusDays(30).toString();
+
+        mockMvc.perform(patch("/v1/users/" + target.getId() + "/expiration")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expirationDate\":\"" + futureDate + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.expirationDate").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void patchExpiration_clearExpiration_returns200WithNull() throws Exception {
+        User target = userRepository.findByUsername("student1").orElseThrow();
+        target.setExpirationDate(LocalDateTime.now().plusDays(30));
+        userRepository.save(target);
+
+        mockMvc.perform(patch("/v1/users/" + target.getId() + "/expiration")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expirationDate\":null}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.expirationDate").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void createUser_withExpirationDate_returns201WithDate() throws Exception {
+        String futureDate = LocalDateTime.now().plusDays(30).toString();
+
+        mockMvc.perform(post("/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"expiringuser","displayName":"Expiring User",\
+                        "password":"securepass1","role":"STUDENT",\
+                        "expirationDate":"%s"}
+                        """.formatted(futureDate)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.expirationDate").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_returnsExpirationDateField() throws Exception {
+        userRepository.findByUsername("admin_test").ifPresent(u -> {
+            u.setExpirationDate(LocalDateTime.now().plusDays(30));
+            userRepository.save(u);
+        });
+
+        mockMvc.perform(get("/v1/users"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.username=='admin_test')].expirationDate").isNotEmpty());
     }
 }

@@ -46,6 +46,11 @@ public class AuthService {
                 "Account disabled — please contact an administrator");
         }
 
+        if (user.isExpired()) {
+            throw new PlatformException(ErrorCode.ACCOUNT_EXPIRED,
+                "Account has expired — please contact an administrator");
+        }
+
         String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
 
         String rawToken = UUID.randomUUID().toString();
@@ -76,6 +81,11 @@ public class AuthService {
         if (user.getStatus() == User.UserStatus.DISABLED) {
             throw new PlatformException(ErrorCode.ACCOUNT_DISABLED,
                 "Account disabled — please contact an administrator");
+        }
+
+        if (user.isExpired()) {
+            throw new PlatformException(ErrorCode.ACCOUNT_EXPIRED,
+                "Account has expired — please contact an administrator");
         }
 
         String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());

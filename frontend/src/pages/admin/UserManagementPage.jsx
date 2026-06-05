@@ -8,6 +8,17 @@ import Pagination from '../../components/Pagination';
 const ROLE_BADGE = { STUDENT: '#1976d2', TUTOR: '#388e3c', SUPER_ADMIN: '#7b1fa2' };
 const STATUS_BADGE = { ACTIVE: '#2e7d32', DISABLED: '#c62828' };
 
+function fmtDate(dt) {
+  if (!dt) return null;
+  const d = new Date(dt);
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function isExpired(dt) {
+  if (!dt) return false;
+  return new Date(dt) < new Date();
+}
+
 export default function UserManagementPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
@@ -20,6 +31,7 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [resettingId, setResettingId] = useState(null);
+  const [expirationInput, setExpirationInput] = useState({});
 
   async function load() {
     setLoading(true);
@@ -47,6 +59,19 @@ export default function UserManagementPage() {
     const newStatus = u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     if (newStatus === 'DISABLED' && !confirm(`Disable ${u.username}? All active sessions will be invalidated.`)) return;
     await userApi.updateStatus(u.id, newStatus);
+    load();
+  }
+
+  async function handleSetExpiration(u) {
+    const val = expirationInput[u.id];
+    const dt = val ? new Date(val).toISOString() : null;
+    await userApi.updateExpiration(u.id, dt);
+    setExpirationInput(p => ({ ...p, [u.id]: undefined }));
+    load();
+  }
+
+  async function handleClearExpiration(u) {
+    await userApi.updateExpiration(u.id, null);
     load();
   }
 
@@ -108,6 +133,7 @@ export default function UserManagementPage() {
               <th style={{ padding: 8 }}>Display Name</th>
               <th style={{ padding: 8 }}>Role</th>
               <th style={{ padding: 8 }}>Status</th>
+              <th style={{ padding: 8 }}>Expiration</th>
               <th style={{ padding: 8 }}>Actions</th>
             </tr>
           </thead>
@@ -125,6 +151,30 @@ export default function UserManagementPage() {
                 </td>
                 <td style={{ padding: 8 }}>
                   <span style={{ color: STATUS_BADGE[u.status], fontWeight: 600 }}>{u.status}</span>
+                </td>
+                <td style={{ padding: 8 }}>
+                  {u.expirationDate ? (
+                    <span style={{ color: isExpired(u.expirationDate) ? '#c62828' : '#2e7d32', fontWeight: 600 }}>
+                      {fmtDate(u.expirationDate)}{isExpired(u.expirationDate) ? ' (Expired)' : ''}
+                    </span>
+                  ) : (
+                    <span style={{ color: '#999' }}>Never</span>
+                  )}
+                  {u.id !== currentUser?.id && (
+                    <div style={{ marginTop: 4, display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input type="date"
+                        value={expirationInput[u.id] || ''}
+                        onChange={e => setExpirationInput(p => ({ ...p, [u.id]: e.target.value }))}
+                        style={{ padding: 2, fontSize: 11, width: 110 }} />
+                      <button onClick={() => handleSetExpiration(u)}
+                        disabled={!expirationInput[u.id]}
+                        style={{ padding: '2px 6px', cursor: 'pointer', fontSize: 11 }}>Set</button>
+                      {u.expirationDate && (
+                        <button onClick={() => handleClearExpiration(u)}
+                          style={{ padding: '2px 6px', cursor: 'pointer', fontSize: 11, color: '#c62828' }}>Clear</button>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: 8 }}>
                   {u.id !== currentUser?.id && (

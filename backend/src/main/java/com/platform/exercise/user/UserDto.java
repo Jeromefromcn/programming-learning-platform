@@ -9,6 +9,7 @@ public record UserDto(
     String displayName,
     String role,
     String status,
+    LocalDateTime expirationDate,
     LocalDateTime createdAt
 ) {
     public static UserDto from(User user) {
@@ -18,6 +19,7 @@ public record UserDto(
             user.getDisplayName(),
             user.getRole().name(),
             user.getStatus().name(),
+            user.getExpirationDate(),
             user.getCreatedAt()
         );
     }
