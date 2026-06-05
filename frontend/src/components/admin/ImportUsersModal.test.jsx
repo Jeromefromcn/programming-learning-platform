@@ -68,3 +68,22 @@ test('calls onImported with count on success', async () => {
   await userEvent.click(screen.getByRole('button', { name: /^import$/i }));
   await waitFor(() => expect(onImported).toHaveBeenCalledWith(1));
 });
+
+test('converts date-only expirationDate to ISO datetime before sending', async () => {
+  const { sheet_to_json } = await import('xlsx').then(m => m.utils);
+  sheet_to_json.mockReturnValue([
+    ['username*', 'displayName*', 'password*', 'role*', 'expirationDate'],
+    ['newuser1', 'New User', 'pass1234', 'STUDENT', '2027-01-01'],
+  ]);
+  const api = await getApi();
+  api.importUsers.mockResolvedValue({ imported: 1 });
+  render(<ImportUsersModal onClose={vi.fn()} onImported={vi.fn()} />);
+  const file = new File(['mock'], 'users.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await userEvent.upload(screen.getByLabelText('Select Excel File *'), file);
+  await userEvent.click(screen.getByRole('button', { name: /^import$/i }));
+  await waitFor(() => {
+    expect(api.importUsers).toHaveBeenCalledWith([
+      expect.objectContaining({ expirationDate: '2027-01-01T00:00:00' }),
+    ]);
+  });
+});

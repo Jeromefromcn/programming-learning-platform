@@ -44,7 +44,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
           displayName: String(row[1] ?? '').trim(),
           password: String(row[2] ?? '').trim(),
           role: String(row[3] ?? '').trim(),
-          expirationDate: row[4] ? String(row[4]).trim() : null,
+          expirationDate: row[4] ? String(row[4]).trim().replace(/^(\d{4}-\d{2}-\d{2})$/, '$1T00:00:00') : null,
         }));
       const result = await userApi.importUsers(users);
       onImported(result.imported);
