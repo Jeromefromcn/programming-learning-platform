@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -159,6 +160,23 @@ class UserControllerTest {
                         """))
             .andExpect(status().isBadRequest());
         assertFalse(userRepository.existsByUsername("valid_new"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void importUsers_withExpirationDate_setsExpirationDate() throws Exception {
+        mockMvc.perform(post("/v1/users/import")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"users":[{"username":"expiring_import","displayName":"Expiring",\
+                        "password":"pass1234","role":"STUDENT",\
+                        "expirationDate":"2027-06-01T00:00:00"}]}
+                        """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.imported").value(1));
+
+        User user = userRepository.findByUsername("expiring_import").orElseThrow();
+        assertEquals(java.time.LocalDateTime.parse("2027-06-01T00:00:00"), user.getExpirationDate());
     }
 
     @Test

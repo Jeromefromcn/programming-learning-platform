@@ -4,7 +4,7 @@ import { userApi } from '../../api/userApi';
 const ROLES = ['STUDENT', 'TUTOR', 'SUPER_ADMIN'];
 
 export default function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'STUDENT' });
+  const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'STUDENT', expirationDate: '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -17,7 +17,8 @@ export default function CreateUserModal({ onClose, onCreated }) {
     setError('');
     setSaving(true);
     try {
-      const user = await userApi.create(form);
+      const payload = { ...form, expirationDate: form.expirationDate ? new Date(form.expirationDate).toISOString() : null };
+      const user = await userApi.create(payload);
       onCreated(user);
     } catch (err) {
       const code = err.response?.data?.error?.code;
@@ -34,17 +35,26 @@ export default function CreateUserModal({ onClose, onCreated }) {
         {error && <div role="alert" style={{ marginBottom: 12, color: '#c62828' }}>{error}</div>}
         {[['username', 'Username'], ['displayName', 'Display Name'], ['password', 'Password']].map(([k, label]) => (
           <div key={k} style={{ marginBottom: 12 }}>
-            <label>{label}</label>
-            <input type={k === 'password' ? 'password' : 'text'} value={form[k]}
-              onChange={update(k)} required style={{ display: 'block', width: '100%', marginTop: 4, padding: 8, boxSizing: 'border-box' }} />
+            <label style={{ display: 'block' }}>{label}
+              <input type={k === 'password' ? 'password' : 'text'} value={form[k]}
+                onChange={update(k)} required style={{ display: 'block', width: '100%', marginTop: 4, padding: 8, boxSizing: 'border-box' }} />
+            </label>
           </div>
         ))}
         <div style={{ marginBottom: 16 }}>
-          <label>Role</label>
-          <select value={form.role} onChange={update('role')}
-            style={{ display: 'block', width: '100%', marginTop: 4, padding: 8 }}>
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-          </select>
+          <label style={{ display: 'block' }}>Role
+            <select value={form.role} onChange={update('role')}
+              style={{ display: 'block', width: '100%', marginTop: 4, padding: 8 }}>
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block' }}>Expiration Date (optional)
+            <input type="date" value={form.expirationDate}
+              onChange={update('expirationDate')}
+              style={{ display: 'block', width: '100%', marginTop: 4, padding: 8, boxSizing: 'border-box' }} />
+          </label>
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button type="button" onClick={onClose}>Cancel</button>

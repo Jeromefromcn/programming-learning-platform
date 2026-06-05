@@ -10,8 +10,8 @@ export default function ImportUsersModal({ onClose, onImported }) {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const usersSheet = XLSX.utils.aoa_to_sheet([
-      ['username*', 'displayName*', 'password*', 'role*'],
-      ['alice', 'Alice Wang', 'pass1234', 'STUDENT'],
+      ['username*', 'displayName*', 'password*', 'role*', 'expirationDate'],
+      ['alice', 'Alice Wang', 'pass1234', 'STUDENT', '2027-01-01'],
     ]);
     XLSX.utils.book_append_sheet(wb, usersSheet, 'Users');
     const instrSheet = XLSX.utils.aoa_to_sheet([
@@ -20,6 +20,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
       ['displayName', 'Yes', 'Max 128 characters', ''],
       ['password', 'Yes', 'Min 8 characters', ''],
       ['role', 'Yes', 'One of the valid values', 'STUDENT / TUTOR / SUPER_ADMIN'],
+      ['expirationDate', 'No', 'ISO date (e.g. 2027-01-01) or leave blank', ''],
       ['', '', 'Max 500 rows per import', ''],
     ]);
     XLSX.utils.book_append_sheet(wb, instrSheet, 'Instructions');
@@ -43,6 +44,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
           displayName: String(row[1] ?? '').trim(),
           password: String(row[2] ?? '').trim(),
           role: String(row[3] ?? '').trim(),
+          expirationDate: row[4] ? String(row[4]).trim() : null,
         }));
       const result = await userApi.importUsers(users);
       onImported(result.imported);

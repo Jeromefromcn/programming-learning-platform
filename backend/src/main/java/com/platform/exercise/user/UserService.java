@@ -109,6 +109,7 @@ public class UserService {
             user.setPasswordHash(passwordEncoder.encode(r.password()));
             user.setRole(Role.valueOf(r.role()));
             user.setStatus(UserStatus.ACTIVE);
+            user.setExpirationDate(r.expirationDate());
             userRepository.save(user);
         }
         return new ImportUsersResult(req.users().size());

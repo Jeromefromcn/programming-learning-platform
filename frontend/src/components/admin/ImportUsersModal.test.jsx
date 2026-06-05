@@ -7,8 +7,8 @@ vi.mock('xlsx', () => ({
   read: vi.fn(() => ({ SheetNames: ['Users'], Sheets: { Users: {} } })),
   utils: {
     sheet_to_json: vi.fn(() => [
-      ['username*', 'displayName*', 'password*', 'role*'],
-      ['newuser1', 'New User', 'pass1234', 'STUDENT'],
+      ['username*', 'displayName*', 'password*', 'role*', 'expirationDate'],
+      ['newuser1', 'New User', 'pass1234', 'STUDENT', ''],
     ]),
     aoa_to_sheet: vi.fn(() => ({})),
     book_new: vi.fn(() => ({})),
