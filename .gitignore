@@ -39,3 +39,6 @@ application-local.properties
 __pycache__/
 *.pyc
 .superpowers/
+
+# opencode tool config
+.opencode/
