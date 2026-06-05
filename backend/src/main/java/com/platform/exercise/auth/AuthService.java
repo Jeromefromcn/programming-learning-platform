@@ -37,6 +37,11 @@ public class AuthService {
         User user = userRepository.findByUsername(request.username())
             .orElseThrow(() -> new PlatformException(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials"));
 
+        if (user.isExpired()) {
+            throw new PlatformException(ErrorCode.ACCOUNT_EXPIRED,
+                "Account has expired — please contact an administrator");
+        }
+
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new PlatformException(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
         }
@@ -44,11 +49,6 @@ public class AuthService {
         if (user.getStatus() == User.UserStatus.DISABLED) {
             throw new PlatformException(ErrorCode.ACCOUNT_DISABLED,
                 "Account disabled — please contact an administrator");
-        }
-
-        if (user.isExpired()) {
-            throw new PlatformException(ErrorCode.ACCOUNT_EXPIRED,
-                "Account has expired — please contact an administrator");
         }
 
         String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());

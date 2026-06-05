@@ -148,6 +148,15 @@ class AuthControllerTest {
     }
 
     @Test
+    void login_expiredUser_wrongPassword_returns403() throws Exception {
+        mockMvc.perform(post("/v1/auth/login")
+                .contentType("application/json")
+                .content("{\"username\":\"expireduser\",\"password\":\"wrongpass\"}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error.code").value("ACCOUNT_EXPIRED"));
+    }
+
+    @Test
     void refresh_expiredUser_returns403() throws Exception {
         var loginResult = mockMvc.perform(post("/v1/auth/login")
                 .contentType("application/json")
