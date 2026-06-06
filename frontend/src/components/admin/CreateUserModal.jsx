@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { userApi } from '../../api/userApi';
 
 const ROLES = ['STUDENT', 'TUTOR', 'SUPER_ADMIN'];
+const today = new Date().toISOString().split('T')[0];
 
 export default function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'STUDENT', expirationDate: '' });
@@ -52,7 +53,7 @@ export default function CreateUserModal({ onClose, onCreated }) {
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block' }}>Expiration Date (optional)
             <input type="date" value={form.expirationDate}
-              onChange={update('expirationDate')}
+              onChange={update('expirationDate')} min={today}
               style={{ display: 'block', width: '100%', marginTop: 4, padding: 8, boxSizing: 'border-box' }} />
           </label>
         </div>

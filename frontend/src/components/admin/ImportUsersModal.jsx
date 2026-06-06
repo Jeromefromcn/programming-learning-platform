@@ -6,6 +6,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
   const [errors, setErrors] = useState([]);
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState(null);
+  const today = new Date().toISOString().split('T')[0];
 
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
@@ -46,6 +47,16 @@ export default function ImportUsersModal({ onClose, onImported }) {
           role: String(row[3] ?? '').trim(),
           expirationDate: row[4] ? String(row[4]).trim().replace(/^(\d{4}-\d{2}-\d{2})$/, '$1T00:00:00') : null,
         }));
+      const pastDateRows = users.filter(u => u.expirationDate && u.expirationDate.split('T')[0] < today);
+      if (pastDateRows.length > 0) {
+        setErrors(pastDateRows.map(u => ({
+          row: users.indexOf(u) + 2,
+          field: 'expirationDate',
+          message: 'must be today or in the future',
+        })));
+        setSaving(false);
+        return;
+      }
       const result = await userApi.importUsers(users);
       onImported(result.imported);
     } catch (err) {

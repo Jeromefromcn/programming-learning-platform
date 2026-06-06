@@ -19,6 +19,8 @@ function isExpired(dt) {
   return new Date(dt) < new Date();
 }
 
+const today = new Date().toISOString().split('T')[0];
+
 export default function UserManagementPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
@@ -165,6 +167,7 @@ export default function UserManagementPage() {
                       <input type="date"
                         value={expirationInput[u.id] || ''}
                         onChange={e => setExpirationInput(p => ({ ...p, [u.id]: e.target.value }))}
+                        min={today}
                         style={{ padding: 2, fontSize: 11, width: 110 }} />
                       <button onClick={() => handleSetExpiration(u)}
                         disabled={!expirationInput[u.id]}
