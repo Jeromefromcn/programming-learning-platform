@@ -172,6 +172,10 @@ public class UserService {
     public UserDto updateExpiration(Long id, UpdateExpirationRequest req) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
+        if (req.expirationDate() != null && req.expirationDate().toLocalDate().isBefore(LocalDate.now())) {
+            throw new PlatformException(ErrorCode.VALIDATION_ERROR,
+                "Expiration date must be today or in the future");
+        }
         user.setExpirationDate(req.expirationDate());
         return UserDto.from(userRepository.save(user));
     }
