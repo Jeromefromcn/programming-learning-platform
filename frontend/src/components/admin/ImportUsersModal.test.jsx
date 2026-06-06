@@ -87,3 +87,19 @@ test('converts date-only expirationDate to ISO datetime before sending', async (
     ]);
   });
 });
+
+test('rejects past expiration date with row error', async () => {
+  const { sheet_to_json } = await import('xlsx').then(m => m.utils);
+  sheet_to_json.mockReturnValue([
+    ['username*', 'displayName*', 'password*', 'role*', 'expirationDate'],
+    ['pastuser', 'Past User', 'pass1234', 'STUDENT', '2020-01-01'],
+  ]);
+  const api = await getApi();
+  render(<ImportUsersModal onClose={vi.fn()} onImported={vi.fn()} />);
+  const file = new File(['mock'], 'users.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await userEvent.upload(screen.getByLabelText('Select Excel File *'), file);
+  await userEvent.click(screen.getByRole('button', { name: /^import$/i }));
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent('must be today or in the future');
+  });
+});

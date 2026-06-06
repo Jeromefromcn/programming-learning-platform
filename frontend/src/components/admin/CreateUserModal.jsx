@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { userApi } from '../../api/userApi';
 
 const ROLES = ['STUDENT', 'TUTOR', 'SUPER_ADMIN'];
-const today = new Date().toISOString().split('T')[0];
 
 export default function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'STUDENT', expirationDate: '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
 
   function update(field) {
     return e => setForm(f => ({ ...f, [field]: e.target.value }));

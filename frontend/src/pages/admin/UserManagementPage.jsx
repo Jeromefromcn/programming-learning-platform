@@ -19,8 +19,6 @@ function isExpired(dt) {
   return new Date(dt) < new Date();
 }
 
-const today = new Date().toISOString().split('T')[0];
-
 export default function UserManagementPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
@@ -34,6 +32,7 @@ export default function UserManagementPage() {
   const [toast, setToast] = useState('');
   const [resettingId, setResettingId] = useState(null);
   const [expirationInput, setExpirationInput] = useState({});
+  const today = new Date().toISOString().split('T')[0];
 
   async function load() {
     setLoading(true);
