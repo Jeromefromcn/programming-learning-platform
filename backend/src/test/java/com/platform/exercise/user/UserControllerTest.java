@@ -181,6 +181,23 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void importUsers_pastExpirationDate_returns400() throws Exception {
+        String pastDate = LocalDateTime.now().minusDays(1).toString();
+
+        mockMvc.perform(post("/v1/users/import")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"users":[{"username":"pastimport","displayName":"Past Import",\
+                        "password":"pass1234","role":"STUDENT",\
+                        "expirationDate":"%s"}]}
+                        """.formatted(pastDate)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("IMPORT_VALIDATION_ERROR"))
+            .andExpect(jsonPath("$.error.rows[0].field").value("expirationDate"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void changePassword_validRequest_returns204AndUpdatesHash() throws Exception {
         mockMvc.perform(patch("/v1/users/me/password")
                 .contentType(MediaType.APPLICATION_JSON)

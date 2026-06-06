@@ -102,6 +102,9 @@ public class UserService {
                     errors.add(new ImportRowError(rowNum, "role", "must be STUDENT, TUTOR, or SUPER_ADMIN"));
                 }
             }
+            if (r.expirationDate() != null && r.expirationDate().toLocalDate().isBefore(LocalDate.now())) {
+                errors.add(new ImportRowError(rowNum, "expirationDate", "must be today or in the future"));
+            }
             rowNum++;
         }
         if (!errors.isEmpty()) {
