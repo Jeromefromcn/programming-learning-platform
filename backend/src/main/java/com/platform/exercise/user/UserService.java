@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -57,6 +58,10 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setRole(Role.valueOf(req.role()));
         user.setStatus(UserStatus.ACTIVE);
+        if (req.expirationDate() != null && req.expirationDate().toLocalDate().isBefore(LocalDate.now())) {
+            throw new PlatformException(ErrorCode.VALIDATION_ERROR,
+                "Expiration date must be today or in the future");
+        }
         user.setExpirationDate(req.expirationDate());
         return UserDto.from(userRepository.save(user));
     }

@@ -307,6 +307,22 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void createUser_pastExpirationDate_returns400() throws Exception {
+        String pastDate = LocalDateTime.now().minusDays(1).toString();
+
+        mockMvc.perform(post("/v1/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"username":"pastuser","displayName":"Past User",\
+                        "password":"securepass1","role":"STUDENT",\
+                        "expirationDate":"%s"}
+                        """.formatted(pastDate)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
     void listUsers_returnsExpirationDateField() throws Exception {
         userRepository.findByUsername("admin_test").ifPresent(u -> {
             u.setExpirationDate(LocalDateTime.now().plusDays(30));
