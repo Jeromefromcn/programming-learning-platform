@@ -59,6 +59,13 @@ test('shows error on failure', async () => {
   });
 });
 
+test('date input has min attribute set to today', () => {
+  render(<CreateUserModal onClose={vi.fn()} onCreated={vi.fn()} />);
+  const input = screen.getByLabelText('Expiration Date (optional)');
+  const today = new Date().toISOString().split('T')[0];
+  expect(input).toHaveAttribute('min', today);
+});
+
 test('sends expirationDate as ISO string when set', async () => {
   const api = await getApi();
   api.create.mockResolvedValue({ username: 'expiringuser' });
