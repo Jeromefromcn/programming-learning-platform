@@ -56,6 +56,10 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try { await axiosInstance.post('/v1/auth/logout'); } catch (_) {}
+    rejectReauthQueue();
+    reauthDismissedRef.current = false;
+    setReauthVisible(false);
+    setConfirmVisible(false);
     setAccessToken(null);
     setUser(null);
     setMenuSections([]);
