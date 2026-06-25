@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { userApi } from '../api/userApi';
+import { isReauthCancelled } from '../api/axiosInstance';
 
 export default function ChangePasswordModal({ onClose }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -24,6 +25,7 @@ export default function ChangePasswordModal({ onClose }) {
       setSuccess(true);
       setTimeout(onClose, 800);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       const code = err.response?.data?.error?.code;
       setError(code === 'WRONG_CURRENT_PASSWORD' ? 'Current password is incorrect' : 'Failed to change password');
     } finally {

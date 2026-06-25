@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { categoryApi } from '../../api/categoryApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import Pagination from '../../components/Pagination';
 
 export default function CategoryManagementPage() {
@@ -33,6 +34,7 @@ export default function CategoryManagementPage() {
       setNewName('');
       load(0);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       const code = err.response?.data?.error?.code;
       setAddError(code === 'CATEGORY_DUPLICATE'
         ? 'This category already exists.'
@@ -46,6 +48,7 @@ export default function CategoryManagementPage() {
       await categoryApi.delete(cat.id);
       load(page);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       const code = err.response?.data?.error?.code;
       alert(code === 'CATEGORY_HAS_EXERCISES'
         ? 'This category has exercises — please remove associations first.'

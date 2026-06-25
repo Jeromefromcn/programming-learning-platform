@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { exerciseApi } from '../../api/exerciseApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 
 /**
  * Props:
@@ -52,6 +53,7 @@ export default function PythonAuthoringEditor({
       });
       setVerifyResults(result.results || []);
     } catch (e) {
+      if (isReauthCancelled(e)) return;
       setVerifyError(e.response?.data?.error?.message || 'Sandbox unavailable');
     } finally {
       setVerifying(false);

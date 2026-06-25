@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { userApi } from '../../api/userApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 
 export default function ImportUsersModal({ onClose, onImported }) {
   const [errors, setErrors] = useState([]);
@@ -60,6 +61,7 @@ export default function ImportUsersModal({ onClose, onImported }) {
       const result = await userApi.importUsers(users);
       onImported(result.imported);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       const rows = err.response?.data?.error?.rows;
       if (rows) {
         setErrors(rows);

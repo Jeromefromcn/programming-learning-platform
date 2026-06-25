@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import Breadcrumb from '../../components/Breadcrumb';
 
 export default function SubmissionDetailPage() {
@@ -55,6 +56,7 @@ export default function SubmissionDetailPage() {
       });
       setSubmission(data);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       setSaveError(err.response?.data?.error?.message || 'Save failed.');
     } finally {
       setSaving(false);

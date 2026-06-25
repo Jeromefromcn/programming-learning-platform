@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userApi } from '../../api/userApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import ImportUsersModal from '../../components/admin/ImportUsersModal';
 import Pagination from '../../components/Pagination';
@@ -83,7 +84,8 @@ export default function UserManagementPage() {
       await userApi.resetPassword(u.id);
       setToast(`${u.username}'s password has been reset`);
       setTimeout(() => setToast(''), 4000);
-    } catch {
+    } catch (err) {
+      if (isReauthCancelled(err)) return;
       setToast('Failed to reset password — please try again');
       setTimeout(() => setToast(''), 4000);
     } finally {

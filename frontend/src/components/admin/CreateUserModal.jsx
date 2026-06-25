@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { userApi } from '../../api/userApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 
 const ROLES = ['STUDENT', 'TUTOR', 'SUPER_ADMIN'];
 
@@ -22,6 +23,7 @@ export default function CreateUserModal({ onClose, onCreated }) {
       const user = await userApi.create(payload);
       onCreated(user);
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       const { code, message } = err.response?.data?.error ?? {};
       if (code === 'USERNAME_TAKEN') {
         setError('Username already taken');

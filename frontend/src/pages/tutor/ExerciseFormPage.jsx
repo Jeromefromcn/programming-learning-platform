@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { exerciseApi } from '../../api/exerciseApi';
 import { categoryApi } from '../../api/categoryApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import BlocklyAuthoringWorkspace from '../../components/tutor/BlocklyAuthoringWorkspace';
 import PythonAuthoringEditor from '../../components/tutor/PythonAuthoringEditor';
 import VersionHistoryPanel from '../../components/tutor/VersionHistoryPanel';
@@ -68,7 +69,8 @@ export default function ExerciseFormPage() {
       } else {
         setPythonConfig(ex.currentVersion.config || EMPTY_PYTHON_CONFIG);
       }
-    } catch {
+    } catch (err) {
+      if (isReauthCancelled(err)) return;
       setError('Failed to load exercise.');
     }
   }
@@ -105,6 +107,7 @@ export default function ExerciseFormPage() {
         navigate('/tutor/exercises');
       }
     } catch (e) {
+      if (isReauthCancelled(e)) return;
       setError(e.response?.data?.error?.message || 'Save failed.');
     } finally {
       setSaving(false);

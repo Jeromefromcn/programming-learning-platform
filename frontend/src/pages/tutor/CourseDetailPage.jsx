@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import Breadcrumb from '../../components/Breadcrumb';
 import Pagination from '../../components/Pagination';
 
@@ -85,7 +86,8 @@ export default function CourseDetailPage() {
       } else {
         setEnrollError(result.errors?.[0] || 'Could not enroll student.');
       }
-    } catch {
+    } catch (err) {
+      if (isReauthCancelled(err)) return;
       setEnrollError('Failed to enroll student.');
     } finally {
       setEnrolling(false);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { studentApi } from '../../api/studentApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import BlocklyPracticePage from './BlocklyPracticePage';
 import PythonPracticePage from './PythonPracticePage';
 
@@ -13,6 +14,7 @@ export default function ExercisePracticeRouter() {
     studentApi.getExercise(id)
       .then(setExercise)
       .catch(err => {
+        if (isReauthCancelled(err)) return;
         if (err.response?.status === 404) setError('Exercise not found.');
         else setError('Failed to load exercise.');
       });

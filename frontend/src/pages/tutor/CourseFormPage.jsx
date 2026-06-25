@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { courseApi } from '../../api/courseApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import Breadcrumb from '../../components/Breadcrumb';
 
 export default function CourseFormPage() {
@@ -22,7 +23,7 @@ export default function CourseFormPage() {
         setName(data.name);
         setDescription(data.description || '');
       })
-      .catch(() => setError('Failed to load course.'))
+      .catch(err => { if (!isReauthCancelled(err)) setError('Failed to load course.'); })
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
@@ -39,6 +40,7 @@ export default function CourseFormPage() {
       }
       navigate('/tutor/courses');
     } catch (err) {
+      if (isReauthCancelled(err)) return;
       setError(err.response?.data?.error?.message || 'Failed to save course.');
     } finally {
       setSaving(false);

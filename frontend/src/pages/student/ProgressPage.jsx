@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { progressApi } from '../../api/progressApi';
+import { isReauthCancelled } from '../../api/axiosInstance';
 import Pagination from '../../components/Pagination';
 
 function chipStyle(status, score) {
@@ -34,7 +35,7 @@ export default function ProgressPage() {
     setLoading(true);
     progressApi.getProgress(page, 20)
       .then(setData)
-      .catch(() => setError('Failed to load progress.'))
+      .catch(err => { if (!isReauthCancelled(err)) setError('Failed to load progress.'); })
       .finally(() => setLoading(false));
   }, [page]);
 
