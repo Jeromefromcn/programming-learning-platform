@@ -130,7 +130,8 @@ export default function BlocklyPracticePage({ exercise }) {
     if (!sharedBufferRef.current) return;
     const int32View = new Int32Array(sharedBufferRef.current);
     const uint8View = new Uint8Array(sharedBufferRef.current);
-    const encoded = new TextEncoder().encode(inputValue.slice(0, 1020));
+    const raw = new TextEncoder().encode(inputValue);
+    const encoded = raw.length <= 1020 ? raw : raw.slice(0, 1020);
     int32View[1] = encoded.length;
     uint8View.set(encoded, 8);
     Atomics.store(int32View, 0, 1);
@@ -235,7 +236,8 @@ export default function BlocklyPracticePage({ exercise }) {
 
         <button
           onClick={() => setExportModal(true)}
-          style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer', marginLeft: 'auto' }}
+          disabled={running}
+          style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: running ? 'not-allowed' : 'pointer', marginLeft: 'auto' }}
         >
           Export
         </button>
