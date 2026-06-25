@@ -229,7 +229,12 @@ export default function BlocklyAuthoringWorkspace({
     const int32View = new Int32Array(sharedBufferRef.current);
     const uint8View = new Uint8Array(sharedBufferRef.current);
     const raw = new TextEncoder().encode(inputValue);
-    const encoded = raw.length <= 1020 ? raw : raw.slice(0, 1020);
+    let encoded = raw;
+    if (raw.length > 1020) {
+      let end = 1020;
+      while (end > 0 && (raw[end] & 0xC0) === 0x80) end--;
+      encoded = raw.slice(0, end);
+    }
     int32View[1] = encoded.length;
     uint8View.set(encoded, 8);
     Atomics.store(int32View, 0, 1);
