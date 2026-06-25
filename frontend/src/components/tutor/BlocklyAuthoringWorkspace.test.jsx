@@ -142,12 +142,14 @@ describe('Run button', () => {
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
   });
 
-  test('clicking Run spawns a Worker from a blob URL without eval', () => {
+  test('clicking Run spawns a Worker from a blob URL and sends init message', () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
     expect(global.Worker).toHaveBeenCalledWith('blob:mock-url');
-    // Code is embedded in the blob — no postMessage needed
-    expect(workerInstance.postMessage).not.toHaveBeenCalled();
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({
+      inputs: [],
+      sharedBuffer: null,
+    });
   });
 
   test('button is disabled while running', () => {
@@ -183,5 +185,76 @@ describe('Run button', () => {
     await act(async () => { vi.advanceTimersByTime(3000); });
     expect(screen.getByText(/Time Limit Exceeded/i)).toBeInTheDocument();
     vi.useRealTimers();
+  });
+});
+
+describe('Input textarea', () => {
+  test('not rendered when text_prompt_ext is absent from allowedBlocks', () => {
+    renderWorkspace({ allowedBlocks: ['text_print'] });
+    expect(screen.queryByLabelText(/Input \(one value per line\)/i)).not.toBeInTheDocument();
+  });
+
+  test('rendered when text_prompt_ext is in allowedBlocks', () => {
+    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
+    expect(screen.getByLabelText(/Input \(one value per line\)/i)).toBeInTheDocument();
+  });
+});
+
+describe('Interactive input modal', () => {
+  let workerInstance;
+
+  beforeEach(() => {
+    workerInstance = { postMessage: vi.fn(), terminate: vi.fn(), onmessage: null, onerror: null };
+    vi.stubGlobal('Worker', vi.fn(function () { return workerInstance; }));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test('modal not shown initially', () => {
+    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
+  });
+
+  test('modal appears when worker sends input-request', async () => {
+    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter a number:' } });
+    });
+    expect(screen.getByRole('heading', { name: /enter input/i })).toBeInTheDocument();
+    expect(screen.getByText('Enter a number:')).toBeInTheDocument();
+  });
+
+  test('modal closes and output shown when worker sends done', async () => {
+    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter:' } });
+    });
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'done', output: 'hello', error: null } });
+    });
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+
+  test('clicking OK in modal closes it', async () => {
+    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
+    fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter:' } });
+    });
+    // Both the pre-defined textarea and the modal input are visible — pick the modal input (last one)
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[textboxes.length - 1], { target: { value: 'world' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /ok/i }));
+    });
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
   });
 });
