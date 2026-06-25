@@ -55,8 +55,8 @@ describe('AVAILABLE_BLOCKS data', () => {
     });
   });
 
-  test('all 23 blocks are still present', () => {
-    expect(AVAILABLE_BLOCKS).toHaveLength(23);
+  test('all 48 blocks are present', () => {
+    expect(AVAILABLE_BLOCKS).toHaveLength(48);
   });
 });
 
@@ -75,37 +75,40 @@ describe('Block category accordion', () => {
   test('shows (0/N) count for each category when nothing selected', () => {
     renderWorkspace();
     fireEvent.click(screen.getByText(/Allowed Blocks/));
-    expect(screen.getByText(/Control \(0\/4\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Logic \(0\/4\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Math \(0\/3\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Control \(0\/6\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Logic \(0\/6\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Math \(0\/13\)/)).toBeInTheDocument();
   });
 
   test('shows correct selected count when some blocks are pre-selected', () => {
     renderWorkspace({ allowedBlocks: ['controls_if', 'controls_for'] });
     fireEvent.click(screen.getByText(/Allowed Blocks/));
-    expect(screen.getByText(/Control \(2\/4\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Control \(2\/6\)/)).toBeInTheDocument();
   });
 
   test('Select all button calls onAllowedBlocksChange with all blocks in category', () => {
     const props = renderWorkspace({ allowedBlocks: [] });
     fireEvent.click(screen.getByText(/Allowed Blocks/));
-    // jsdom renders all <details> content regardless of open state;
-    // pick the first "Select all" button which belongs to the Control category
     const selectAllButtons = screen.getAllByRole('button', { name: 'Select all', hidden: true });
     fireEvent.click(selectAllButtons[0]);
     const called = props.onAllowedBlocksChange.mock.calls[0][0];
-    expect(called).toHaveLength(4);
+    expect(called).toHaveLength(6);
     expect(called).toEqual(
-      expect.arrayContaining(['controls_if', 'controls_repeat_ext', 'controls_for', 'controls_whileUntil'])
+      expect.arrayContaining([
+        'controls_if', 'controls_repeat_ext', 'controls_for', 'controls_whileUntil',
+        'controls_forEach', 'controls_flow_statements',
+      ])
     );
   });
 
   test('Deselect all button calls onAllowedBlocksChange without category blocks', () => {
-    const allControl = ['controls_if', 'controls_repeat_ext', 'controls_for', 'controls_whileUntil'];
+    const allControl = [
+      'controls_if', 'controls_repeat_ext', 'controls_for', 'controls_whileUntil',
+      'controls_forEach', 'controls_flow_statements',
+    ];
     const props = renderWorkspace({ allowedBlocks: allControl });
     fireEvent.click(screen.getByText(/Allowed Blocks/));
-    fireEvent.click(screen.getByText(/Control \(4\/4\)/));
-    // hidden: true needed because jsdom renders <details> children regardless of open state
+    fireEvent.click(screen.getByText(/Control \(6\/6\)/));
     fireEvent.click(screen.getByRole('button', { name: 'Deselect all', hidden: true }));
     const called = props.onAllowedBlocksChange.mock.calls[0][0];
     allControl.forEach(t => expect(called).not.toContain(t));
