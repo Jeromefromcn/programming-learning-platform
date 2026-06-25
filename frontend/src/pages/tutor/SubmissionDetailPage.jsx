@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
 import Breadcrumb from '../../components/Breadcrumb';
+import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 
 export default function SubmissionDetailPage() {
   const { id } = useParams();
@@ -26,12 +27,12 @@ export default function SubmissionDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!submission || !editorRef.current) return;
+    if (!submission || submission.exerciseType !== 'PYTHON' || !editorRef.current) return;
     import('monaco-editor').then(monaco => {
       if (monacoRef.current) monacoRef.current.dispose();
       monacoRef.current = monaco.editor.create(editorRef.current, {
         value: submission.answerData || '',
-        language: submission.exerciseType === 'PYTHON' ? 'python' : 'javascript',
+        language: 'python',
         readOnly: true,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
@@ -161,7 +162,13 @@ export default function SubmissionDetailPage() {
       )}
 
       <h2 style={{ marginBottom: 8 }}>Student Answer</h2>
-      <div ref={editorRef} style={{ height: 300, border: '1px solid #ddd', borderRadius: 4, marginBottom: 24 }} />
+      {submission.exerciseType === 'BLOCKLY' ? (
+        <div style={{ marginBottom: 24 }}>
+          <BlocklySubmissionViewer workspaceXml={submission.workspaceXml} />
+        </div>
+      ) : (
+        <div ref={editorRef} style={{ height: 300, border: '1px solid #ddd', borderRadius: 4, marginBottom: 24 }} />
+      )}
 
       <h2 style={{ marginBottom: 8 }}>Auto-Grade Details</h2>
       <div style={{ background: '#fafafa', border: '1px solid #ddd', borderRadius: 4, padding: 16, marginBottom: 24 }}>
