@@ -167,6 +167,9 @@ export default function BlocklyPracticePage({ exercise }) {
       answer: workspaceRef.current
         ? javascriptGenerator.workspaceToCode(workspaceRef.current)
         : '',
+      workspaceXml: workspaceRef.current
+        ? Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspaceRef.current))
+        : '',
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -268,8 +271,9 @@ export default function BlocklyPracticePage({ exercise }) {
         }}>
           <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320 }}>
             <h2 style={{ marginTop: 0 }}>Export Answer</h2>
-            <label style={{ display: 'block', marginBottom: 8 }}>Your name:</label>
+            <label htmlFor="export-student-name" style={{ display: 'block', marginBottom: 8 }}>Your name:</label>
             <input
+              id="export-student-name"
               type="text"
               value={studentName}
               onChange={e => setStudentName(e.target.value)}

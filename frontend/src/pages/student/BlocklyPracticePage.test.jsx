@@ -156,6 +156,52 @@ describe('Input textarea', () => {
   });
 });
 
+describe('Export payload', () => {
+  beforeEach(() => {
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined);
+    // Spy on Blob to capture the JSON passed to it
+    vi.stubGlobal('Blob', vi.fn(function (parts) {
+      global.__lastBlobParts = parts;
+      this.size = 1;
+      this.type = 'application/json';
+    }));
+    // Stub anchor click so no real download fires (only intercept 'a' tags)
+    const anchor = { href: '', download: '', click: vi.fn() };
+    const realCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag, ...args) =>
+      tag === 'a' ? anchor : realCreateElement(tag, ...args)
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    delete global.__lastBlobParts;
+  });
+
+  test('exported JSON includes workspaceXml field', async () => {
+    const { default: Blockly } = await import('blockly');
+    vi.mocked(Blockly.Xml.domToText).mockReturnValue('<xml xmlns="..."><block type="text_print"></block></xml>');
+
+    render(<BlocklyPracticePage exercise={makeExercise()} />);
+
+    // Open export modal
+    fireEvent.click(screen.getByRole('button', { name: /export/i }));
+    // Enter student name
+    fireEvent.change(screen.getByLabelText(/your name/i), { target: { value: 'Alice' } });
+    // Click Download JSON
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /download json/i }));
+    });
+
+    expect(global.__lastBlobParts).toBeDefined();
+    const json = JSON.parse(global.__lastBlobParts[0]);
+    expect(json).toHaveProperty('workspaceXml');
+    expect(json.workspaceXml).toContain('text_print');
+  });
+});
+
 describe('Interactive input modal', () => {
   let workerInstance;
 
