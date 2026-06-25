@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import toast from 'react-hot-toast';
 import { AuthProvider, useAuth } from './AuthContext';
 import axiosInstance from '../api/axiosInstance';
 
@@ -17,10 +16,8 @@ vi.mock('../api/axiosInstance', () => ({
     },
   },
   setAuthHandlers: vi.fn(),
-}));
-
-vi.mock('react-hot-toast', () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+  resolveReauthQueue: vi.fn(),
+  rejectReauthQueue: vi.fn(),
 }));
 
 function ShowAuth() {
@@ -113,23 +110,101 @@ test('bootstrap: initializing becomes false when refresh fails', async () => {
   expect(screen.getByTestId('user')).toHaveTextContent('none');
 });
 
-test('onUnauthorized: clears user state and saves returnUrl to sessionStorage', async () => {
-  vi.mocked(axiosInstance.post).mockRejectedValueOnce(new Error('no cookie'));
-  const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+function ShowReauth() {
+  const {
+    user, reauthVisible, confirmVisible,
+    onReauthSuccess, onReauthCancel, onConfirmLogin, onConfirmCancel,
+  } = useAuth();
+  return (
+    <>
+      <span data-testid="user">{user?.username ?? 'none'}</span>
+      <span data-testid="reauth">{String(reauthVisible)}</span>
+      <span data-testid="confirm">{String(confirmVisible)}</span>
+      <button onClick={() => onReauthSuccess('new-tok', { username: 'alice', role: 'STUDENT' })}>
+        ReauthSuccess
+      </button>
+      <button onClick={onReauthCancel}>ReauthCancel</button>
+      <button onClick={onConfirmLogin}>ConfirmLogin</button>
+      <button onClick={onConfirmCancel}>ConfirmCancel</button>
+    </>
+  );
+}
 
-  function ShowUser() {
-    const { user } = useAuth();
-    return <span data-testid="user">{user?.username ?? 'none'}</span>;
-  }
-  render(<AuthProvider><ShowUser /></AuthProvider>);
-  await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent('none'));
+test('onUnauthorized: shows ReauthModal without clearing user', async () => {
+  // Bootstrap with a valid session first
+  vi.mocked(axiosInstance.post).mockResolvedValueOnce({
+    data: { accessToken: 'tok', user: { username: 'alice', role: 'STUDENT', id: 1 } },
+  });
+  render(<AuthProvider><ShowReauth /></AuthProvider>);
+  await waitFor(() =>
+    expect(screen.getByTestId('user')).toHaveTextContent('alice')
+  );
 
   const { setAuthHandlers } = await import('../api/axiosInstance');
   const unauthorizedHandler = vi.mocked(setAuthHandlers).mock.calls.at(-1)[1];
-
   unauthorizedHandler();
 
-  expect(setItemSpy).toHaveBeenCalledWith('returnUrl', expect.stringContaining('/'));
-  expect(toast.error).toHaveBeenCalledWith('Your session has expired. Please log in again.');
-  setItemSpy.mockRestore();
+  expect(screen.getByTestId('user')).toHaveTextContent('alice'); // user preserved
+  expect(screen.getByTestId('reauth')).toHaveTextContent('true');
+});
+
+test('onReauthSuccess: sets new token, closes modal, calls resolveReauthQueue', async () => {
+  const { resolveReauthQueue } = await import('../api/axiosInstance');
+  render(<AuthProvider><ShowReauth /></AuthProvider>);
+
+  const { setAuthHandlers } = await import('../api/axiosInstance');
+  const unauthorizedHandler = vi.mocked(setAuthHandlers).mock.calls.at(-1)[1];
+  unauthorizedHandler();
+
+  await userEvent.click(screen.getByText('ReauthSuccess'));
+
+  expect(screen.getByTestId('reauth')).toHaveTextContent('false');
+  expect(vi.mocked(resolveReauthQueue)).toHaveBeenCalledWith('new-tok');
+});
+
+test('onReauthCancel: closes modal, marks dismissed, calls rejectReauthQueue', async () => {
+  const { rejectReauthQueue } = await import('../api/axiosInstance');
+  render(<AuthProvider><ShowReauth /></AuthProvider>);
+
+  const { setAuthHandlers } = await import('../api/axiosInstance');
+  const unauthorizedHandler = vi.mocked(setAuthHandlers).mock.calls.at(-1)[1];
+  unauthorizedHandler(); // open modal
+  await userEvent.click(screen.getByText('ReauthCancel')); // cancel
+
+  expect(screen.getByTestId('reauth')).toHaveTextContent('false');
+  expect(vi.mocked(rejectReauthQueue)).toHaveBeenCalled();
+
+  // Second onUnauthorized should show ConfirmReauthDialog instead of modal
+  unauthorizedHandler();
+  expect(screen.getByTestId('reauth')).toHaveTextContent('false');
+  expect(screen.getByTestId('confirm')).toHaveTextContent('true');
+});
+
+test('onConfirmLogin: closes confirm dialog, opens modal', async () => {
+  render(<AuthProvider><ShowReauth /></AuthProvider>);
+
+  const { setAuthHandlers } = await import('../api/axiosInstance');
+  const unauthorizedHandler = vi.mocked(setAuthHandlers).mock.calls.at(-1)[1];
+  unauthorizedHandler();
+  await userEvent.click(screen.getByText('ReauthCancel')); // dismiss modal → dismissed flag set
+  unauthorizedHandler(); // next action → confirm dialog
+
+  await userEvent.click(screen.getByText('ConfirmLogin'));
+  expect(screen.getByTestId('confirm')).toHaveTextContent('false');
+  expect(screen.getByTestId('reauth')).toHaveTextContent('true');
+});
+
+test('onConfirmCancel: closes confirm dialog, calls rejectReauthQueue', async () => {
+  const { rejectReauthQueue } = await import('../api/axiosInstance');
+  render(<AuthProvider><ShowReauth /></AuthProvider>);
+
+  const { setAuthHandlers } = await import('../api/axiosInstance');
+  const unauthorizedHandler = vi.mocked(setAuthHandlers).mock.calls.at(-1)[1];
+  unauthorizedHandler();
+  await userEvent.click(screen.getByText('ReauthCancel'));
+  unauthorizedHandler();
+
+  await userEvent.click(screen.getByText('ConfirmCancel'));
+  expect(screen.getByTestId('confirm')).toHaveTextContent('false');
+  expect(vi.mocked(rejectReauthQueue)).toHaveBeenCalled();
 });

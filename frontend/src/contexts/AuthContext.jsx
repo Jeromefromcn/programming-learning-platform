@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import toast from 'react-hot-toast';
-import axiosInstance, { setAuthHandlers } from '../api/axiosInstance';
+import { flushSync } from 'react-dom';
+import axiosInstance, { setAuthHandlers, resolveReauthQueue, rejectReauthQueue } from '../api/axiosInstance';
 import { authApi } from '../api/authApi';
 import { settingsApi } from '../api/settingsApi';
 import { SECTIONS } from '../components/sectionConfig';
@@ -12,11 +12,13 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null);
   const [menuSections, setMenuSections] = useState([]);
   const [initializing, setInitializing] = useState(true);
+  const [reauthVisible, setReauthVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const tokenRef = useRef(null);
+  const reauthDismissedRef = useRef(false);
 
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
-  // Silently restore session from HttpOnly refresh cookie on mount
   useEffect(() => {
     authApi.refresh()
       .then(async ({ accessToken: tok, user: userData }) => {
@@ -33,9 +35,7 @@ export function AuthProvider({ children }) {
           setMenuSections(fallback);
         }
       })
-      .catch(() => {
-        // No valid session — user must log in
-      })
+      .catch(() => {})
       .finally(() => setInitializing(false));
   }, []);
 
@@ -61,24 +61,62 @@ export function AuthProvider({ children }) {
     setMenuSections([]);
   }, []);
 
+  const onReauthSuccess = useCallback(async (token, userData) => {
+    tokenRef.current = token;
+    setAccessToken(token);
+    setUser(userData);
+    reauthDismissedRef.current = false;
+    setReauthVisible(false);
+    resolveReauthQueue(token);
+    try {
+      const data = await settingsApi.getMenuConfig();
+      setMenuSections(data.sections);
+    } catch {
+      const fallback = SECTIONS
+        .filter(s => s.roles.includes(userData.role))
+        .map(s => s.key);
+      setMenuSections(fallback);
+    }
+  }, []);
+
+  const onReauthCancel = useCallback(() => {
+    reauthDismissedRef.current = true;
+    setReauthVisible(false);
+    rejectReauthQueue();
+  }, []);
+
+  const onConfirmLogin = useCallback(() => {
+    setConfirmVisible(false);
+    setReauthVisible(true);
+  }, []);
+
+  const onConfirmCancel = useCallback(() => {
+    setConfirmVisible(false);
+    rejectReauthQueue();
+  }, []);
+
   useEffect(() => {
     setAuthHandlers(
       () => tokenRef.current,
       () => {
-        const currentPath = window.location.pathname + window.location.search;
-        if (currentPath !== '/login') {
-          sessionStorage.setItem('returnUrl', currentPath);
-        }
-        toast.error('Your session has expired. Please log in again.');
-        setAccessToken(null);
-        setUser(null);
-        setMenuSections([]);
+        tokenRef.current = null;
+        flushSync(() => {
+          if (!reauthDismissedRef.current) {
+            setReauthVisible(true);
+          } else {
+            setConfirmVisible(true);
+          }
+        });
       }
     );
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, menuSections, login, logout, initializing }}>
+    <AuthContext.Provider value={{
+      user, accessToken, menuSections, login, logout, initializing,
+      reauthVisible, confirmVisible,
+      onReauthSuccess, onReauthCancel, onConfirmLogin, onConfirmCancel,
+    }}>
       {children}
     </AuthContext.Provider>
   );
