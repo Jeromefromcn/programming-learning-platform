@@ -101,6 +101,7 @@ export function AuthProvider({ children }) {
       () => {
         tokenRef.current = null;
         flushSync(() => {
+          setAccessToken(null);
           if (!reauthDismissedRef.current) {
             setReauthVisible(true);
           } else {
