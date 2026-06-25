@@ -32,6 +32,9 @@ public class Submission {
     @Column(name = "answer_data", nullable = false, columnDefinition = "MEDIUMTEXT")
     private String answerData;
 
+    @Column(name = "workspace_xml", columnDefinition = "MEDIUMTEXT")
+    private String workspaceXml;
+
     @Column(name = "export_timestamp", nullable = false)
     private LocalDateTime exportTimestamp;
 

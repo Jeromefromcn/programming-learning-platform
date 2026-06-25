@@ -147,6 +147,7 @@ public class FileImportService {
             sub.setStudentName(studentName);
             sub.setExerciseType(exerciseType);
             sub.setAnswerData(answer);
+            sub.setWorkspaceXml(node.path("workspaceXml").asText(null));
             sub.setExportTimestamp(exportedAt);
             sub.setVersionMismatch(versionMismatch);
             sub.setStudentVersionNumber(studentVersion);

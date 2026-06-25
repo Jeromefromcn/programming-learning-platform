@@ -126,6 +126,53 @@ class FileImportServiceTest {
             .hasMessageContaining("Path traversal");
     }
 
+    private byte[] blocklyJsonWithXml(long exerciseId) {
+        return String.format("""
+            {"platformVersion":"1.0","exerciseId":%d,"exerciseTitle":"Hello","exerciseType":"BLOCKLY",
+             "exerciseVersion":1,"studentName":"Alex","answer":"print('Hello');",
+             "workspaceXml":"<xml xmlns=\\"https://developers.google.com/blockly/xml\\"><block type=\\"text_print\\"></block></xml>",
+             "exportedAt":"2026-05-01T10:00:00Z"}""", exerciseId).getBytes();
+    }
+
+    @Test
+    void processSingleFile_withWorkspaceXml_storesXmlOnSubmission() {
+        stubExercise(1L, 10L);
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        service.processSingleFile("alex.json", blocklyJsonWithXml(1L), "batch-1", false);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(Submission.class);
+        verify(submissionRepository).save(captor.capture());
+        assertThat(captor.getValue().getWorkspaceXml())
+            .contains("text_print");
+    }
+
+    @Test
+    void processSingleFile_withoutWorkspaceXml_storesNull() {
+        stubExercise(1L, 10L);
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(Submission.class);
+        verify(submissionRepository).save(captor.capture());
+        assertThat(captor.getValue().getWorkspaceXml()).isNull();
+    }
+
     private byte[] buildZipWithEntry(String entryName, byte[] content) {
         try {
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
