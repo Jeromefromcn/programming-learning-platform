@@ -5,6 +5,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/login/LoginPage';
 import AppShell from './components/AppShell';
+import ReauthModal from './components/ReauthModal';
+import ConfirmReauthDialog from './components/ConfirmReauthDialog';
 
 class AppErrorBoundary extends Component {
   constructor(props) {
@@ -61,6 +63,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
+        <ReauthModal />
+        <ConfirmReauthDialog />
       </AuthProvider>
     </AppErrorBoundary>
   );
