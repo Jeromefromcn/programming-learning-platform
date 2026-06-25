@@ -34,6 +34,8 @@ export default function LoginPage() {
         setError('Account disabled — please contact an administrator');
       } else if (code === 'ACCOUNT_EXPIRED') {
         setError('Account expired — please contact an administrator');
+      } else if (code === 'RATE_LIMITED') {
+        setError('Too many login attempts. Please try again in 1 minute.');
       } else {
         setError('Invalid username or password');
       }

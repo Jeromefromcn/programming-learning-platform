@@ -59,6 +59,23 @@ test('shows error on failure', async () => {
   });
 });
 
+test('shows backend validation message when VALIDATION_ERROR is returned', async () => {
+  const api = await getApi();
+  api.create.mockRejectedValue({
+    response: { data: { error: { code: 'VALIDATION_ERROR', message: 'password: size must be between 8 and 2147483647' } } },
+  });
+  render(<CreateUserModal onClose={vi.fn()} onCreated={vi.fn()} />);
+
+  await userEvent.type(screen.getByLabelText('Username'), 'newuser');
+  await userEvent.type(screen.getByLabelText('Display Name'), 'New User');
+  await userEvent.type(screen.getByLabelText('Password'), 'short');
+  await userEvent.click(screen.getByRole('button', { name: /create/i }));
+
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent('password: size must be between 8 and 2147483647');
+  });
+});
+
 test('date input has min attribute set to today', () => {
   render(<CreateUserModal onClose={vi.fn()} onCreated={vi.fn()} />);
   const input = screen.getByLabelText('Expiration Date (optional)');

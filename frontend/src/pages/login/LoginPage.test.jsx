@@ -53,6 +53,19 @@ test('shows expired error when ACCOUNT_EXPIRED is returned', async () => {
   });
 });
 
+test('shows rate limit message when RATE_LIMITED is returned', async () => {
+  vi.mocked(authApi.login).mockRejectedValue({
+    response: { data: { error: { code: 'RATE_LIMITED' } } },
+  });
+  render(<MemoryRouter><LoginPage /></MemoryRouter>);
+  await userEvent.type(screen.getByLabelText('Username'), 'alice');
+  await userEvent.type(screen.getByLabelText('Password'), 'pass');
+  await userEvent.click(screen.getByRole('button', { name: /login/i }));
+  await waitFor(() => {
+    expect(screen.getByRole('alert')).toHaveTextContent('Too many login attempts. Please try again in 1 minute.');
+  });
+});
+
 test('redirects to returnUrl after login when one is saved in sessionStorage', async () => {
   sessionStorage.setItem('returnUrl', '/app/exercises/42');
   render(<MemoryRouter><LoginPage /></MemoryRouter>);

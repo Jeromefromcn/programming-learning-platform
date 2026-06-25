@@ -22,8 +22,14 @@ export default function CreateUserModal({ onClose, onCreated }) {
       const user = await userApi.create(payload);
       onCreated(user);
     } catch (err) {
-      const code = err.response?.data?.error?.code;
-      setError(code === 'USERNAME_TAKEN' ? 'Username already taken' : 'Failed to create user');
+      const { code, message } = err.response?.data?.error ?? {};
+      if (code === 'USERNAME_TAKEN') {
+        setError('Username already taken');
+      } else if (code === 'VALIDATION_ERROR' && message) {
+        setError(message);
+      } else {
+        setError('Failed to create user');
+      }
     } finally {
       setSaving(false);
     }
