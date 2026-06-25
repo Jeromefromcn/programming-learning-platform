@@ -20,7 +20,34 @@ axiosInstance.interceptors.request.use(config => {
 });
 
 let isRefreshing = false;
+// Each entry: { onToken: (token: string) => void, reject: (err: Error) => void }
 let pendingRequests = [];
+
+// Requests waiting for the user to re-authenticate via the modal
+let reauthQueue = [];
+let isWaitingReauth = false;
+
+export function resolveReauthQueue(newToken) {
+  isWaitingReauth = false;
+  const queue = reauthQueue;
+  reauthQueue = [];
+  queue.forEach(({ config, resolve }) => {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${newToken}`;
+    resolve(axiosInstance(config));
+  });
+}
+
+export function rejectReauthQueue() {
+  isWaitingReauth = false;
+  const queue = reauthQueue;
+  reauthQueue = [];
+  queue.forEach(({ reject }) => reject(new Error('REAUTH_CANCELLED')));
+}
+
+export function isReauthCancelled(err) {
+  return err?.message === 'REAUTH_CANCELLED';
+}
 
 axiosInstance.interceptors.response.use(
   response => response,
@@ -33,20 +60,33 @@ axiosInstance.interceptors.response.use(
         try {
           const res = await axiosInstance.post('/v1/auth/refresh');
           const newToken = res.data.accessToken;
-          pendingRequests.forEach(cb => cb(newToken));
+          pendingRequests.forEach(({ onToken }) => onToken(newToken));
           pendingRequests = [];
           return axiosInstance(original);
         } catch (_) {
-          onUnauthorized();
-          return Promise.reject(error);
+          // Drain concurrent requests: reject them so callers get REAUTH_CANCELLED
+          pendingRequests.forEach(({ reject }) => reject(new Error('REAUTH_CANCELLED')));
+          pendingRequests = [];
+          // Queue this request and signal that reauth is needed
+          if (!isWaitingReauth) {
+            isWaitingReauth = true;
+            onUnauthorized();
+          }
+          return new Promise((resolve, reject) => {
+            reauthQueue.push({ config: original, resolve, reject });
+          });
         } finally {
           isRefreshing = false;
         }
       }
-      return new Promise(resolve => {
-        pendingRequests.push(token => {
-          original.headers.Authorization = `Bearer ${token}`;
-          resolve(axiosInstance(original));
+      // Concurrent request during active refresh — wait for the outcome
+      return new Promise((resolve, reject) => {
+        pendingRequests.push({
+          onToken: (token) => {
+            original.headers.Authorization = `Bearer ${token}`;
+            resolve(axiosInstance(original));
+          },
+          reject,
         });
       });
     }
