@@ -86,11 +86,14 @@ describe('Run button', () => {
     expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
   });
 
-  test('clicking Run spawns a Worker from a blob URL without postMessage', () => {
+  test('clicking Run spawns a Worker from a blob URL and sends init message', () => {
     render(<BlocklyPracticePage exercise={makeExercise()} />);
     fireEvent.click(screen.getByRole('button', { name: /run/i }));
     expect(global.Worker).toHaveBeenCalledWith('blob:mock-url');
-    expect(workerInstance.postMessage).not.toHaveBeenCalled();
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({
+      inputs: [],
+      sharedBuffer: null,
+    });
   });
 
   test('button is disabled while running', () => {
@@ -136,5 +139,85 @@ describe('Back button', () => {
     expect(backBtn).toBeInTheDocument();
     fireEvent.click(backBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/student/exercises');
+  });
+});
+
+describe('Input textarea', () => {
+  test('not rendered when text_prompt_ext is absent from allowedBlocks', () => {
+    render(<BlocklyPracticePage exercise={makeExercise()} />);
+    expect(screen.queryByLabelText(/Input \(one value per line\)/i)).not.toBeInTheDocument();
+  });
+
+  test('rendered when text_prompt_ext is in allowedBlocks', () => {
+    render(<BlocklyPracticePage exercise={makeExercise({
+      allowedBlocks: ['text_print', 'text_prompt_ext'],
+    })} />);
+    expect(screen.getByLabelText(/Input \(one value per line\)/i)).toBeInTheDocument();
+  });
+});
+
+describe('Interactive input modal', () => {
+  let workerInstance;
+
+  beforeEach(() => {
+    workerInstance = { postMessage: vi.fn(), terminate: vi.fn(), onmessage: null, onerror: null };
+    vi.stubGlobal('Worker', vi.fn(function () { return workerInstance; }));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test('modal not shown initially', () => {
+    render(<BlocklyPracticePage exercise={makeExercise({
+      allowedBlocks: ['text_prompt_ext'],
+    })} />);
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
+  });
+
+  test('modal appears when worker sends input-request', async () => {
+    render(<BlocklyPracticePage exercise={makeExercise({
+      allowedBlocks: ['text_prompt_ext'],
+    })} />);
+    fireEvent.click(screen.getByRole('button', { name: /run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter your name:' } });
+    });
+    expect(screen.getByRole('heading', { name: /enter input/i })).toBeInTheDocument();
+    expect(screen.getByText('Enter your name:')).toBeInTheDocument();
+  });
+
+  test('modal closes and output shown when worker sends done', async () => {
+    render(<BlocklyPracticePage exercise={makeExercise({
+      allowedBlocks: ['text_prompt_ext'],
+    })} />);
+    fireEvent.click(screen.getByRole('button', { name: /run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter:' } });
+    });
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'done', output: 'result', error: null } });
+    });
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
+    expect(screen.getByText('result')).toBeInTheDocument();
+  });
+
+  test('clicking OK in modal closes it', async () => {
+    render(<BlocklyPracticePage exercise={makeExercise({
+      allowedBlocks: ['text_prompt_ext'],
+    })} />);
+    fireEvent.click(screen.getByRole('button', { name: /run/i }));
+    await act(async () => {
+      workerInstance.onmessage({ data: { type: 'input-request', message: 'Enter:' } });
+    });
+    const modal = screen.getByRole('heading', { name: /enter input/i }).closest('div');
+    fireEvent.change(modal.querySelector('input[type="text"]'), { target: { value: 'hello' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /ok/i }));
+    });
+    expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
   });
 });

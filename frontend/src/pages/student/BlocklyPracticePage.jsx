@@ -33,6 +33,10 @@ export default function BlocklyPracticePage({ exercise }) {
   const [exportModal, setExportModal] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [pythonCode, setPythonCode] = useState('');
+  const [preDefinedInputs, setPreDefinedInputs] = useState('');
+  const [inputModalMsg, setInputModalMsg] = useState(null);
+  const [inputValue, setInputValue] = useState('');
+  const sharedBufferRef = useRef(null);
 
   const version = exercise.version;
   const config = version.config;
@@ -73,26 +77,45 @@ export default function BlocklyPracticePage({ exercise }) {
     setRunning(true);
     setOutput(null);
     setTle(false);
+    setInputModalMsg(null);
 
     if (workerRef.current) workerRef.current.terminate();
     clearTimeout(timeoutRef.current);
 
+    const hasInputBlock = config.allowedBlocks?.includes('text_prompt_ext');
+    const inputs = hasInputBlock
+      ? preDefinedInputs.split('\n').filter(s => s !== '')
+      : [];
+    const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+    sharedBufferRef.current = sharedBuffer;
+
     const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = createBlocklyBlobWorker(jsCode);
+    const worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
     workerRef.current = worker;
 
-    timeoutRef.current = setTimeout(() => {
-      worker.terminate();
-      workerRef.current = null;
-      setRunning(false);
-      setTle(true);
-    }, 3000);
+    function startTle() {
+      timeoutRef.current = setTimeout(() => {
+        worker.terminate();
+        workerRef.current = null;
+        setRunning(false);
+        setTle(true);
+        setInputModalMsg(null);
+      }, 3000);
+    }
+    startTle();
 
-    worker.onmessage = ({ data: { output, error } }) => {
+    worker.onmessage = ({ data }) => {
+      if (data.type === 'input-request') {
+        clearTimeout(timeoutRef.current);
+        setInputValue('');
+        setInputModalMsg(data.message || '');
+        return;
+      }
       clearTimeout(timeoutRef.current);
       workerRef.current = null;
       setRunning(false);
-      setOutput(error ? `Error: ${mapError(error)}` : (output ?? '(no output)'));
+      setInputModalMsg(null);
+      setOutput(data.error ? `Error: ${mapError(data.error)}` : (data.output ?? '(no output)'));
     };
 
     worker.onerror = (e) => {
@@ -101,6 +124,28 @@ export default function BlocklyPracticePage({ exercise }) {
       setRunning(false);
       setOutput(`Error: ${mapError(e.message)}`);
     };
+  }
+
+  function handleInputSubmit() {
+    if (!sharedBufferRef.current) return;
+    const int32View = new Int32Array(sharedBufferRef.current);
+    const uint8View = new Uint8Array(sharedBufferRef.current);
+    const encoded = new TextEncoder().encode(inputValue.slice(0, 1020));
+    int32View[1] = encoded.length;
+    uint8View.set(encoded, 8);
+    Atomics.store(int32View, 0, 1);
+    Atomics.notify(int32View, 0, 1);
+    setInputModalMsg(null);
+    setInputValue('');
+    if (workerRef.current) {
+      timeoutRef.current = setTimeout(() => {
+        workerRef.current?.terminate();
+        workerRef.current = null;
+        setRunning(false);
+        setTle(true);
+        setInputModalMsg(null);
+      }, 3000);
+    }
   }
 
   function handleExport() {
@@ -148,6 +193,24 @@ export default function BlocklyPracticePage({ exercise }) {
         <div style={{ marginBottom: 16 }}>
           <p style={{ margin: '0 0 4px', fontSize: 13, color: '#555' }}>Python equivalent (read-only):</p>
           <pre style={OUTPUT_STYLE}>{pythonCode || '(empty workspace)'}</pre>
+        </div>
+      )}
+
+      {config.allowedBlocks?.includes('text_prompt_ext') && (
+        <div style={{ marginBottom: 16 }}>
+          <label
+            htmlFor="practice-input"
+            style={{ display: 'block', marginBottom: 4, fontSize: 13, color: '#555' }}
+          >
+            Input (one value per line):
+          </label>
+          <textarea
+            id="practice-input"
+            rows={3}
+            value={preDefinedInputs}
+            onChange={e => setPreDefinedInputs(e.target.value)}
+            style={{ width: '100%', fontFamily: 'monospace', fontSize: 13, boxSizing: 'border-box', padding: 6 }}
+          />
         </div>
       )}
 
@@ -214,6 +277,39 @@ export default function BlocklyPracticePage({ exercise }) {
                 style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
               >
                 Download JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inputModalMsg !== null && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320 }}>
+            <h3 style={{ marginTop: 0 }}>Enter input</h3>
+            {inputModalMsg && (
+              <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{inputModalMsg}</p>
+            )}
+            <input
+              type="text"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleInputSubmit()}
+              style={{ width: '100%', padding: 8, boxSizing: 'border-box', marginBottom: 16 }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleInputSubmit}
+                style={{
+                  background: '#1976d2', color: '#fff', border: 'none',
+                  borderRadius: 4, padding: '8px 16px', cursor: 'pointer',
+                }}
+              >
+                OK
               </button>
             </div>
           </div>
