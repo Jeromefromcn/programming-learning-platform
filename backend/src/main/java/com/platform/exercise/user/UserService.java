@@ -42,10 +42,14 @@ public class UserService {
                 predicates.add(cb.equal(root.get("status"), UserStatus.valueOf(status)));
             }
             if (name != null && !name.isBlank()) {
-                String pattern = "%" + name.toLowerCase() + "%";
+                String escaped = name.toLowerCase()
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
+                String pattern = "%" + escaped + "%";
                 predicates.add(cb.or(
-                    cb.like(cb.lower(root.get("username")), pattern),
-                    cb.like(cb.lower(root.get("displayName")), pattern)
+                    cb.like(cb.lower(root.get("username")), pattern, '\\'),
+                    cb.like(cb.lower(root.get("displayName")), pattern, '\\')
                 ));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
