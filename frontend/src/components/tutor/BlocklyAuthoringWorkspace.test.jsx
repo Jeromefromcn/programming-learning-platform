@@ -146,10 +146,7 @@ describe('Run button', () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: /▶ Run/i }));
     expect(global.Worker).toHaveBeenCalledWith('blob:mock-url');
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({
-      inputs: [],
-      sharedBuffer: null,
-    });
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: 'run' });
   });
 
   test('button is disabled while running', () => {
@@ -185,18 +182,6 @@ describe('Run button', () => {
     await act(async () => { vi.advanceTimersByTime(3000); });
     expect(screen.getByText(/Time Limit Exceeded/i)).toBeInTheDocument();
     vi.useRealTimers();
-  });
-});
-
-describe('Input textarea', () => {
-  test('not rendered when text_prompt_ext is absent from allowedBlocks', () => {
-    renderWorkspace({ allowedBlocks: ['text_print'] });
-    expect(screen.queryByLabelText(/Input \(one value per line\)/i)).not.toBeInTheDocument();
-  });
-
-  test('rendered when text_prompt_ext is in allowedBlocks', () => {
-    renderWorkspace({ allowedBlocks: ['text_prompt_ext'] });
-    expect(screen.getByLabelText(/Input \(one value per line\)/i)).toBeInTheDocument();
   });
 });
 

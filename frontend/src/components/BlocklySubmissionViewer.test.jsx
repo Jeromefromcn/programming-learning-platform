@@ -106,13 +106,5 @@ describe('BlocklySubmissionViewer', () => {
     vi.restoreAllMocks();
   });
 
-  test('shows input textarea when XML contains text_prompt_ext', () => {
-    render(<BlocklySubmissionViewer workspaceXml={XML_WITH_INPUT} />);
-    expect(screen.getByLabelText(/input \(one value per line\)/i)).toBeInTheDocument();
-  });
 
-  test('does not show input textarea when XML has no text_prompt_ext', () => {
-    render(<BlocklySubmissionViewer workspaceXml={SAMPLE_XML} />);
-    expect(screen.queryByLabelText(/input \(one value per line\)/i)).not.toBeInTheDocument();
-  });
 });

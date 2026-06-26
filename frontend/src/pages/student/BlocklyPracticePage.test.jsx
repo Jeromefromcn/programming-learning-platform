@@ -101,10 +101,7 @@ describe('Run button', () => {
     render(<BlocklyPracticePage exercise={makeExercise()} />);
     fireEvent.click(screen.getByRole('button', { name: /run/i }));
     expect(global.Worker).toHaveBeenCalledWith('blob:mock-url');
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({
-      inputs: [],
-      sharedBuffer: null,
-    });
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: 'run' });
   });
 
   test('button is disabled while running', () => {
@@ -150,20 +147,6 @@ describe('Back button', () => {
     expect(backBtn).toBeInTheDocument();
     fireEvent.click(backBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/student/exercises');
-  });
-});
-
-describe('Input textarea', () => {
-  test('not rendered when text_prompt_ext is absent from allowedBlocks', () => {
-    render(<BlocklyPracticePage exercise={makeExercise()} />);
-    expect(screen.queryByLabelText(/Input \(one value per line\)/i)).not.toBeInTheDocument();
-  });
-
-  test('rendered when text_prompt_ext is in allowedBlocks', () => {
-    render(<BlocklyPracticePage exercise={makeExercise({
-      allowedBlocks: ['text_print', 'text_prompt_ext'],
-    })} />);
-    expect(screen.getByLabelText(/Input \(one value per line\)/i)).toBeInTheDocument();
   });
 });
 
