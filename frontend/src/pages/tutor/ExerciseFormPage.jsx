@@ -13,6 +13,7 @@ const EMPTY_BLOCKLY_CONFIG = {
   allowedBlocks: [],
   initialWorkspaceXml: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
   showCodeView: false,
+  showResult: true,
   gradingRules: {
     outputMatch: { enabled: false, expectedOutput: '' },
     requiredBlocks: { enabled: false, blocks: [] },
@@ -25,6 +26,7 @@ const EMPTY_PYTHON_CONFIG = {
   starterCode: '',
   timeLimitSeconds: 5,
   testCases: [],
+  showResult: true,
 };
 
 export default function ExerciseFormPage() {
@@ -219,6 +221,21 @@ export default function ExerciseFormPage() {
           </div>
 
           <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
+            <input
+              type="checkbox"
+              checked={(exerciseType === 'BLOCKLY' ? blocklyConfig.showResult : pythonConfig.showResult) !== false}
+              onChange={e => {
+                const show = e.target.checked;
+                if (exerciseType === 'BLOCKLY')
+                  setBlocklyConfig(prev => ({ ...prev, showResult: show }));
+                else
+                  setPythonConfig(prev => ({ ...prev, showResult: show }));
+              }}
+            />
+            即時提示是否做對
+          </label>
 
           {exerciseType === 'BLOCKLY' ? (
             <div>
