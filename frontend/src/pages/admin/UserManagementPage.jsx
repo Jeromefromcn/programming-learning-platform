@@ -15,6 +15,14 @@ function fmtDate(dt) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
+function fmtDateTime(dt) {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function isExpired(dt) {
   if (!dt) return false;
   return new Date(dt) < new Date();
@@ -27,6 +35,7 @@ export default function UserManagementPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,6 +51,7 @@ export default function UserManagementPage() {
         page, size: 20,
         ...(roleFilter && { role: roleFilter }),
         ...(statusFilter && { status: statusFilter }),
+        ...(nameFilter && { name: nameFilter }),
       });
       setUsers(data.content);
       setTotalPages(data.totalPages);
@@ -50,7 +60,7 @@ export default function UserManagementPage() {
     }
   }
 
-  useEffect(() => { load(); }, [page, roleFilter, statusFilter]);
+  useEffect(() => { load(); }, [page, roleFilter, statusFilter, nameFilter]);
 
   async function handleRoleChange(id, role) {
     await userApi.updateRole(id, role);
@@ -115,6 +125,13 @@ export default function UserManagementPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="Search by username or name"
+          value={nameFilter}
+          onChange={e => { setNameFilter(e.target.value); setPage(0); }}
+          style={{ padding: 8, minWidth: 220 }}
+        />
         <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(0); }}
           style={{ padding: 8 }}>
           <option value="">All Roles</option>
@@ -137,6 +154,7 @@ export default function UserManagementPage() {
               <th style={{ padding: 8 }}>Role</th>
               <th style={{ padding: 8 }}>Status</th>
               <th style={{ padding: 8 }}>Expiration</th>
+              <th style={{ padding: 8 }}>Last Login</th>
               <th style={{ padding: 8 }}>Actions</th>
             </tr>
           </thead>
@@ -179,6 +197,9 @@ export default function UserManagementPage() {
                       )}
                     </div>
                   )}
+                </td>
+                <td style={{ padding: 8, color: u.lastLoginAt ? 'inherit' : '#999' }}>
+                  {fmtDateTime(u.lastLoginAt)}
                 </td>
                 <td style={{ padding: 8 }}>
                   {u.id !== currentUser?.id && (
