@@ -110,9 +110,11 @@ export default function BlocklyPracticePage({ exercise }) {
   async function handleSubmit() {
     setSubmitting(true);
     setSubmitResult(null);
+    const jsCode = currentJsCode();
+    const xml = currentWorkspaceXml();
+    try { await studentApi.saveDraft(exercise.id, { answerData: jsCode, workspaceXml: xml }); } catch { /* best-effort */ }
     try {
-      const res = await studentApi.submit(exercise.id,
-        { answerData: currentJsCode(), workspaceXml: currentWorkspaceXml() });
+      const res = await studentApi.submit(exercise.id, { answerData: jsCode, workspaceXml: xml });
       setSubmitResult(res);
     } finally {
       setSubmitting(false);
@@ -288,7 +290,7 @@ export default function BlocklyPracticePage({ exercise }) {
       {savedToast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
           background: '#323232', color: '#fff', padding: '10px 20px', borderRadius: 4, zIndex: 1100 }}>
-          已保存
+          Saved
         </div>
       )}
 
@@ -299,12 +301,12 @@ export default function BlocklyPracticePage({ exercise }) {
             {submitResult.showResult ? (
               <>
                 <h2 style={{ marginTop: 0 }}>
-                  {submitResult.passed ? '✅ 通過' : '❌ 未通過'}
+                  {submitResult.passed ? '✅ Passed' : '❌ Failed'}
                 </h2>
                 <p style={{ fontSize: 32, margin: '8px 0' }}>{submitResult.score}</p>
               </>
             ) : (
-              <h2 style={{ marginTop: 0 }}>已提交</h2>
+              <h2 style={{ marginTop: 0 }}>Submitted</h2>
             )}
             <button onClick={() => setSubmitResult(null)}
               style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>

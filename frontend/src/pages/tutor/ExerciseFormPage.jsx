@@ -234,7 +234,7 @@ export default function ExerciseFormPage() {
                   setPythonConfig(prev => ({ ...prev, showResult: show }));
               }}
             />
-            即時提示是否做對
+            Show instant result feedback
           </label>
 
           {exerciseType === 'BLOCKLY' ? (

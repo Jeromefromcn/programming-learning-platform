@@ -88,7 +88,7 @@ it('unchecking the toggle sends showResult false', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();
 
-  const checkbox = screen.getByRole('checkbox', { name: /即時提示是否做對/ });
+  const checkbox = screen.getByRole('checkbox', { name: /Show instant result feedback/ });
   expect(checkbox).toBeChecked();
 
   fireEvent.click(checkbox);
