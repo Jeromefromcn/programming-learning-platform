@@ -297,6 +297,30 @@ class SubmissionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void list_defaultsToImportSource_excludesStudentSubmissions() throws Exception {
+        // Insert a STUDENT-source submission directly
+        Submission studentSub = new Submission();
+        studentSub.setExerciseId(blocklyExercise.getId());
+        studentSub.setGradedVersionId(blocklyVersion.getId());
+        studentSub.setStudentName("Bob");
+        studentSub.setExerciseType("PYTHON");
+        studentSub.setAnswerData("code");
+        studentSub.setExportTimestamp(LocalDateTime.now());
+        studentSub.setSource("STUDENT");
+        studentSub.setAutoScore(new java.math.BigDecimal("100"));
+        submissionRepository.save(studentSub);
+
+        mockMvc.perform(get("/v1/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").isEmpty());
+
+        mockMvc.perform(get("/v1/submissions").param("source", "STUDENT"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
+    }
+
+    @Test
     void exportCsv_unauthenticated_returns200WithCsv() throws Exception {
         Submission sub = new Submission();
         sub.setExerciseId(blocklyExercise.getId());
