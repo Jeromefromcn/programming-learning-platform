@@ -186,7 +186,13 @@ export default function BlocklyAuthoringWorkspace({
       const inputs = hasInputBlock
         ? preDefinedInputs.split('\n').filter(s => s !== '')
         : [];
-      const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+      let sharedBuffer = null;
+      try {
+        sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+      } catch {
+        // SharedArrayBuffer unavailable (missing COOP/COEP headers) —
+        // fall back to predefined-inputs-only mode; interactive modal won't appear.
+      }
       sharedBufferRef.current = sharedBuffer;
 
       const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
