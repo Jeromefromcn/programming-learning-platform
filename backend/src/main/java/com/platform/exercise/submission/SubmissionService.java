@@ -75,6 +75,7 @@ public class SubmissionService {
         Page<Submission> submissionPage = submissionRepository.findFiltered(
             exerciseId,
             (studentName != null && studentName.isBlank()) ? null : studentName,
+            null,
             PageRequest.of(page, size));
 
         List<Long> exerciseIds = submissionPage.map(Submission::getExerciseId).toList();
