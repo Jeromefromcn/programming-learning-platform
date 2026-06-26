@@ -33,9 +33,12 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [pendingName, setPendingName] = useState('');
+  const [pendingRole, setPendingRole] = useState('');
+  const [pendingStatus, setPendingStatus] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [nameFilter, setNameFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -60,7 +63,14 @@ export default function UserManagementPage() {
     }
   }
 
-  useEffect(() => { load(); }, [page, roleFilter, statusFilter, nameFilter]);
+  useEffect(() => { load(); }, [page, nameFilter, roleFilter, statusFilter]);
+
+  function handleSearch() {
+    setPage(0);
+    setNameFilter(pendingName);
+    setRoleFilter(pendingRole);
+    setStatusFilter(pendingStatus);
+  }
 
   async function handleRoleChange(id, role) {
     await userApi.updateRole(id, role);
@@ -124,25 +134,31 @@ export default function UserManagementPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
         <input
           type="text"
           placeholder="Search by username or name"
-          value={nameFilter}
-          onChange={e => { setNameFilter(e.target.value); setPage(0); }}
+          value={pendingName}
+          onChange={e => setPendingName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: 8, minWidth: 220 }}
         />
-        <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(0); }}
+        <select value={pendingRole} onChange={e => setPendingRole(e.target.value)}
           style={{ padding: 8 }}>
           <option value="">All Roles</option>
           {['STUDENT', 'TUTOR', 'SUPER_ADMIN'].map(r => <option key={r} value={r}>{r}</option>)}
         </select>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0); }}
+        <select value={pendingStatus} onChange={e => setPendingStatus(e.target.value)}
           style={{ padding: 8 }}>
           <option value="">All Statuses</option>
           <option value="ACTIVE">ACTIVE</option>
           <option value="DISABLED">DISABLED</option>
         </select>
+        <button
+          onClick={handleSearch}
+          style={{ padding: '8px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          Search
+        </button>
       </div>
 
       {loading ? <p>Loading…</p> : (

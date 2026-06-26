@@ -5,7 +5,7 @@ import { authApi } from '../api/authApi';
 import { settingsApi } from '../api/settingsApi';
 import { SECTIONS } from '../components/sectionConfig';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);

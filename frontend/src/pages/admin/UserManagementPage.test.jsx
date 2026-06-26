@@ -1,50 +1,44 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import UserManagementPage from './UserManagementPage';
-import userEvent from '@testing-library/user-event';
+import { userApi } from '../../api/userApi';
+import { AuthContext } from '../../contexts/AuthContext';
 
-vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: vi.fn(() => ({ user: { id: 1, role: 'SUPER_ADMIN' } })),
-}));
+vi.mock('../../api/userApi');
+vi.mock('../../api/axiosInstance', () => ({ isReauthCancelled: () => false }));
 
-vi.mock('../../api/userApi', () => ({
-  userApi: {
-    list: vi.fn(),
-    updateRole: vi.fn(),
-    updateStatus: vi.fn(),
-    updateExpiration: vi.fn(),
-    resetPassword: vi.fn(),
-  },
-}));
+const emptyPage = { content: [], totalPages: 0 };
+const wrapper = ({ children }) => (
+  <AuthContext.Provider value={{ user: { id: 99 } }}>
+    {children}
+  </AuthContext.Provider>
+);
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  userApi.list = vi.fn().mockResolvedValue(emptyPage);
+  userApi.updateRole = vi.fn();
+  userApi.updateStatus = vi.fn();
+  userApi.updateExpiration = vi.fn();
+  userApi.resetPassword = vi.fn();
 });
 
-async function getApi() {
-  const { userApi } = await import('../../api/userApi');
-  return userApi;
-}
-
 test('renders page title and action buttons', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({ content: [], totalPages: 0 });
-  render(<UserManagementPage />);
+  render(<UserManagementPage />, { wrapper });
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(1));
   expect(screen.getByText('User Management')).toBeInTheDocument();
   expect(screen.getByText('Import Users')).toBeInTheDocument();
   expect(screen.getByText('+ New User')).toBeInTheDocument();
 });
 
 test('displays users from API', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({
+  userApi.list.mockResolvedValue({
     content: [
       { id: 2, username: 'alice', displayName: 'Alice', role: 'STUDENT', status: 'ACTIVE', expirationDate: null },
       { id: 3, username: 'bob', displayName: 'Bob', role: 'TUTOR', status: 'ACTIVE', expirationDate: null },
     ],
     totalPages: 1,
   });
-  render(<UserManagementPage />);
+  render(<UserManagementPage />, { wrapper });
   await waitFor(() => {
     expect(screen.getByText('alice')).toBeInTheDocument();
   });
@@ -52,14 +46,13 @@ test('displays users from API', async () => {
 });
 
 test('date inputs have min attribute set to today', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({
+  userApi.list.mockResolvedValue({
     content: [
       { id: 2, username: 'alice', displayName: 'Alice', role: 'STUDENT', status: 'ACTIVE', expirationDate: null },
     ],
     totalPages: 1,
   });
-  const { container } = render(<UserManagementPage />);
+  const { container } = render(<UserManagementPage />, { wrapper });
   await waitFor(() => {
     expect(screen.getByText('alice')).toBeInTheDocument();
   });
@@ -69,17 +62,14 @@ test('date inputs have min attribute set to today', async () => {
 });
 
 test('renders Last Login column header', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({ content: [], totalPages: 0 });
-  render(<UserManagementPage />);
+  render(<UserManagementPage />, { wrapper });
   await waitFor(() => {
     expect(screen.getByText('Last Login')).toBeInTheDocument();
   });
 });
 
 test('displays formatted last login time when present', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({
+  userApi.list.mockResolvedValue({
     content: [
       {
         id: 2,
@@ -93,7 +83,7 @@ test('displays formatted last login time when present', async () => {
     ],
     totalPages: 1,
   });
-  render(<UserManagementPage />);
+  render(<UserManagementPage />, { wrapper });
   await waitFor(() => {
     expect(screen.getByText('alice')).toBeInTheDocument();
   });
@@ -105,8 +95,7 @@ test('displays formatted last login time when present', async () => {
 });
 
 test('displays — when lastLoginAt is null', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({
+  userApi.list.mockResolvedValue({
     content: [
       {
         id: 2,
@@ -120,25 +109,57 @@ test('displays — when lastLoginAt is null', async () => {
     ],
     totalPages: 1,
   });
-  render(<UserManagementPage />);
+  render(<UserManagementPage />, { wrapper });
   await waitFor(() => {
     expect(screen.getByText('alice')).toBeInTheDocument();
   });
   expect(screen.getByText('—')).toBeInTheDocument();
 });
 
-test('name filter input calls API with name param', async () => {
-  const api = await getApi();
-  api.list.mockResolvedValue({ content: [], totalPages: 0 });
-  render(<UserManagementPage />);
-  await waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
+it('does not call userApi.list again when name input changes without clicking Search', async () => {
+  render(<UserManagementPage />, { wrapper });
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(1));
 
-  const input = screen.getByPlaceholderText('Search by username or name');
-  await userEvent.type(input, 'alice');
-
-  await waitFor(() => {
-    const calls = api.list.mock.calls;
-    const lastCall = calls[calls.length - 1][0];
-    expect(lastCall.name).toBe('alice');
+  fireEvent.change(screen.getByPlaceholderText(/search by username/i), {
+    target: { value: 'alice' },
   });
+
+  // Still only 1 call (the initial mount call)
+  expect(userApi.list).toHaveBeenCalledTimes(1);
+});
+
+it('calls userApi.list with name filter after clicking Search', async () => {
+  render(<UserManagementPage />, { wrapper });
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByPlaceholderText(/search by username/i), {
+    target: { value: 'alice' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(2));
+  expect(userApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'alice', page: 0 }));
+});
+
+it('calls userApi.list with name filter after pressing Enter in text input', async () => {
+  render(<UserManagementPage />, { wrapper });
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(1));
+
+  const input = screen.getByPlaceholderText(/search by username/i);
+  fireEvent.change(input, { target: { value: 'bob' } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(2));
+  expect(userApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'bob', page: 0 }));
+});
+
+it('does not call userApi.list when dropdown changes without clicking Search', async () => {
+  render(<UserManagementPage />, { wrapper });
+  await waitFor(() => expect(userApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByDisplayValue('All Roles'), {
+    target: { value: 'TUTOR' },
+  });
+
+  expect(userApi.list).toHaveBeenCalledTimes(1);
 });
