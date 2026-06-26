@@ -51,4 +51,26 @@ class MigrationTest {
             assertEquals("false", rs.getString("setting_value"));
         }
     }
+
+    @Test
+    void v8AddsExerciseDraftsTableAndSubmissionSourceColumns() throws Exception {
+        try (Connection conn = dataSource.getConnection()) {
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES " +
+                    "WHERE TABLE_SCHEMA='PUBLIC' AND LOWER(TABLE_NAME)='exercise_drafts'")) {
+                ResultSet rs = stmt.executeQuery();
+                rs.next();
+                assertEquals(1, rs.getInt(1), "exercise_drafts table should exist");
+            }
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT LOWER(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS " +
+                    "WHERE TABLE_SCHEMA='PUBLIC' AND LOWER(TABLE_NAME)='submissions'")) {
+                ResultSet rs = stmt.executeQuery();
+                Set<String> cols = new HashSet<>();
+                while (rs.next()) cols.add(rs.getString(1));
+                assertTrue(cols.contains("source"), "submissions.source should exist");
+                assertTrue(cols.contains("user_id"), "submissions.user_id should exist");
+            }
+        }
+    }
 }
