@@ -20,16 +20,12 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
   const workspaceRef = useRef(null);
   const workerRef = useRef(null);
   const timeoutRef = useRef(null);
-  const sharedBufferRef = useRef(null);
 
   const [output, setOutput] = useState(null);
   const [running, setRunning] = useState(false);
   const [tle, setTle] = useState(false);
-  const [preDefinedInputs, setPreDefinedInputs] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
-
-  const hasInputBlock = workspaceXml?.includes('type="text_prompt_ext"') ?? false;
 
   useEffect(() => {
     if (!workspaceXml || !containerRef.current) return;
@@ -53,6 +49,13 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
     };
   }, [workspaceXml]);
 
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+      clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
   function handleRun() {
     if (!workspaceRef.current) return;
     setRunning(true);
@@ -63,15 +66,16 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
     if (workerRef.current) workerRef.current.terminate();
     clearTimeout(timeoutRef.current);
 
-    const inputs = hasInputBlock
-      ? preDefinedInputs.split('\n').filter(s => s !== '')
-      : [];
-    const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
-    sharedBufferRef.current = sharedBuffer;
-
-    const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
-    workerRef.current = worker;
+    let worker;
+    try {
+      const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+      worker = createBlocklyBlobWorker(jsCode);
+      workerRef.current = worker;
+    } catch (e) {
+      setRunning(false);
+      setOutput(`Error starting execution: ${e.message}`);
+      return;
+    }
 
     timeoutRef.current = setTimeout(() => {
       worker.terminate();
@@ -104,31 +108,17 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
   }
 
   function handleInputSubmit() {
-    if (!sharedBufferRef.current) return;
-    const int32View = new Int32Array(sharedBufferRef.current);
-    const uint8View = new Uint8Array(sharedBufferRef.current);
-    const raw = new TextEncoder().encode(inputValue);
-    let encoded = raw;
-    if (raw.length > 1020) {
-      let end = 1020;
-      while (end > 0 && (raw[end] & 0xC0) === 0x80) end--;
-      encoded = raw.slice(0, end);
-    }
-    int32View[1] = encoded.length;
-    uint8View.set(encoded, 8);
-    Atomics.store(int32View, 0, 1);
-    Atomics.notify(int32View, 0, 1);
+    if (!workerRef.current) return;
+    workerRef.current.postMessage({ type: 'input-response', value: inputValue });
     setInputModalMsg(null);
     setInputValue('');
-    if (workerRef.current) {
-      timeoutRef.current = setTimeout(() => {
-        workerRef.current?.terminate();
-        workerRef.current = null;
-        setRunning(false);
-        setTle(true);
-        setInputModalMsg(null);
-      }, 3000);
-    }
+    timeoutRef.current = setTimeout(() => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+      setInputModalMsg(null);
+    }, 3000);
   }
 
   if (!workspaceXml) {
@@ -145,24 +135,6 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
         ref={containerRef}
         style={{ height: 400, border: '1px solid #ddd', borderRadius: 4, marginBottom: 16 }}
       />
-
-      {hasInputBlock && (
-        <div style={{ marginBottom: 12 }}>
-          <label
-            htmlFor="viewer-input"
-            style={{ display: 'block', marginBottom: 4, fontSize: 13, color: '#555' }}
-          >
-            Input (one value per line):
-          </label>
-          <textarea
-            id="viewer-input"
-            rows={3}
-            value={preDefinedInputs}
-            onChange={e => setPreDefinedInputs(e.target.value)}
-            style={{ width: '100%', fontFamily: 'monospace', fontSize: 13, boxSizing: 'border-box', padding: 6 }}
-          />
-        </div>
-      )}
 
       <button
         onClick={handleRun}
