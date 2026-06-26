@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -173,6 +174,17 @@ class AuthControllerTest {
         mockMvc.perform(post("/v1/auth/refresh").cookie(refreshCookie))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.error.code").value("ACCOUNT_EXPIRED"));
+    }
+
+    @Test
+    void login_validCredentials_stampsLastLoginAt() throws Exception {
+        mockMvc.perform(post("/v1/auth/login")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"password\":\"password123\"}"))
+            .andExpect(status().isOk());
+
+        User updated = userRepository.findByUsername("testuser").orElseThrow();
+        assertNotNull(updated.getLastLoginAt(), "lastLoginAt must be set after login");
     }
 
     @Test

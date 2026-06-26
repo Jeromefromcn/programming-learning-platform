@@ -51,6 +51,9 @@ public class AuthService {
                 "Account disabled — please contact an administrator");
         }
 
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
         String accessToken = jwtUtil.generateToken(user.getId(), user.getRole().name());
 
         String rawToken = UUID.randomUUID().toString();
