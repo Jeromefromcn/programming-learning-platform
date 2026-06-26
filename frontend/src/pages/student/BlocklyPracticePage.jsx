@@ -86,7 +86,17 @@ export default function BlocklyPracticePage({ exercise }) {
     const inputs = hasInputBlock
       ? preDefinedInputs.split('\n').filter(s => s !== '')
       : [];
-    const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+
+    let sharedBuffer = null;
+    if (hasInputBlock) {
+      try {
+        sharedBuffer = new SharedArrayBuffer(1028);
+      } catch {
+        setRunning(false);
+        setOutput('Error: SharedArrayBuffer not available. The page requires cross-origin isolation headers (COOP/COEP).');
+        return;
+      }
+    }
     sharedBufferRef.current = sharedBuffer;
 
     const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
