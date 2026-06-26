@@ -1,0 +1,97 @@
+package com.platform.exercise.student;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.platform.exercise.domain.Exercise;
+import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.Submission;
+import com.platform.exercise.grading.BlocklyGrader;
+import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.repository.ExerciseRepository;
+import com.platform.exercise.repository.ExerciseVersionRepository;
+import com.platform.exercise.repository.SubmissionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+class StudentSubmissionServiceTest {
+
+    SubmissionRepository submissionRepo;
+    ExerciseRepository exerciseRepo;
+    ExerciseVersionRepository versionRepo;
+    BlocklyGrader blocklyGrader;
+    PythonGrader pythonGrader;
+    StudentSubmissionService service;
+
+    @BeforeEach
+    void setUp() {
+        submissionRepo = mock(SubmissionRepository.class);
+        exerciseRepo = mock(ExerciseRepository.class);
+        versionRepo = mock(ExerciseVersionRepository.class);
+        blocklyGrader = mock(BlocklyGrader.class);
+        pythonGrader = mock(PythonGrader.class);
+        service = new StudentSubmissionService(submissionRepo, exerciseRepo, versionRepo,
+            blocklyGrader, pythonGrader, new ObjectMapper());
+        when(submissionRepo.save(any())).thenAnswer(inv -> {
+            Submission s = inv.getArgument(0);
+            s.setId(123L);
+            return s;
+        });
+    }
+
+    private void stubExercise(String configJson) {
+        Exercise ex = new Exercise();
+        ex.setId(2L);
+        ex.setType(Exercise.ExerciseType.PYTHON);
+        ex.setStatus(Exercise.Status.PUBLISHED);
+        ex.setCurrentVersionId(9L);
+        when(exerciseRepo.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(ex));
+        ExerciseVersion v = new ExerciseVersion();
+        v.setId(9L);
+        v.setVersionNumber(1);
+        v.setConfig(configJson);
+        when(versionRepo.findById(9L)).thenReturn(Optional.of(v));
+        when(pythonGrader.grade(any(), any()))
+            .thenReturn(new PythonGrader.Result(BigDecimal.valueOf(100), "{}"));
+    }
+
+    @Test
+    void submit_showResultTrue_returnsScoreAndPassed_andPersistsStudentSource() {
+        stubExercise("{\"showResult\":true,\"testCases\":[]}");
+        SubmitResultDto result = service.submit(7L, "Alice", 2L,
+            new SubmitRequest("print(1)", null));
+
+        assertTrue(result.showResult());
+        assertEquals(0, BigDecimal.valueOf(100).compareTo(result.score()));
+        assertTrue(result.passed());
+        verify(submissionRepo).save(argThat(s ->
+            "STUDENT".equals(s.getSource()) && s.getUserId().equals(7L)
+                && "Alice".equals(s.getStudentName())
+                && s.getAutoScore() != null));
+    }
+
+    @Test
+    void submit_showResultFalse_hidesScoreButStillStoresIt() {
+        stubExercise("{\"showResult\":false,\"testCases\":[]}");
+        SubmitResultDto result = service.submit(7L, "Alice", 2L,
+            new SubmitRequest("print(1)", null));
+
+        assertFalse(result.showResult());
+        assertNull(result.score());
+        assertNull(result.passed());
+        verify(submissionRepo).save(argThat(s -> s.getAutoScore() != null));
+    }
+
+    @Test
+    void submit_showResultAbsent_defaultsToTrue() {
+        stubExercise("{\"testCases\":[]}");
+        SubmitResultDto result = service.submit(7L, "Alice", 2L,
+            new SubmitRequest("print(1)", null));
+        assertTrue(result.showResult());
+    }
+}

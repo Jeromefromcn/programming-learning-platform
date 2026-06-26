@@ -65,6 +65,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
         }
 
+        // Student submit: 20/min per user (sandboxed grading is expensive)
+        boolean isSubmitEndpoint = uri.matches("(/api)?/v1/student/exercises/\\d+/submissions");
+        if ("POST".equals(method) && isSubmitEndpoint) {
+            String userId = extractUserIdFromToken(request);
+            if (userId != null) {
+                Bucket bucket = buckets.get("submit:" + userId, k -> newBucket(20, 1));
+                if (!bucket.tryConsume(1)) {
+                    writeRateLimitResponse(response, "Submit rate limit exceeded. Try again in 1 minute.");
+                    return;
+                }
+            }
+        }
+
         chain.doFilter(request, response);
     }
 

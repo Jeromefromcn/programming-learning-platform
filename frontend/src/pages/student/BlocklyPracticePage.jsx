@@ -7,6 +7,7 @@ import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
+import { studentApi } from '../../api/studentApi';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -35,6 +36,10 @@ export default function BlocklyPracticePage({ exercise }) {
   const [pythonCode, setPythonCode] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
+  const [savedToast, setSavedToast] = useState(false);
 
   const version = exercise.version;
   const config = version.config;
@@ -69,6 +74,50 @@ export default function BlocklyPracticePage({ exercise }) {
 
     return () => { workspace.dispose(); workspaceRef.current = null; };
   }, []);
+
+  useEffect(() => {
+    studentApi.getDraft(exercise.id)
+      .then(d => {
+        if (d && d.workspaceXml && workspaceRef.current) {
+          const dom = Blockly.utils.xml.textToDom(d.workspaceXml);
+          Blockly.Xml.domToWorkspace(dom, workspaceRef.current);
+        }
+      })
+      .catch(() => { /* ignore */ });
+  }, [exercise.id]);
+
+  function currentJsCode() {
+    return workspaceRef.current
+      ? javascriptGenerator.workspaceToCode(workspaceRef.current) : '';
+  }
+  function currentWorkspaceXml() {
+    return workspaceRef.current
+      ? Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspaceRef.current)) : '';
+  }
+
+  async function handleSaveDraft() {
+    setSaving(true);
+    try {
+      await studentApi.saveDraft(exercise.id,
+        { answerData: currentJsCode(), workspaceXml: currentWorkspaceXml() });
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    setSubmitResult(null);
+    try {
+      const res = await studentApi.submit(exercise.id,
+        { answerData: currentJsCode(), workspaceXml: currentWorkspaceXml() });
+      setSubmitResult(res);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function handleRun() {
     if (!workspaceRef.current) return;
@@ -205,6 +254,15 @@ export default function BlocklyPracticePage({ exercise }) {
           </button>
         )}
 
+        <button onClick={handleSaveDraft} disabled={saving}
+          style={{ border: '1px solid #1976d2', color: '#1976d2', background: '#fff', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={handleSubmit} disabled={submitting}
+          style={{ background: '#7b1fa2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+          {submitting ? 'Submitting…' : 'Submit'}
+        </button>
+
         <button
           onClick={() => setExportModal(true)}
           disabled={running}
@@ -226,6 +284,35 @@ export default function BlocklyPracticePage({ exercise }) {
         </div>
       )}
       {output !== null && <pre style={OUTPUT_STYLE}>{output}</pre>}
+
+      {savedToast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#323232', color: '#fff', padding: '10px 20px', borderRadius: 4, zIndex: 1100 }}>
+          已保存
+        </div>
+      )}
+
+      {submitResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320, textAlign: 'center' }}>
+            {submitResult.showResult ? (
+              <>
+                <h2 style={{ marginTop: 0 }}>
+                  {submitResult.passed ? '✅ 通過' : '❌ 未通過'}
+                </h2>
+                <p style={{ fontSize: 32, margin: '8px 0' }}>{submitResult.score}</p>
+              </>
+            ) : (
+              <h2 style={{ marginTop: 0 }}>已提交</h2>
+            )}
+            <button onClick={() => setSubmitResult(null)}
+              style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {exportModal && (
         <div style={{

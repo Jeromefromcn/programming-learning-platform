@@ -59,6 +59,12 @@ public class Submission {
     @Column(name = "import_batch_id", length = 36)
     private String importBatchId;
 
+    @Column(name = "source", nullable = false, length = 20)
+    private String source = "IMPORT";
+
+    @Column(name = "user_id")
+    private Long userId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

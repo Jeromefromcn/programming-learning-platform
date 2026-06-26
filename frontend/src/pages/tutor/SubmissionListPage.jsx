@@ -12,6 +12,7 @@ export default function SubmissionListPage() {
   const [pendingExerciseId, setPendingExerciseId] = useState('');
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
+  const [source, setSource] = useState('IMPORT');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -29,11 +30,11 @@ export default function SubmissionListPage() {
   }
 
   useEffect(() => {
-    const params = { page, size: 20 };
+    const params = { page, size: 20, source };
     if (studentName.trim()) params.studentName = studentName.trim();
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
     fetchSubmissions(params);
-  }, [page, studentName, exerciseId]);
+  }, [page, studentName, exerciseId, source]);
 
   function handleSearch() {
     setPage(0);
@@ -50,7 +51,7 @@ export default function SubmissionListPage() {
       if (submissions.length === 1 && page > 0) {
         setPage(page - 1); // useEffect will fetch the previous page
       } else {
-        const params = { page, size: 20 };
+        const params = { page, size: 20, source };
         if (studentName.trim()) params.studentName = studentName.trim();
         if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
         fetchSubmissions(params);
@@ -102,6 +103,13 @@ export default function SubmissionListPage() {
           onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', width: 180 }}
         />
+        <label>
+          Source:
+          <select value={source} onChange={e => setSource(e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="IMPORT">Imported</option>
+            <option value="STUDENT">Student</option>
+          </select>
+        </label>
         <button
           onClick={handleSearch}
           style={{ padding: '6px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>

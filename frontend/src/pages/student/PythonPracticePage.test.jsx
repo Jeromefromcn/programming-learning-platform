@@ -1,6 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PythonPracticePage from './PythonPracticePage';
+import { studentApi } from '../../api/studentApi';
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -13,6 +15,8 @@ vi.mock('@monaco-editor/react', () => ({
     <textarea data-testid="monaco-editor" value={value} onChange={e => onChange(e.target.value)} />
   ),
 }));
+
+vi.mock('../../api/studentApi');
 
 // Mock Worker
 class MockWorker {
@@ -43,14 +47,43 @@ const mockExercise = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no draft exists, so getDraft resolves null for all tests
+  studentApi.getDraft.mockResolvedValue(null);
 });
 
 describe('PythonPracticePage', () => {
   it('renders a back button that navigates to /student/exercises', () => {
-    render(<PythonPracticePage exercise={mockExercise} />);
+    render(<MemoryRouter><PythonPracticePage exercise={mockExercise} /></MemoryRouter>);
     const backBtn = screen.getByRole('button', { name: /back to exercises/i });
     expect(backBtn).toBeInTheDocument();
     fireEvent.click(backBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/student/exercises');
+  });
+});
+
+const exercise = {
+  id: 5, title: 'FizzBuzz', type: 'PYTHON',
+  version: { versionNumber: 1, description: 'd', hints: [],
+    config: { starterCode: 'x=1', visibleTestCases: [], showResult: true } },
+};
+
+describe('PythonPracticePage submit/draft', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('loads draft on mount and shows Submit/Save buttons', async () => {
+    studentApi.getDraft.mockResolvedValue({ answerData: 'print(99)' });
+    render(<MemoryRouter><PythonPracticePage exercise={exercise} /></MemoryRouter>);
+    await waitFor(() => expect(studentApi.getDraft).toHaveBeenCalledWith(5));
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument();
+  });
+
+  it('submit shows result modal when showResult true', async () => {
+    studentApi.getDraft.mockResolvedValue(null);
+    studentApi.submit.mockResolvedValue({ submissionId: 1, showResult: true, score: 100, passed: true });
+    render(<MemoryRouter><PythonPracticePage exercise={exercise} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    await waitFor(() => expect(studentApi.submit).toHaveBeenCalledWith(5, expect.objectContaining({ answerData: expect.any(String) })));
+    expect(await screen.findByText(/100/)).toBeInTheDocument();
   });
 });

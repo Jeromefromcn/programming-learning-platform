@@ -28,6 +28,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             SELECT * FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
+              AND (:source IS NULL OR source = :source)
               AND is_deleted = false
             ORDER BY created_at DESC
             """,
@@ -35,13 +36,18 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             SELECT COUNT(*) FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
+              AND (:source IS NULL OR source = :source)
               AND is_deleted = false
             """,
             nativeQuery = true)
     Page<Submission> findFiltered(
             @Param("exerciseId") Long exerciseId,
             @Param("studentName") String studentName,
+            @Param("source") String source,
             Pageable pageable);
+
+    List<Submission> findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(
+            Long userId, Long exerciseId);
 
     @Query(value = """
             SELECT * FROM submissions

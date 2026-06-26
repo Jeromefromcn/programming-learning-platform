@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
+import { studentApi } from '../../api/studentApi';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -25,6 +26,10 @@ export default function PythonPracticePage({ exercise }) {
   const [hintIndex, setHintIndex] = useState(-1);
   const [exportModal, setExportModal] = useState(false);
   const [studentName, setStudentName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
+  const [savedToast, setSavedToast] = useState(false);
   const workerRef = useRef(null);
   const timeoutRef = useRef(null);
 
@@ -37,6 +42,12 @@ export default function PythonPracticePage({ exercise }) {
       if (workerRef.current) workerRef.current.terminate();
     };
   }, []);
+
+  useEffect(() => {
+    studentApi.getDraft(exercise.id)
+      .then(d => { if (d && d.answerData != null) setCode(d.answerData); })
+      .catch(() => { /* no draft / ignore */ });
+  }, [exercise.id]);
 
   function handleRun() {
     if (!workerRef.current || running) return;
@@ -74,6 +85,28 @@ export default function PythonPracticePage({ exercise }) {
     clearTimeout(timeoutRef.current);
     setRunning(false);
     setRunError(e.message || 'Worker error');
+  }
+
+  async function handleSaveDraft() {
+    setSaving(true);
+    try {
+      await studentApi.saveDraft(exercise.id, { answerData: code });
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    setSubmitResult(null);
+    try {
+      const res = await studentApi.submit(exercise.id, { answerData: code });
+      setSubmitResult(res);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleExport() {
@@ -141,6 +174,15 @@ export default function PythonPracticePage({ exercise }) {
           </button>
         )}
 
+        <button onClick={handleSaveDraft} disabled={saving}
+          style={{ border: '1px solid #1976d2', color: '#1976d2', background: '#fff', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={handleSubmit} disabled={submitting}
+          style={{ background: '#7b1fa2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+          {submitting ? 'Submitting…' : 'Submit'}
+        </button>
+
         <button
           onClick={() => setExportModal(true)}
           style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer', marginLeft: 'auto' }}
@@ -201,6 +243,35 @@ export default function PythonPracticePage({ exercise }) {
       {runError && (
         <div style={{ background: '#fce4ec', border: '1px solid #ef9a9a', borderRadius: 4, padding: 12, marginTop: 12 }}>
           Error: {runError}
+        </div>
+      )}
+
+      {savedToast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: '#323232', color: '#fff', padding: '10px 20px', borderRadius: 4, zIndex: 1100 }}>
+          已保存
+        </div>
+      )}
+
+      {submitResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320, textAlign: 'center' }}>
+            {submitResult.showResult ? (
+              <>
+                <h2 style={{ marginTop: 0 }}>
+                  {submitResult.passed ? '✅ 通過' : '❌ 未通過'}
+                </h2>
+                <p style={{ fontSize: 32, margin: '8px 0' }}>{submitResult.score}</p>
+              </>
+            ) : (
+              <h2 style={{ marginTop: 0 }}>已提交</h2>
+            )}
+            <button onClick={() => setSubmitResult(null)}
+              style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>
+              OK
+            </button>
+          </div>
         </div>
       )}
 

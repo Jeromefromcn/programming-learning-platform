@@ -68,3 +68,13 @@ it('does not call submissionApi.list when exercise ID input changes without clic
 
   expect(submissionApi.list).toHaveBeenCalledTimes(1);
 });
+
+it('requests IMPORT source by default and STUDENT after switching', async () => {
+  renderPage();
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
+    expect.objectContaining({ source: 'IMPORT' })));
+
+  fireEvent.change(screen.getByLabelText(/source/i), { target: { value: 'STUDENT' } });
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
+    expect.objectContaining({ source: 'STUDENT' })));
+});
