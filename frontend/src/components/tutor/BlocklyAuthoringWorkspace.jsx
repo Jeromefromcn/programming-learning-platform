@@ -88,7 +88,6 @@ export default function BlocklyAuthoringWorkspace({
   const [preDefinedInputs, setPreDefinedInputs] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
-  const sharedBufferRef = useRef(null);
 
   // Rebuild workspace when allowedBlocks changes
   useEffect(() => {
@@ -186,17 +185,8 @@ export default function BlocklyAuthoringWorkspace({
       const inputs = hasInputBlock
         ? preDefinedInputs.split('\n').filter(s => s !== '')
         : [];
-      let sharedBuffer = null;
-      try {
-        sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
-      } catch {
-        // SharedArrayBuffer unavailable (missing COOP/COEP headers) —
-        // fall back to predefined-inputs-only mode; interactive modal won't appear.
-      }
-      sharedBufferRef.current = sharedBuffer;
-
       const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-      worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
+      worker = createBlocklyBlobWorker(jsCode, inputs);
       workerRef.current = worker;
     } catch (e) {
       setRunning(false);
@@ -235,31 +225,17 @@ export default function BlocklyAuthoringWorkspace({
   }
 
   function handleInputSubmit() {
-    if (!sharedBufferRef.current) return;
-    const int32View = new Int32Array(sharedBufferRef.current);
-    const uint8View = new Uint8Array(sharedBufferRef.current);
-    const raw = new TextEncoder().encode(inputValue);
-    let encoded = raw;
-    if (raw.length > 1020) {
-      let end = 1020;
-      while (end > 0 && (raw[end] & 0xC0) === 0x80) end--;
-      encoded = raw.slice(0, end);
-    }
-    int32View[1] = encoded.length;
-    uint8View.set(encoded, 8);
-    Atomics.store(int32View, 0, 1);
-    Atomics.notify(int32View, 0, 1);
+    if (!workerRef.current) return;
+    workerRef.current.postMessage({ type: 'input-response', value: inputValue });
     setInputModalMsg(null);
     setInputValue('');
-    if (workerRef.current) {
-      timeoutRef.current = setTimeout(() => {
-        workerRef.current?.terminate();
-        workerRef.current = null;
-        setRunning(false);
-        setTle(true);
-        setInputModalMsg(null);
-      }, 3000);
-    }
+    timeoutRef.current = setTimeout(() => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+      setInputModalMsg(null);
+    }, 3000);
   }
 
   return (

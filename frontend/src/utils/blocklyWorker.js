@@ -1,44 +1,66 @@
-export function createBlocklyBlobWorker(jsCode, preDefinedInputs = [], sharedBuffer = null) {
-  const script = [
-    'var __lines = [];',
-    'var __inputQueue = [];',
-    'var __int32View = null;',
-    'function print() {',
-    '  __lines.push(Array.prototype.join.call(arguments, \' \'));',
-    '}',
-    'var window = {',
-    '  alert: function(x) { print(String(x)); },',
-    '  prompt: function(msg) {',
-    '    if (__inputQueue.length > 0) { return __inputQueue.shift(); }',
-    '    if (__int32View) {',
-    '      self.postMessage({ type: "input-request", message: msg || "" });',
-    '      try { Atomics.wait(__int32View, 0, 0); } catch(e) { return ""; }',
-    '      var len = __int32View[1];',
-    '      var bytes = new Uint8Array(__int32View.buffer, 8, len);',
-    '      var response = new TextDecoder().decode(bytes);',
-    '      Atomics.store(__int32View, 0, 0);',
-    '      return response;',
-    '    }',
-    '    return "";',
-    '  }',
-    '};',
-    'self.onmessage = function(e) {',
-    '  __inputQueue = e.data.inputs || [];',
-    '  var sharedBuf = e.data.sharedBuffer || null;',
-    '  if (sharedBuf) { __int32View = new Int32Array(sharedBuf); }',
-    '  try {',
-    jsCode,
-    '    self.postMessage({ type: "done", output: __lines.join("\\n"), error: null });',
-    '  } catch(e) {',
-    '    self.postMessage({ type: "done", output: null, error: e.message });',
-    '  }',
-    '};',
-  ].join('\n');
+export function transformPromptCalls(jsCode) {
+  // Replace window.prompt(args) with a generator yield that pauses execution
+  // and resumes with the user-supplied value. Non-greedy match works for the
+  // simple string args that Blockly generates (e.g. 'Enter a number').
+  return jsCode.replace(
+    /window\.prompt\((.*?)\)/gs,
+    (_, args) => `(yield { __p: true, __m: String(${args || "''"}) })`
+  );
+}
+
+export function createBlocklyBlobWorker(jsCode, preDefinedInputs = []) {
+  const transformed = transformPromptCalls(jsCode);
+
+  const script = `
+var __lines = [];
+var __q = ${JSON.stringify(preDefinedInputs)};
+var __gen = null;
+
+function print() {
+  __lines.push(Array.prototype.join.call(arguments, ' '));
+}
+
+var window = {
+  alert: function(x) { print(String(x)); },
+};
+
+function __step(v) {
+  var r;
+  try { r = __gen.next(v); }
+  catch (e) {
+    self.postMessage({ type: 'done', output: null, error: e.message });
+    __gen = null;
+    return;
+  }
+  if (r.done) {
+    self.postMessage({ type: 'done', output: __lines.join('\\n'), error: null });
+    __gen = null;
+  } else if (__q.length > 0) {
+    __step(__q.shift());
+  } else {
+    self.postMessage({ type: 'input-request', message: r.value.__m || '' });
+  }
+}
+
+function* __run() {
+${transformed}
+}
+
+self.onmessage = function (e) {
+  if (e.data.type === 'input-response') {
+    if (__gen) __step(String(e.data.value != null ? e.data.value : ''));
+    return;
+  }
+  __lines = [];
+  __gen = __run();
+  __step(undefined);
+};
+`;
 
   const blob = new Blob([script], { type: 'application/javascript' });
   const url = URL.createObjectURL(blob);
   const worker = new Worker(url);
   URL.revokeObjectURL(url);
-  worker.postMessage({ inputs: preDefinedInputs, sharedBuffer });
+  worker.postMessage({ type: 'run' });
   return worker;
 }

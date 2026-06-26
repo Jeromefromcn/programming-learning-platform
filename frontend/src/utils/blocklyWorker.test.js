@@ -1,63 +1,76 @@
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { createBlocklyBlobWorker } from './blocklyWorker';
+import { createBlocklyBlobWorker, transformPromptCalls } from './blocklyWorker';
 
-// Helper: runs the worker script logic in Node.js context with mocked self/globals.
-// jsCode is the user code string to embed; inputs is the pre-defined queue array.
-function runWorkerScript(jsCode, inputs) {
+// Runs the worker script logic in Node.js with a mocked self.
+// Handles input-request messages by responding with queued values.
+function runWorkerScript(jsCode, inputs = []) {
   return new Promise((resolve) => {
-    const messages = [];
+    const queue = [...inputs];
     const mockSelf = {
-      postMessage: (msg) => messages.push(msg),
+      postMessage: null,
       onmessage: null,
     };
 
-    const scriptLines = [
-      'var __lines = [];',
-      'var __inputQueue = [];',
-      'var __int32View = null;',
-      'function print() {',
-      '  __lines.push(Array.prototype.join.call(arguments, \' \'));',
-      '}',
-      'var window = {',
-      '  alert: function(x) { print(String(x)); },',
-      '  prompt: function(msg) {',
-      '    if (__inputQueue.length > 0) { return __inputQueue.shift(); }',
-      '    if (__int32View) {',
-      '      self.postMessage({ type: "input-request", message: msg || "" });',
-      '      try { Atomics.wait(__int32View, 0, 0); } catch(e) { return ""; }',
-      '      var len = __int32View[1];',
-      '      var bytes = new Uint8Array(__int32View.buffer, 8, len);',
-      '      var response = new TextDecoder().decode(bytes);',
-      '      Atomics.store(__int32View, 0, 0);',
-      '      return response;',
-      '    }',
-      '    return "";',
-      '  }',
-      '};',
-      'self.onmessage = function(e) {',
-      '  __inputQueue = e.data.inputs || [];',
-      '  var sharedBuf = e.data.sharedBuffer || null;',
-      '  if (sharedBuf) { __int32View = new Int32Array(sharedBuf); }',
-      '  try {',
-      jsCode,
-      '    self.postMessage({ type: "done", output: __lines.join("\\n"), error: null });',
-      '  } catch(e) {',
-      '    self.postMessage({ type: "done", output: null, error: e.message });',
-      '  }',
-      '};',
-    ].join('\n');
+    mockSelf.postMessage = (msg) => {
+      if (msg.type === 'done') { resolve(msg); return; }
+      if (msg.type === 'input-request') {
+        const val = queue.length > 0 ? queue.shift() : '';
+        Promise.resolve().then(() => {
+          mockSelf.onmessage({ data: { type: 'input-response', value: val } });
+        });
+      }
+    };
 
-    // Execute script with `self` and `window` injected (so the local `var window`
-    // definition in the script shadows the jsdom global `window`).
-    // We pass a placeholder for `window` so the `new Function` parameter shadows
-    // the global; the script itself redefines it with `var window = {...}`.
-    new Function('self', 'window', scriptLines)(mockSelf, undefined);
-    // Trigger onmessage with init data
-    mockSelf.onmessage({ data: { inputs, sharedBuffer: null } });
-    // Return the last posted message (the "done" message)
-    resolve(messages[messages.length - 1]);
+    const transformed = transformPromptCalls(jsCode);
+    const scriptBody = `
+var __lines = [];
+var __q = [];
+var __gen = null;
+function print() { __lines.push(Array.prototype.join.call(arguments, ' ')); }
+var window = { alert: function(x) { print(String(x)); } };
+function __step(v) {
+  var r;
+  try { r = __gen.next(v); }
+  catch(e) { self.postMessage({ type: 'done', output: null, error: e.message }); __gen = null; return; }
+  if (r.done) { self.postMessage({ type: 'done', output: __lines.join('\\n'), error: null }); __gen = null; }
+  else if (__q.length > 0) { __step(__q.shift()); }
+  else { self.postMessage({ type: 'input-request', message: r.value.__m || '' }); }
+}
+function* __run() { ${transformed} }
+self.onmessage = function(e) {
+  if (e.data.type === 'input-response') { if (__gen) __step(String(e.data.value != null ? e.data.value : '')); return; }
+  __lines = []; __gen = __run(); __step(undefined);
+};`;
+
+    new Function('self', 'window', scriptBody)(mockSelf, undefined);
+    mockSelf.onmessage({ data: { type: 'run' } });
   });
 }
+
+describe('transformPromptCalls', () => {
+  test('transforms window.prompt(msg) into a yield expression', () => {
+    const result = transformPromptCalls("var x = window.prompt('Enter:');");
+    expect(result).toContain('yield');
+    expect(result).toContain('__p: true');
+    expect(result).toContain("String('Enter:')");
+    expect(result).not.toContain('window.prompt');
+  });
+
+  test('transforms multiple prompt calls in one expression', () => {
+    const result = transformPromptCalls("print(window.prompt('a'), window.prompt('b'));");
+    expect(result.match(/yield/g)).toHaveLength(2);
+  });
+
+  test('leaves code without prompt calls unchanged', () => {
+    const code = 'window.alert("hello");';
+    expect(transformPromptCalls(code)).toBe(code);
+  });
+
+  test('handles empty args with fallback', () => {
+    const result = transformPromptCalls('window.prompt()');
+    expect(result).toContain("String('')");
+  });
+});
 
 describe('createBlocklyBlobWorker', () => {
   let workerInstance;
@@ -69,7 +82,6 @@ describe('createBlocklyBlobWorker', () => {
       onmessage: null,
       onerror: null,
     };
-    // Use a regular function (not arrow) so `new Worker(...)` returns workerInstance
     vi.stubGlobal('Worker', vi.fn(function () { return workerInstance; }));
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test-url');
     vi.spyOn(URL, 'revokeObjectURL').mockReturnValue(undefined);
@@ -91,29 +103,9 @@ describe('createBlocklyBlobWorker', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test-url');
   });
 
-  test('sends init postMessage with empty inputs and null sharedBuffer by default', () => {
+  test('sends initial run message to worker', () => {
     createBlocklyBlobWorker('var x = 1;');
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({
-      inputs: [],
-      sharedBuffer: null,
-    });
-  });
-
-  test('sends provided inputs array in init postMessage', () => {
-    createBlocklyBlobWorker('var x = 1;', ['hello', '42']);
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({
-      inputs: ['hello', '42'],
-      sharedBuffer: null,
-    });
-  });
-
-  test('sends provided SharedArrayBuffer in init postMessage', () => {
-    const buf = new SharedArrayBuffer(1028);
-    createBlocklyBlobWorker('var x = 1;', [], buf);
-    expect(workerInstance.postMessage).toHaveBeenCalledWith({
-      inputs: [],
-      sharedBuffer: buf,
-    });
+    expect(workerInstance.postMessage).toHaveBeenCalledWith({ type: 'run' });
   });
 
   test('returns the Worker instance', () => {
@@ -122,31 +114,49 @@ describe('createBlocklyBlobWorker', () => {
   });
 });
 
-describe('worker script prompt behavior', () => {
-  // NOTE: Blockly generates `window.prompt(...)` calls, not bare `prompt(...)`.
-  // Tests use `window.prompt(...)` to match actual generated code.
+describe('worker script execution', () => {
+  test('outputs print/alert results', async () => {
+    const result = await runWorkerScript('window.alert("hello");');
+    expect(result).toEqual({ type: 'done', output: 'hello', error: null });
+  });
 
-  test('pre-defined inputs consumed in order', async () => {
+  test('pre-defined inputs consumed in order via interactive messages', async () => {
     const code = 'print(window.prompt("a"), window.prompt("b"), window.prompt("c"));';
     const result = await runWorkerScript(code, ['first', 'second', 'third']);
     expect(result).toEqual({ type: 'done', output: 'first second third', error: null });
   });
 
-  test('extra window.prompt() calls return empty string when queue exhausted and no SharedArrayBuffer', async () => {
+  test('extra prompt() calls return empty string when queue exhausted', async () => {
     const code = 'print(window.prompt(), window.prompt());';
     const result = await runWorkerScript(code, ['only-one']);
     expect(result).toEqual({ type: 'done', output: 'only-one ', error: null });
   });
 
-  test('empty inputs and no SharedArrayBuffer: window.prompt() returns empty string', async () => {
+  test('empty inputs: window.prompt() returns empty string', async () => {
     const code = 'print(window.prompt("what?"));';
     const result = await runWorkerScript(code, []);
     expect(result).toEqual({ type: 'done', output: '', error: null });
   });
 
-  test('code errors are caught and reported as done with error', async () => {
+  test('code errors are caught and reported', async () => {
     const code = 'throw new Error("test error");';
     const result = await runWorkerScript(code, []);
     expect(result).toEqual({ type: 'done', output: null, error: 'test error' });
+  });
+
+  test('interactive loop: prompt called multiple times', async () => {
+    const code = `
+      var a = window.prompt('first');
+      var b = window.prompt('second');
+      print(a + '-' + b);
+    `;
+    const result = await runWorkerScript(code, ['hello', 'world']);
+    expect(result).toEqual({ type: 'done', output: 'hello-world', error: null });
+  });
+
+  test('Number(window.prompt()) converts response to number', async () => {
+    const code = 'print(Number(window.prompt("num")) + 1);';
+    const result = await runWorkerScript(code, ['41']);
+    expect(result).toEqual({ type: 'done', output: '42', error: null });
   });
 });
