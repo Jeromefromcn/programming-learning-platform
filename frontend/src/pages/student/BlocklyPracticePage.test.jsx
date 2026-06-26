@@ -1,6 +1,15 @@
 import { vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import BlocklyPracticePage from './BlocklyPracticePage';
+
+vi.mock('../../api/studentApi', () => ({
+  studentApi: {
+    getDraft: vi.fn(),
+    saveDraft: vi.fn(),
+    submit: vi.fn(),
+  },
+}));
 
 // Blockly cannot run in jsdom — mock it entirely
 vi.mock('blockly', () => {
@@ -48,8 +57,10 @@ function makeExercise(configOverrides = {}) {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  const { studentApi } = await import('../../api/studentApi');
+  studentApi.getDraft.mockResolvedValue(null);
 });
 
 describe('Clean student workspace', () => {
@@ -265,5 +276,20 @@ describe('Interactive input modal', () => {
       fireEvent.click(screen.getByRole('button', { name: /ok/i }));
     });
     expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('Save and Submit', () => {
+  const blocklyExercise = makeExercise({ showResult: true });
+
+  it('renders Save and Submit buttons and submits', async () => {
+    const { studentApi } = await import('../../api/studentApi');
+    studentApi.getDraft.mockResolvedValue(null);
+    studentApi.submit.mockResolvedValue({ submissionId: 1, showResult: true, score: 100, passed: true });
+    render(<MemoryRouter><BlocklyPracticePage exercise={blocklyExercise} /></MemoryRouter>);
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+    await waitFor(() => expect(studentApi.submit).toHaveBeenCalledWith(blocklyExercise.id, expect.any(Object)));
+    expect((await screen.findAllByText(/通過|100/)).length).toBeGreaterThan(0);
   });
 });
