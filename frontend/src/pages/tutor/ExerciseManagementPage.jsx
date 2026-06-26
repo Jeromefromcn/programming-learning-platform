@@ -44,10 +44,9 @@ export default function ExerciseManagementPage() {
     categoryApi.list(0, 200).then(d => setCategories(d.content));
   }, []);
 
-  useEffect(() => { load(0, filters); }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(0, filters); }, [filters]); // load is recreated each render; omitting it is intentional
 
   function handleSearch() {
-    setPage(0);
     setFilters({ ...pendingFilters });
   }
 
@@ -55,7 +54,7 @@ export default function ExerciseManagementPage() {
     if (!confirm(`Delete exercise "${ex.title}"?`)) return;
     try {
       await exerciseApi.delete(ex.id);
-      load(page);
+      load(page, filters);
     } catch {
       alert('Failed to delete exercise.');
     }
@@ -68,7 +67,7 @@ export default function ExerciseManagementPage() {
       } else {
         await exerciseApi.publish(ex.id);
       }
-      load(page);
+      load(page, filters);
     } catch {
       alert('Failed to update status.');
     }
