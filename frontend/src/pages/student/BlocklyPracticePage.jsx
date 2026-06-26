@@ -33,7 +33,6 @@ export default function BlocklyPracticePage({ exercise }) {
   const [exportModal, setExportModal] = useState(false);
   const [studentName, setStudentName] = useState('');
   const [pythonCode, setPythonCode] = useState('');
-  const [preDefinedInputs, setPreDefinedInputs] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
 
@@ -83,12 +82,8 @@ export default function BlocklyPracticePage({ exercise }) {
 
     let worker;
     try {
-      const hasInputBlock = config.allowedBlocks?.includes('text_prompt_ext');
-      const inputs = hasInputBlock
-        ? preDefinedInputs.split('\n').filter(s => s !== '')
-        : [];
       const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-      worker = createBlocklyBlobWorker(jsCode, inputs);
+      worker = createBlocklyBlobWorker(jsCode);
       workerRef.current = worker;
     } catch (e) {
       setRunning(false);
@@ -188,24 +183,6 @@ export default function BlocklyPracticePage({ exercise }) {
         <div style={{ marginBottom: 16 }}>
           <p style={{ margin: '0 0 4px', fontSize: 13, color: '#555' }}>Python equivalent (read-only):</p>
           <pre style={OUTPUT_STYLE}>{pythonCode || '(empty workspace)'}</pre>
-        </div>
-      )}
-
-      {config.allowedBlocks?.includes('text_prompt_ext') && (
-        <div style={{ marginBottom: 16 }}>
-          <label
-            htmlFor="practice-input"
-            style={{ display: 'block', marginBottom: 4, fontSize: 13, color: '#555' }}
-          >
-            Input (one value per line):
-          </label>
-          <textarea
-            id="practice-input"
-            rows={3}
-            value={preDefinedInputs}
-            onChange={e => setPreDefinedInputs(e.target.value)}
-            style={{ width: '100%', fontFamily: 'monospace', fontSize: 13, boxSizing: 'border-box', padding: 6 }}
-          />
         </div>
       )}
 

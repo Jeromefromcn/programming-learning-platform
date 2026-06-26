@@ -85,7 +85,6 @@ export default function BlocklyAuthoringWorkspace({
   const [tle, setTle] = useState(false);
   const workerRef = useRef(null);
   const timeoutRef = useRef(null);
-  const [preDefinedInputs, setPreDefinedInputs] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
 
@@ -181,12 +180,8 @@ export default function BlocklyAuthoringWorkspace({
 
     let worker;
     try {
-      const hasInputBlock = allowedBlocks.includes('text_prompt_ext');
-      const inputs = hasInputBlock
-        ? preDefinedInputs.split('\n').filter(s => s !== '')
-        : [];
       const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-      worker = createBlocklyBlobWorker(jsCode, inputs);
+      worker = createBlocklyBlobWorker(jsCode);
       workerRef.current = worker;
     } catch (e) {
       setRunning(false);
@@ -303,24 +298,6 @@ export default function BlocklyAuthoringWorkspace({
 
       {/* Blockly workspace */}
       <div ref={containerRef} style={{ height: 400, border: '1px solid #ddd', borderRadius: 4 }} />
-
-      {allowedBlocks.includes('text_prompt_ext') && (
-        <div style={{ marginTop: 12 }}>
-          <label
-            htmlFor="authoring-input"
-            style={{ display: 'block', marginBottom: 4, fontSize: 13, color: '#555' }}
-          >
-            Input (one value per line):
-          </label>
-          <textarea
-            id="authoring-input"
-            rows={3}
-            value={preDefinedInputs}
-            onChange={e => setPreDefinedInputs(e.target.value)}
-            style={{ width: '100%', fontFamily: 'monospace', fontSize: 13, boxSizing: 'border-box', padding: 6 }}
-          />
-        </div>
-      )}
 
       {/* Run controls */}
       <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
