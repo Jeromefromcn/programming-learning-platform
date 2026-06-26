@@ -180,27 +180,31 @@ export default function BlocklyAuthoringWorkspace({
     if (workerRef.current) workerRef.current.terminate();
     clearTimeout(timeoutRef.current);
 
-    const hasInputBlock = allowedBlocks.includes('text_prompt_ext');
-    const inputs = hasInputBlock
-      ? preDefinedInputs.split('\n').filter(s => s !== '')
-      : [];
-    const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
-    sharedBufferRef.current = sharedBuffer;
+    let worker;
+    try {
+      const hasInputBlock = allowedBlocks.includes('text_prompt_ext');
+      const inputs = hasInputBlock
+        ? preDefinedInputs.split('\n').filter(s => s !== '')
+        : [];
+      const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+      sharedBufferRef.current = sharedBuffer;
 
-    const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
-    workerRef.current = worker;
-
-    function startTle() {
-      timeoutRef.current = setTimeout(() => {
-        worker.terminate();
-        workerRef.current = null;
-        setRunning(false);
-        setTle(true);
-        setInputModalMsg(null);
-      }, 3000);
+      const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+      worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
+      workerRef.current = worker;
+    } catch (e) {
+      setRunning(false);
+      setOutput(`Error starting execution: ${e.message}`);
+      return;
     }
-    startTle();
+
+    timeoutRef.current = setTimeout(() => {
+      worker.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+      setInputModalMsg(null);
+    }, 3000);
 
     worker.onmessage = ({ data }) => {
       if (data.type === 'input-request') {

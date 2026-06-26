@@ -82,37 +82,31 @@ export default function BlocklyPracticePage({ exercise }) {
     if (workerRef.current) workerRef.current.terminate();
     clearTimeout(timeoutRef.current);
 
-    const hasInputBlock = config.allowedBlocks?.includes('text_prompt_ext');
-    const inputs = hasInputBlock
-      ? preDefinedInputs.split('\n').filter(s => s !== '')
-      : [];
+    let worker;
+    try {
+      const hasInputBlock = config.allowedBlocks?.includes('text_prompt_ext');
+      const inputs = hasInputBlock
+        ? preDefinedInputs.split('\n').filter(s => s !== '')
+        : [];
+      const sharedBuffer = hasInputBlock ? new SharedArrayBuffer(1028) : null;
+      sharedBufferRef.current = sharedBuffer;
 
-    let sharedBuffer = null;
-    if (hasInputBlock) {
-      try {
-        sharedBuffer = new SharedArrayBuffer(1028);
-      } catch {
-        setRunning(false);
-        setOutput('Error: SharedArrayBuffer not available. The page requires cross-origin isolation headers (COOP/COEP).');
-        return;
-      }
+      const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
+      worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
+      workerRef.current = worker;
+    } catch (e) {
+      setRunning(false);
+      setOutput(`Error starting execution: ${e.message}`);
+      return;
     }
-    sharedBufferRef.current = sharedBuffer;
 
-    const jsCode = javascriptGenerator.workspaceToCode(workspaceRef.current);
-    const worker = createBlocklyBlobWorker(jsCode, inputs, sharedBuffer);
-    workerRef.current = worker;
-
-    function startTle() {
-      timeoutRef.current = setTimeout(() => {
-        worker.terminate();
-        workerRef.current = null;
-        setRunning(false);
-        setTle(true);
-        setInputModalMsg(null);
-      }, 3000);
-    }
-    startTle();
+    timeoutRef.current = setTimeout(() => {
+      worker.terminate();
+      workerRef.current = null;
+      setRunning(false);
+      setTle(true);
+      setInputModalMsg(null);
+    }, 3000);
 
     worker.onmessage = ({ data }) => {
       if (data.type === 'input-request') {
