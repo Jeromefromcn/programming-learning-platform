@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { exerciseApi } from '../../api/exerciseApi';
 import { categoryApi } from '../../api/categoryApi';
@@ -14,10 +14,12 @@ export default function ExerciseManagementPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const [pendingFilters, setPendingFilters] = useState({
+    type: '', status: '', categoryId: '', difficulty: '', title: '',
+  });
   const [filters, setFilters] = useState({
     type: '', status: '', categoryId: '', difficulty: '', title: '',
   });
-  const debounceRef = useRef(null);
 
   async function load(p = 0, f = filters) {
     setLoading(true);
@@ -40,18 +42,13 @@ export default function ExerciseManagementPage() {
 
   useEffect(() => {
     categoryApi.list(0, 200).then(d => setCategories(d.content));
-    load(0);
   }, []);
 
-  function handleFilterChange(key, value) {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    if (key === 'title') {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => load(0, next), 300);
-    } else {
-      load(0, next);
-    }
+  useEffect(() => { load(0, filters); }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSearch() {
+    setPage(0);
+    setFilters({ ...pendingFilters });
   }
 
   async function handleDelete(ex) {
@@ -88,37 +85,47 @@ export default function ExerciseManagementPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           placeholder="Search title…"
-          value={filters.title}
-          onChange={e => handleFilterChange('title', e.target.value)}
+          value={pendingFilters.title}
+          onChange={e => setPendingFilters(p => ({ ...p, title: e.target.value }))}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, width: 200 }}
         />
-        <select value={filters.type} onChange={e => handleFilterChange('type', e.target.value)}
+        <select value={pendingFilters.type}
+          onChange={e => setPendingFilters(p => ({ ...p, type: e.target.value }))}
           style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
           <option value="">All Types</option>
           <option value="BLOCKLY">Blockly</option>
           <option value="PYTHON">Python</option>
         </select>
-        <select value={filters.status} onChange={e => handleFilterChange('status', e.target.value)}
+        <select value={pendingFilters.status}
+          onChange={e => setPendingFilters(p => ({ ...p, status: e.target.value }))}
           style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
           <option value="">All Statuses</option>
           <option value="DRAFT">Draft</option>
           <option value="PUBLISHED">Published</option>
         </select>
-        <select value={filters.difficulty} onChange={e => handleFilterChange('difficulty', e.target.value)}
+        <select value={pendingFilters.difficulty}
+          onChange={e => setPendingFilters(p => ({ ...p, difficulty: e.target.value }))}
           style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
           <option value="">All Difficulties</option>
           <option value="EASY">Easy</option>
           <option value="MEDIUM">Medium</option>
           <option value="HARD">Hard</option>
         </select>
-        <select value={filters.categoryId} onChange={e => handleFilterChange('categoryId', e.target.value)}
+        <select value={pendingFilters.categoryId}
+          onChange={e => setPendingFilters(p => ({ ...p, categoryId: e.target.value }))}
           style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        <button
+          onClick={handleSearch}
+          style={{ padding: '6px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          Search
+        </button>
       </div>
 
       {loading ? <p style={{ marginTop: 24 }}>Loading…</p> : (
@@ -174,7 +181,7 @@ export default function ExerciseManagementPage() {
         </table>
       )}
 
-      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => load(p)} />
+      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => load(p, filters)} />
     </div>
   );
 }
