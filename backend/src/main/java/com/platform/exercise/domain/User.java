@@ -48,6 +48,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @PreUpdate
     protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
 }

@@ -10,7 +10,8 @@ public record UserDto(
     String role,
     String status,
     LocalDateTime expirationDate,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    LocalDateTime lastLoginAt
 ) {
     public static UserDto from(User user) {
         return new UserDto(
@@ -20,7 +21,8 @@ public record UserDto(
             user.getRole().name(),
             user.getStatus().name(),
             user.getExpirationDate(),
-            user.getCreatedAt()
+            user.getCreatedAt(),
+            user.getLastLoginAt()
         );
     }
 }

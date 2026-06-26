@@ -363,4 +363,24 @@ class UserControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[?(@.username=='admin_test')].expirationDate").isNotEmpty());
     }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_returnsLastLoginAtField() throws Exception {
+        User target = userRepository.findByUsername("student1").orElseThrow();
+        target.setLastLoginAt(LocalDateTime.of(2026, 1, 15, 10, 30));
+        userRepository.save(target);
+
+        mockMvc.perform(get("/v1/users"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.username=='student1')].lastLoginAt").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_returnsNullLastLoginAtWhenNeverLoggedIn() throws Exception {
+        mockMvc.perform(get("/v1/users"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.username=='student1')].lastLoginAt[0]").doesNotExist());
+    }
 }
