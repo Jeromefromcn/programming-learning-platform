@@ -32,7 +32,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
-    public PageResponse<UserDto> listUsers(int page, int size, String role, String status) {
+    public PageResponse<UserDto> listUsers(int page, int size, String role, String status, String name) {
         Specification<User> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (role != null && !role.isBlank()) {
@@ -40,6 +40,13 @@ public class UserService {
             }
             if (status != null && !status.isBlank()) {
                 predicates.add(cb.equal(root.get("status"), UserStatus.valueOf(status)));
+            }
+            if (name != null && !name.isBlank()) {
+                String pattern = "%" + name.toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("username")), pattern),
+                    cb.like(cb.lower(root.get("displayName")), pattern)
+                ));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

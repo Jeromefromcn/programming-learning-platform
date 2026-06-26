@@ -383,4 +383,39 @@ class UserControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[?(@.username=='student1')].lastLoginAt[0]").doesNotExist());
     }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_nameFilter_matchesUsername() throws Exception {
+        // "student1" username contains "student"
+        mockMvc.perform(get("/v1/users").param("name", "student"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.username=='student1')]").exists())
+            .andExpect(jsonPath("$.content[?(@.username=='admin_test')]").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_nameFilter_matchesDisplayName() throws Exception {
+        // "Admin User" displayName contains "admin" (case-insensitive)
+        mockMvc.perform(get("/v1/users").param("name", "admin"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.username=='admin_test')]").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_nameFilter_noMatch_returnsEmptyContent() throws Exception {
+        mockMvc.perform(get("/v1/users").param("name", "zzznomatch"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_test", roles = "SUPER_ADMIN")
+    void listUsers_nameFilter_blank_returnsAll() throws Exception {
+        mockMvc.perform(get("/v1/users").param("name", "  "))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(org.hamcrest.Matchers.greaterThan(0)));
+    }
 }

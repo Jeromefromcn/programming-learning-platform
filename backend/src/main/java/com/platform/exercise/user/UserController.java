@@ -25,8 +25,9 @@ public class UserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String role,
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(userService.listUsers(page, size, role, status));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String name) {
+        return ResponseEntity.ok(userService.listUsers(page, size, role, status, name));
     }
 
     @PostMapping
