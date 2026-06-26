@@ -1,24 +1,21 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submissionApi, csvExportUrl } from '../../api/submissionApi';
 import Pagination from '../../components/Pagination';
-
-function debounce(fn, ms) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
 
 export default function SubmissionListPage() {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(0);
+  const [pendingStudentName, setPendingStudentName] = useState('');
+  const [pendingExerciseId, setPendingExerciseId] = useState('');
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  const fetchSubmissions = useCallback(async (params) => {
+  async function fetchSubmissions(params) {
     setLoading(true);
     try {
       const data = await submissionApi.list(params);
@@ -29,17 +26,20 @@ export default function SubmissionListPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedFetch = useCallback(debounce(fetchSubmissions, 300), [fetchSubmissions]);
+  }
 
   useEffect(() => {
     const params = { page, size: 20 };
     if (studentName.trim()) params.studentName = studentName.trim();
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
-    debouncedFetch(params);
-  }, [page, studentName, exerciseId, debouncedFetch]);
+    fetchSubmissions(params);
+  }, [page, studentName, exerciseId]);
+
+  function handleSearch() {
+    setPage(0);
+    setStudentName(pendingStudentName);
+    setExerciseId(pendingExerciseId);
+  }
 
   async function handleDelete(e, id) {
     e.stopPropagation();
@@ -87,19 +87,26 @@ export default function SubmissionListPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
         <input
           placeholder="Filter by student name…"
-          value={studentName}
-          onChange={e => { setStudentName(e.target.value); setPage(0); }}
+          value={pendingStudentName}
+          onChange={e => setPendingStudentName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
         />
         <input
           placeholder="Filter by exercise ID…"
-          value={exerciseId}
-          onChange={e => { setExerciseId(e.target.value); setPage(0); }}
+          value={pendingExerciseId}
+          onChange={e => setPendingExerciseId(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', width: 180 }}
         />
+        <button
+          onClick={handleSearch}
+          style={{ padding: '6px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
+          Search
+        </button>
       </div>
 
       {loading ? (
