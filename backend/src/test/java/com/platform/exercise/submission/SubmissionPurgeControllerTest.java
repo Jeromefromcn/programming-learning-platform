@@ -191,4 +191,18 @@ class SubmissionPurgeControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
+
+    @Test
+    void preview_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/v1/submissions/purge/preview").param("before", "2025-01-01"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void purge_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(delete("/v1/submissions/purge")
+                .param("before", "2025-01-01")
+                .param("mode", "SOFT"))
+            .andExpect(status().isUnauthorized());
+    }
 }
