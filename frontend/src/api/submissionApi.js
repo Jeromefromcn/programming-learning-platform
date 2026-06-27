@@ -20,6 +20,12 @@ export const submissionApi = {
 
   delete: (id) =>
     axiosInstance.delete(`/v1/submissions/${id}`).then(r => r.data),
+
+  previewPurge: (params) =>
+    axiosInstance.get('/v1/submissions/purge/preview', { params }).then(r => r.data),
+
+  purge: (params) =>
+    axiosInstance.delete('/v1/submissions/purge', { params }).then(r => r.data),
 };
 
 // CSV export uses a plain <a href> — no Axios call needed; the endpoint is unauthenticated.

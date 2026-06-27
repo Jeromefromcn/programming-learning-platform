@@ -13,6 +13,7 @@ import SubmissionImportPage from '../pages/tutor/SubmissionImportPage';
 import SubmissionDetailPage from '../pages/tutor/SubmissionDetailPage';
 import UserManagementPage from '../pages/admin/UserManagementPage';
 import GlobalSettingsPage from '../pages/admin/GlobalSettingsPage';
+import DataManagementPage from '../pages/admin/DataManagementPage';
 
 export default function SectionRouter({ section, role }) {
   const isStudent = role === 'STUDENT';
@@ -58,6 +59,9 @@ export default function SectionRouter({ section, role }) {
       )}
       {section === 'settings' && (
         <Route path="/admin/settings" element={<GlobalSettingsPage />} />
+      )}
+      {section === 'data' && (
+        <Route path="/admin/data" element={<DataManagementPage />} />
       )}
     </Routes>
   );
