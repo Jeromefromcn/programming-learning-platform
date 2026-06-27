@@ -7,6 +7,8 @@ import Pagination from '../../components/Pagination';
 const DIFFICULTY_LABELS = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard' };
 const TYPE_LABELS = { BLOCKLY: 'Blockly', PYTHON: 'Python' };
 
+const EMPTY_FILTERS = { type: '', categoryId: '', difficulty: '' };
+
 export default function ExerciseListPage() {
   const navigate = useNavigate();
   const [exercises, setExercises] = useState([]);
@@ -14,7 +16,8 @@ export default function ExerciseListPage() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ type: '', categoryId: '', difficulty: '' });
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [pendingFilters, setPendingFilters] = useState(EMPTY_FILTERS);
 
   async function load(p = 0, f = filters) {
     setLoading(true);
@@ -37,35 +40,58 @@ export default function ExerciseListPage() {
     load(0);
   }, []);
 
-  function handleFilterChange(key, value) {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    load(0, next);
+  function handleSearch() {
+    setFilters(pendingFilters);
+    load(0, pendingFilters);
   }
 
   return (
     <div style={{ padding: 32 }}>
       <h1>Exercises</h1>
 
-      <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
-        <select value={filters.type} onChange={e => handleFilterChange('type', e.target.value)}
-          style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
-          <option value="">All Types</option>
-          <option value="BLOCKLY">Blockly</option>
-          <option value="PYTHON">Python</option>
-        </select>
-        <select value={filters.difficulty} onChange={e => handleFilterChange('difficulty', e.target.value)}
-          style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
-          <option value="">All Difficulties</option>
-          <option value="EASY">Easy</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HARD">Hard</option>
-        </select>
-        <select value={filters.categoryId} onChange={e => handleFilterChange('categoryId', e.target.value)}
-          style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+      <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <label>
+          Type:
+          <select
+            value={pendingFilters.type}
+            onChange={e => setPendingFilters(prev => ({ ...prev, type: e.target.value }))}
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          >
+            <option value="">All Types</option>
+            <option value="BLOCKLY">Blockly</option>
+            <option value="PYTHON">Python</option>
+          </select>
+        </label>
+        <label>
+          Difficulty:
+          <select
+            value={pendingFilters.difficulty}
+            onChange={e => setPendingFilters(prev => ({ ...prev, difficulty: e.target.value }))}
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          >
+            <option value="">All Difficulties</option>
+            <option value="EASY">Easy</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HARD">Hard</option>
+          </select>
+        </label>
+        <label>
+          Category:
+          <select
+            value={pendingFilters.categoryId}
+            onChange={e => setPendingFilters(prev => ({ ...prev, categoryId: e.target.value }))}
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <button
+          onClick={handleSearch}
+          style={{ padding: '6px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+        >
+          Search
+        </button>
       </div>
 
       {loading ? <p style={{ marginTop: 24 }}>Loading…</p> : (
