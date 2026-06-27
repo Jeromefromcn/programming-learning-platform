@@ -29,7 +29,7 @@ public class SettingsService {
     private static final Map<String, List<String>> DEFAULT_MENU_CONFIG = Map.of(
         "STUDENT",     List.of("exercises", "progress"),
         "TUTOR",       List.of("exercises", "courses", "categories", "submissions"),
-        "SUPER_ADMIN", List.of("exercises", "courses", "categories", "submissions", "users", "settings")
+        "SUPER_ADMIN", List.of("exercises", "courses", "categories", "submissions", "users", "settings", "data")
     );
 
     private final GlobalSettingRepository settingRepository;
@@ -113,9 +113,9 @@ public class SettingsService {
                     "exercises must be present for role: " + role);
             }
             if (!role.equals("SUPER_ADMIN") &&
-                    (sections.contains("users") || sections.contains("settings"))) {
+                    (sections.contains("users") || sections.contains("settings") || sections.contains("data"))) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "users and settings are only allowed for SUPER_ADMIN");
+                    "users, settings, and data are only allowed for SUPER_ADMIN");
             }
         }
     }
