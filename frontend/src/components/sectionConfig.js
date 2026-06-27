@@ -1,11 +1,12 @@
 export const SECTIONS = [
-  { key: 'exercises',   label: 'Exercises',   icon: '📋', roles: ['STUDENT', 'TUTOR', 'SUPER_ADMIN'] },
-  { key: 'progress',    label: 'My Progress', icon: '📊', roles: ['STUDENT'] },
-  { key: 'courses',     label: 'Courses',     icon: '📚', roles: ['TUTOR', 'SUPER_ADMIN'] },
-  { key: 'categories',  label: 'Categories',  icon: '🏷️', roles: ['TUTOR', 'SUPER_ADMIN'] },
-  { key: 'submissions', label: 'Submissions', icon: '📥', roles: ['TUTOR', 'SUPER_ADMIN'] },
-  { key: 'users',       label: 'Users',       icon: '👥', roles: ['SUPER_ADMIN'] },
-  { key: 'settings',    label: 'Settings',    icon: '⚙️', roles: ['SUPER_ADMIN'] },
+  { key: 'exercises',   label: 'Exercises',      icon: '📋', roles: ['STUDENT', 'TUTOR', 'SUPER_ADMIN'] },
+  { key: 'progress',    label: 'My Progress',    icon: '📊', roles: ['STUDENT'] },
+  { key: 'courses',     label: 'Courses',        icon: '📚', roles: ['TUTOR', 'SUPER_ADMIN'] },
+  { key: 'categories',  label: 'Categories',     icon: '🏷️', roles: ['TUTOR', 'SUPER_ADMIN'] },
+  { key: 'submissions', label: 'Submissions',    icon: '📥', roles: ['TUTOR', 'SUPER_ADMIN'] },
+  { key: 'users',       label: 'Users',          icon: '👥', roles: ['SUPER_ADMIN'] },
+  { key: 'settings',    label: 'Settings',       icon: '⚙️', roles: ['SUPER_ADMIN'] },
+  { key: 'data',        label: 'Data Management', icon: '🗑️', roles: ['SUPER_ADMIN'] },
 ];
 
 export function sectionsForRole(role) {
@@ -22,6 +23,7 @@ export function getInitialPath(section, role) {
     case 'submissions': return '/tutor/submissions';
     case 'users':       return '/admin/users';
     case 'settings':    return '/admin/settings';
+    case 'data':        return '/admin/data';
     default:            return '/';
   }
 }

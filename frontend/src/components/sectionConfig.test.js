@@ -6,10 +6,10 @@ import {
 } from './sectionConfig';
 
 describe('SECTIONS', () => {
-  test('contains all 7 expected section keys', () => {
+  test('contains all 8 expected section keys', () => {
     const keys = SECTIONS.map(s => s.key);
     expect(keys).toEqual([
-      'exercises', 'progress', 'courses', 'categories', 'submissions', 'users', 'settings',
+      'exercises', 'progress', 'courses', 'categories', 'submissions', 'users', 'settings', 'data',
     ]);
   });
 });
@@ -28,7 +28,7 @@ describe('sectionsForRole', () => {
   test('SUPER_ADMIN gets all sections except progress', () => {
     const keys = sectionsForRole('SUPER_ADMIN').map(s => s.key);
     expect(keys).toEqual([
-      'exercises', 'courses', 'categories', 'submissions', 'users', 'settings',
+      'exercises', 'courses', 'categories', 'submissions', 'users', 'settings', 'data',
     ]);
   });
 });
@@ -44,6 +44,10 @@ describe('getInitialPath', () => {
 
   test('users starts at /admin/users', () => {
     expect(getInitialPath('users', 'SUPER_ADMIN')).toBe('/admin/users');
+  });
+
+  test('data starts at /admin/data', () => {
+    expect(getInitialPath('data', 'SUPER_ADMIN')).toBe('/admin/data');
   });
 
   test('unknown section returns /', () => {
