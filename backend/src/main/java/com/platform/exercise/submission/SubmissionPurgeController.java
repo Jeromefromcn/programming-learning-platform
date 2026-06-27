@@ -53,8 +53,8 @@ public class SubmissionPurgeController {
     }
 
     private void validateSource(String source) {
-        if (source != null && !source.equals("IMPORT") && !source.equals("ONLINE")) {
-            throw new PlatformException(ErrorCode.VALIDATION_ERROR, "source must be IMPORT or ONLINE.");
+        if (source != null && !source.equals("IMPORT") && !source.equals("STUDENT")) {
+            throw new PlatformException(ErrorCode.VALIDATION_ERROR, "source must be IMPORT or STUDENT.");
         }
     }
 

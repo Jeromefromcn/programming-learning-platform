@@ -126,8 +126,8 @@ export default function DataManagementPage() {
             style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', fontSize: 14 }}
           >
             <option value="">All sources</option>
-            <option value="IMPORT">IMPORT</option>
-            <option value="ONLINE">ONLINE</option>
+            <option value="IMPORT">Imported</option>
+            <option value="STUDENT">Student</option>
           </select>
         </div>
 

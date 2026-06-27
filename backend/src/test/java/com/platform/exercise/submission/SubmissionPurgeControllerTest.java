@@ -104,12 +104,25 @@ class SubmissionPurgeControllerTest {
 
     @Test
     @WithMockUser(roles = "SUPER_ADMIN")
-    void preview_withSourceFilter_filtersCorrectly() throws Exception {
+    void preview_withStudentSource_filtersCorrectly() throws Exception {
+        Submission studentSub = submission("Carol", "STUDENT", LocalDateTime.of(2024, 6, 1, 0, 0));
+        submissionRepository.save(studentSub);
+
+        mockMvc.perform(get("/v1/submissions/purge/preview")
+                .param("before", "2025-01-01")
+                .param("source", "STUDENT"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(1));
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPER_ADMIN")
+    void preview_withOnlineSource_returns400() throws Exception {
         mockMvc.perform(get("/v1/submissions/purge/preview")
                 .param("before", "2025-01-01")
                 .param("source", "ONLINE"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.count").value(0));
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
     }
 
     @Test
