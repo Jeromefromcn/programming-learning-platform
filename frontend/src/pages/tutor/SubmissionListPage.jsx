@@ -13,6 +13,7 @@ export default function SubmissionListPage() {
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
   const [source, setSource] = useState('IMPORT');
+  const [pendingSource, setPendingSource] = useState('IMPORT');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -40,6 +41,7 @@ export default function SubmissionListPage() {
     setPage(0);
     setStudentName(pendingStudentName);
     setExerciseId(pendingExerciseId);
+    setSource(pendingSource);
   }
 
   async function handleDelete(e, id) {
@@ -105,7 +107,7 @@ export default function SubmissionListPage() {
         />
         <label>
           Source:
-          <select value={source} onChange={e => setSource(e.target.value)} style={{ marginLeft: 8 }}>
+          <select value={pendingSource} onChange={e => setPendingSource(e.target.value)} style={{ marginLeft: 8 }}>
             <option value="IMPORT">Imported</option>
             <option value="STUDENT">Student</option>
           </select>

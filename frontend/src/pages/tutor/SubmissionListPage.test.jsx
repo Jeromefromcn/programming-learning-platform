@@ -69,12 +69,31 @@ it('does not call submissionApi.list when exercise ID input changes without clic
   expect(submissionApi.list).toHaveBeenCalledTimes(1);
 });
 
-it('requests IMPORT source by default and STUDENT after switching', async () => {
+it('does not call submissionApi.list when source dropdown changes without clicking Search', async () => {
   renderPage();
-  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
-    expect.objectContaining({ source: 'IMPORT' })));
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
 
   fireEvent.change(screen.getByLabelText(/source/i), { target: { value: 'STUDENT' } });
+
+  expect(submissionApi.list).toHaveBeenCalledTimes(1);
+});
+
+it('calls submissionApi.list with new source after clicking Search', async () => {
+  renderPage();
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText(/source/i), { target: { value: 'STUDENT' } });
+  fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(2));
+  expect(submissionApi.list).toHaveBeenLastCalledWith(
+    expect.objectContaining({ source: 'STUDENT', page: 0 })
+  );
+});
+
+it('calls submissionApi.list with IMPORT source by default on mount', async () => {
+  renderPage();
   await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
-    expect.objectContaining({ source: 'STUDENT' })));
+    expect.objectContaining({ source: 'IMPORT' })
+  ));
 });
