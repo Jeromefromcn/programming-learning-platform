@@ -14,10 +14,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
 @DataJpaTest
@@ -109,5 +112,77 @@ class SubmissionRepositoryTest {
         List<Submission> history =
             repository.findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(userId7, exerciseId);
         assertEquals(2, history.size());
+    }
+
+    private Submission subWithDate(LocalDateTime createdAt, String source, String studentName) {
+        Submission s = new Submission();
+        s.setExerciseId(exerciseId);
+        s.setGradedVersionId(gradedVersionId);
+        s.setStudentName(studentName);
+        s.setExerciseType("BLOCKLY");
+        s.setAnswerData("{}");
+        s.setExportTimestamp(LocalDateTime.now());
+        s.setSource(source);
+        s.setCreatedAt(createdAt);
+        return s;
+    }
+
+    @Test
+    void countForPurge_returnsMatchingNonDeletedCount() {
+        LocalDateTime old = LocalDateTime.of(2024, 1, 1, 0, 0);
+        LocalDateTime recent = LocalDateTime.of(2025, 6, 1, 0, 0);
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        repository.save(subWithDate(old, "IMPORT", "Alice"));
+        repository.save(subWithDate(old, "ONLINE", "Bob"));
+        repository.save(subWithDate(recent, "IMPORT", "Carol"));
+
+        assertEquals(2, repository.countForPurge(cutoff, null, null));
+        assertEquals(1, repository.countForPurge(cutoff, null, "IMPORT"));
+        assertEquals(0, repository.countForPurge(cutoff, null, "ONLINE_MISSING"));
+    }
+
+    @Test
+    void countForPurge_excludesAlreadyDeleted() {
+        LocalDateTime old = LocalDateTime.of(2024, 1, 1, 0, 0);
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        Submission s = subWithDate(old, "IMPORT", "Dave");
+        s.setDeleted(true);
+        repository.save(s);
+
+        assertEquals(0, repository.countForPurge(cutoff, null, null));
+    }
+
+    @Test
+    void softDeleteByFilters_marksMatchingRowsDeleted() {
+        LocalDateTime old = LocalDateTime.of(2024, 3, 1, 0, 0);
+        LocalDateTime recent = LocalDateTime.of(2025, 9, 1, 0, 0);
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        Submission s1 = repository.save(subWithDate(old, "IMPORT", "Eve"));
+        Submission s2 = repository.save(subWithDate(recent, "IMPORT", "Frank"));
+
+        int affected = repository.softDeleteByFilters(cutoff, null, null);
+
+        assertEquals(1, affected);
+        assertTrue(repository.findById(s1.getId()).map(Submission::isDeleted).orElse(false));
+        assertFalse(repository.findById(s2.getId()).map(Submission::isDeleted).orElse(true));
+    }
+
+    @Test
+    void hardDeleteByFilters_permanentlyRemovesMatchingRows() {
+        LocalDateTime old = LocalDateTime.of(2024, 6, 1, 0, 0);
+        LocalDateTime recent = LocalDateTime.of(2025, 8, 1, 0, 0);
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        Submission s1 = repository.save(subWithDate(old, "ONLINE", "Grace"));
+        Submission s2 = repository.save(subWithDate(recent, "ONLINE", "Hank"));
+
+        int affected = repository.hardDeleteByFilters(cutoff, null, null);
+
+        assertEquals(1, affected);
+        assertFalse(repository.findById(s1.getId()).isPresent());
+        assertTrue(repository.findById(s2.getId()).isPresent());
     }
 }

@@ -4,8 +4,10 @@ import com.platform.exercise.domain.Submission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -59,4 +61,40 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findAllForExport(@Param("exerciseId") Long exerciseId);
 
     List<Submission> findByStudentNameAndDeletedFalse(String studentName);
+
+    @Query("""
+            SELECT COUNT(s) FROM Submission s
+            WHERE s.createdAt < :before
+              AND (:exerciseId IS NULL OR s.exerciseId = :exerciseId)
+              AND (:source IS NULL OR s.source = :source)
+              AND s.deleted = false
+            """)
+    long countForPurge(@Param("before") LocalDateTime before,
+                       @Param("exerciseId") Long exerciseId,
+                       @Param("source") String source);
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("""
+            UPDATE Submission s SET s.deleted = true
+            WHERE s.createdAt < :before
+              AND (:exerciseId IS NULL OR s.exerciseId = :exerciseId)
+              AND (:source IS NULL OR s.source = :source)
+              AND s.deleted = false
+            """)
+    int softDeleteByFilters(@Param("before") LocalDateTime before,
+                            @Param("exerciseId") Long exerciseId,
+                            @Param("source") String source);
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("""
+            DELETE FROM Submission s
+            WHERE s.createdAt < :before
+              AND (:exerciseId IS NULL OR s.exerciseId = :exerciseId)
+              AND (:source IS NULL OR s.source = :source)
+            """)
+    int hardDeleteByFilters(@Param("before") LocalDateTime before,
+                            @Param("exerciseId") Long exerciseId,
+                            @Param("source") String source);
 }
