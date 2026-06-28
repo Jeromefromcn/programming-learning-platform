@@ -10,8 +10,10 @@ export default function SubmissionListPage() {
   const [page, setPage] = useState(0);
   const [pendingStudentName, setPendingStudentName] = useState('');
   const [pendingExerciseId, setPendingExerciseId] = useState('');
+  const [pendingBatchId, setPendingBatchId] = useState('');
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
+  const [batchId, setBatchId] = useState('');
   const [source, setSource] = useState('IMPORT');
   const [pendingSource, setPendingSource] = useState('IMPORT');
   const [loading, setLoading] = useState(false);
@@ -34,13 +36,15 @@ export default function SubmissionListPage() {
     const params = { page, size: 20, source };
     if (studentName.trim()) params.studentName = studentName.trim();
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
+    if (batchId.trim()) params.batchId = batchId.trim();
     fetchSubmissions(params);
-  }, [page, studentName, exerciseId, source]);
+  }, [page, studentName, exerciseId, batchId, source]);
 
   function handleSearch() {
     setPage(0);
     setStudentName(pendingStudentName);
     setExerciseId(pendingExerciseId);
+    setBatchId(pendingBatchId);
     setSource(pendingSource);
   }
 
@@ -56,6 +60,7 @@ export default function SubmissionListPage() {
         const params = { page, size: 20, source };
         if (studentName.trim()) params.studentName = studentName.trim();
         if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
+        if (batchId.trim()) params.batchId = batchId.trim();
         fetchSubmissions(params);
       }
     } catch {
@@ -96,6 +101,13 @@ export default function SubmissionListPage() {
           onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
           style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', width: 180 }}
         />
+        <input
+          placeholder="Filter by batch ID…"
+          value={pendingBatchId}
+          onChange={e => setPendingBatchId(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+          style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', width: 160 }}
+        />
         <label>
           Source:
           <select value={pendingSource} onChange={e => setPendingSource(e.target.value)} style={{ marginLeft: 8 }}>
@@ -116,14 +128,14 @@ export default function SubmissionListPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Graded', 'Mismatch', 'Date', ''].map(h => (
+              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Graded', 'Mismatch', 'Batch', 'Date', ''].map(h => (
                 <th key={h} style={{ padding: '10px 12px', borderBottom: '2px solid #ddd' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {submissions.length === 0 ? (
-              <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
+              <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
             ) : submissions.map(sub => (
               <tr
                 key={sub.id}
@@ -152,6 +164,9 @@ export default function SubmissionListPage() {
                       borderRadius: 4, fontSize: 12, fontWeight: 600,
                     }}>Mismatch</span>
                   )}
+                </td>
+                <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
+                  {sub.batchId ?? ''}
                 </td>
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
                   {new Date(sub.createdAt).toLocaleDateString()}

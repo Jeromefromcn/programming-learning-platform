@@ -97,11 +97,11 @@ class SubmissionRepositoryTest {
         repository.save(sub("STUDENT", userId7, exerciseId));
         repository.save(sub("IMPORT", null, exerciseId));
 
-        var imports = repository.findFiltered(null, null, "IMPORT", PageRequest.of(0, 20));
+        var imports = repository.findFiltered(null, null, "IMPORT", null, PageRequest.of(0, 20));
         assertEquals(1, imports.getTotalElements());
         assertEquals("IMPORT", imports.getContent().get(0).getSource());
 
-        var all = repository.findFiltered(null, null, null, PageRequest.of(0, 20));
+        var all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
         assertEquals(2, all.getTotalElements());
     }
 
@@ -210,6 +210,35 @@ class SubmissionRepositoryTest {
         Page<Submission> page = repository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(
                 userId7, PageRequest.of(0, 20));
         assertEquals(1, page.getTotalElements());
+    }
+
+    @Test
+    void findFiltered_byBatchId_returnsOnlyMatchingBatch() {
+        ImportBatch batch = new ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(userId7);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        Long batchId = ((ImportBatch) em.persistAndFlush(batch)).getId();
+
+        Submission withBatch = repository.save(sub("IMPORT", null, exerciseId));
+        Submission noBatch = repository.save(sub("IMPORT", null, exerciseId));
+
+        em.getEntityManager().createNativeQuery(
+            "UPDATE submissions SET batch_id = :b WHERE id = :id")
+            .setParameter("b", batchId)
+            .setParameter("id", withBatch.getId())
+            .executeUpdate();
+        em.flush(); em.clear();
+
+        Page<Submission> result = repository.findFiltered(null, null, null, batchId, PageRequest.of(0, 20));
+        assertEquals(1, result.getTotalElements());
+        assertEquals(withBatch.getId(), result.getContent().get(0).getId());
+
+        Page<Submission> all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
+        assertEquals(2, all.getTotalElements());
     }
 
     @Test

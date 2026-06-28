@@ -45,9 +45,10 @@ public class SubmissionController {
             @RequestParam(required = false) Long exerciseId,
             @RequestParam(required = false) String studentName,
             @RequestParam(defaultValue = "IMPORT") String source,
+            @RequestParam(required = false) Long batchId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(submissionService.list(exerciseId, studentName, source, page, size));
+        return ResponseEntity.ok(submissionService.list(exerciseId, studentName, source, batchId, page, size));
     }
 
     @GetMapping("/{id}")

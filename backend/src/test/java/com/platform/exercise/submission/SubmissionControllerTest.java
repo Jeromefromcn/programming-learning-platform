@@ -44,6 +44,7 @@ class SubmissionControllerTest {
     @Autowired ExerciseVersionRepository versionRepository;
     @Autowired SubmissionRepository submissionRepository;
     @Autowired UserRepository userRepository;
+    @Autowired com.platform.exercise.repository.ImportBatchRepository importBatchRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
     @MockBean SandboxClient sandboxClient;
@@ -325,6 +326,70 @@ class SubmissionControllerTest {
         mockMvc.perform(get("/v1/submissions").param("source", "STUDENT"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_includesBatchIdInResponse() throws Exception {
+        com.platform.exercise.domain.ImportBatch batch = new com.platform.exercise.domain.ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(null);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        com.platform.exercise.domain.ImportBatch savedBatch = importBatchRepository.save(batch);
+
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setBatchId(savedBatch.getId());
+        submissionRepository.save(sub);
+
+        mockMvc.perform(get("/v1/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].batchId").value(savedBatch.getId()));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_filterByBatchId_returnsOnlyMatchingSubmissions() throws Exception {
+        com.platform.exercise.domain.ImportBatch batch = new com.platform.exercise.domain.ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(null);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        com.platform.exercise.domain.ImportBatch savedBatch = importBatchRepository.save(batch);
+
+        Submission withBatch = new Submission();
+        withBatch.setExerciseId(blocklyExercise.getId());
+        withBatch.setGradedVersionId(blocklyVersion.getId());
+        withBatch.setStudentName("Alice");
+        withBatch.setExerciseType("BLOCKLY");
+        withBatch.setAnswerData("code");
+        withBatch.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        withBatch.setBatchId(savedBatch.getId());
+        submissionRepository.save(withBatch);
+
+        Submission noBatch = new Submission();
+        noBatch.setExerciseId(blocklyExercise.getId());
+        noBatch.setGradedVersionId(blocklyVersion.getId());
+        noBatch.setStudentName("Bob");
+        noBatch.setExerciseType("BLOCKLY");
+        noBatch.setAnswerData("code");
+        noBatch.setExportTimestamp(LocalDateTime.of(2026, 5, 2, 10, 0));
+        submissionRepository.save(noBatch);
+
+        mockMvc.perform(get("/v1/submissions").param("batchId", savedBatch.getId().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].studentName").value("Alice"));
     }
 
     @Test

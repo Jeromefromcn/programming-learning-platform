@@ -13,12 +13,14 @@ public record SubmissionListItemDto(
     BigDecimal tutorScore,
     boolean versionMismatch,
     boolean graded,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    Long batchId
 ) {
     public static SubmissionListItemDto of(Submission sub, String exerciseTitle) {
         return new SubmissionListItemDto(
             sub.getId(), sub.getStudentName(), exerciseTitle,
             sub.getExerciseType(), sub.getAutoScore(), sub.getTutorScore(),
-            sub.isVersionMismatch(), sub.isGraded(), sub.getCreatedAt());
+            sub.isVersionMismatch(), sub.isGraded(), sub.getCreatedAt(),
+            sub.getBatchId());
     }
 }
