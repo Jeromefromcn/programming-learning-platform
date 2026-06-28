@@ -8,6 +8,7 @@ import PythonAuthoringEditor from '../../components/tutor/PythonAuthoringEditor'
 import VersionHistoryPanel from '../../components/tutor/VersionHistoryPanel';
 import Breadcrumb from '../../components/Breadcrumb';
 import MarkdownEditor from '../../components/MarkdownEditor';
+import RubricEditor from '../../components/RubricEditor';
 
 const EMPTY_BLOCKLY_CONFIG = {
   allowedBlocks: [],
@@ -15,6 +16,7 @@ const EMPTY_BLOCKLY_CONFIG = {
   showCodeView: false,
   showResult: true,
   canViewAnswer: false,
+  rubric: { dimensions: [] },
   gradingRules: {
     outputMatch: { enabled: false, expectedOutput: '' },
     requiredBlocks: { enabled: false, blocks: [] },
@@ -28,6 +30,7 @@ const EMPTY_PYTHON_CONFIG = {
   timeLimitSeconds: 5,
   testCases: [],
   showResult: true,
+  rubric: { dimensions: [] },
 };
 
 export default function ExerciseFormPage() {
@@ -91,6 +94,24 @@ export default function ExerciseFormPage() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    // Validate rubric if manual grading mode
+    const activeConfig = exerciseType === 'BLOCKLY' ? blocklyConfig : pythonConfig;
+    if (!activeConfig.showResult) {
+      const dims = activeConfig.rubric?.dimensions || [];
+      if (dims.length === 0) {
+        setError('Add at least one scoring dimension.');
+        setSaving(false);
+        return;
+      }
+      const sum = dims.reduce((acc, d) => acc + (parseFloat(d.weight) || 0), 0);
+      if (Math.abs(sum - 1) > 1e-6) {
+        setError('Dimension weights must sum to exactly 1.0.');
+        setSaving(false);
+        return;
+      }
+    }
+
     try {
       const config = exerciseType === 'BLOCKLY'
         ? { ...blocklyConfig, answerWorkspaceXml: blocklyConfig.initialWorkspaceXml }
@@ -264,48 +285,58 @@ export default function ExerciseFormPage() {
                   setBlocklyConfig(prev => ({ ...prev, showCodeView: show }))}
               />
 
-              <h4 style={{ marginTop: 24 }}>Grading Rules</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <input type="checkbox"
-                    checked={blocklyConfig.gradingRules?.outputMatch?.enabled || false}
-                    onChange={e => setBlocklyConfig(prev => ({
-                      ...prev,
-                      gradingRules: { ...prev.gradingRules,
-                        outputMatch: { ...prev.gradingRules?.outputMatch, enabled: e.target.checked } }}))} />
-                  Output Match
-                  {blocklyConfig.gradingRules?.outputMatch?.enabled && (
-                    <input
-                      value={blocklyConfig.gradingRules?.outputMatch?.expectedOutput || ''}
-                      onChange={e => setBlocklyConfig(prev => ({
-                        ...prev,
-                        gradingRules: { ...prev.gradingRules,
-                          outputMatch: { ...prev.gradingRules?.outputMatch, expectedOutput: e.target.value } }}))}
-                      placeholder="Expected output"
-                      style={{ flex: 1, padding: '4px 8px', border: '1px solid #ccc', borderRadius: 4 }} />
-                  )}
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <input type="checkbox"
-                    checked={blocklyConfig.gradingRules?.blockCountLimit?.enabled || false}
-                    onChange={e => setBlocklyConfig(prev => ({
-                      ...prev,
-                      gradingRules: { ...prev.gradingRules,
-                        blockCountLimit: { ...prev.gradingRules?.blockCountLimit, enabled: e.target.checked } }}))} />
-                  Block Count Limit
-                  {blocklyConfig.gradingRules?.blockCountLimit?.enabled && (
-                    <input type="number" min={1}
-                      value={blocklyConfig.gradingRules?.blockCountLimit?.max || ''}
-                      onChange={e => setBlocklyConfig(prev => ({
-                        ...prev,
-                        gradingRules: { ...prev.gradingRules,
-                          blockCountLimit: { ...prev.gradingRules?.blockCountLimit, max: parseInt(e.target.value) || null } }}))}
-                      placeholder="Max blocks"
-                      style={{ width: 80, padding: '4px 8px', border: '1px solid #ccc', borderRadius: 4 }} />
-                  )}
-                </label>
-              </div>
+              {blocklyConfig.showResult ? (
+                <>
+                  <h4 style={{ marginTop: 24 }}>Grading Rules</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <input type="checkbox"
+                        checked={blocklyConfig.gradingRules?.outputMatch?.enabled || false}
+                        onChange={e => setBlocklyConfig(prev => ({
+                          ...prev,
+                          gradingRules: { ...prev.gradingRules,
+                            outputMatch: { ...prev.gradingRules?.outputMatch, enabled: e.target.checked } }}))} />
+                      Output Match
+                      {blocklyConfig.gradingRules?.outputMatch?.enabled && (
+                        <input
+                          value={blocklyConfig.gradingRules?.outputMatch?.expectedOutput || ''}
+                          onChange={e => setBlocklyConfig(prev => ({
+                            ...prev,
+                            gradingRules: { ...prev.gradingRules,
+                              outputMatch: { ...prev.gradingRules?.outputMatch, expectedOutput: e.target.value } }}))}
+                          placeholder="Expected output"
+                          style={{ flex: 1, padding: '4px 8px', border: '1px solid #ccc', borderRadius: 4 }} />
+                      )}
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <input type="checkbox"
+                        checked={blocklyConfig.gradingRules?.blockCountLimit?.enabled || false}
+                        onChange={e => setBlocklyConfig(prev => ({
+                          ...prev,
+                          gradingRules: { ...prev.gradingRules,
+                            blockCountLimit: { ...prev.gradingRules?.blockCountLimit, enabled: e.target.checked } }}))} />
+                      Block Count Limit
+                      {blocklyConfig.gradingRules?.blockCountLimit?.enabled && (
+                        <input type="number" min={1}
+                          value={blocklyConfig.gradingRules?.blockCountLimit?.max || ''}
+                          onChange={e => setBlocklyConfig(prev => ({
+                            ...prev,
+                            gradingRules: { ...prev.gradingRules,
+                              blockCountLimit: { ...prev.gradingRules?.blockCountLimit, max: parseInt(e.target.value) || null } }}))}
+                          placeholder="Max blocks"
+                          style={{ width: 80, padding: '4px 8px', border: '1px solid #ccc', borderRadius: 4 }} />
+                      )}
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <RubricEditor
+                  dimensions={blocklyConfig.rubric?.dimensions || []}
+                  onChange={dims => setBlocklyConfig(prev => ({
+                    ...prev, rubric: { dimensions: dims }
+                  }))}
+                />
+              )}
             </div>
           ) : (
             <div>
@@ -321,6 +352,14 @@ export default function ExerciseFormPage() {
                 onTestCasesChange={cases =>
                   setPythonConfig(prev => ({ ...prev, testCases: cases }))}
               />
+              {!pythonConfig.showResult && (
+                <RubricEditor
+                  dimensions={pythonConfig.rubric?.dimensions || []}
+                  onChange={dims => setPythonConfig(prev => ({
+                    ...prev, rubric: { dimensions: dims }
+                  }))}
+                />
+              )}
             </div>
           )}
 
