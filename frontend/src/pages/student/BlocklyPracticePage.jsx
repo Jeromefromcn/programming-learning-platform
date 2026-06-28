@@ -9,6 +9,7 @@ import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 import { studentApi } from '../../api/studentApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 const OUTPUT_STYLE = {
   background: '#1e1e1e', color: '#d4d4d4', fontFamily: 'monospace',
@@ -23,6 +24,7 @@ function mapError(msg) {
 
 export default function BlocklyPracticePage({ exercise }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const containerRef = useRef(null);
   const workspaceRef = useRef(null);
   const workerRef = useRef(null);
@@ -32,8 +34,6 @@ export default function BlocklyPracticePage({ exercise }) {
   const [running, setRunning] = useState(false);
   const [tle, setTle] = useState(false);
   const [hintIndex, setHintIndex] = useState(-1);
-  const [exportModal, setExportModal] = useState(false);
-  const [studentName, setStudentName] = useState('');
   const [pythonCode, setPythonCode] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
@@ -189,15 +189,14 @@ export default function BlocklyPracticePage({ exercise }) {
   }
 
   function handleExport() {
-    const name = studentName.trim();
-    if (!name) { alert('Please enter your name.'); return; }
     const payload = {
       platformVersion: '1.0',
       exerciseId: exercise.id,
       exerciseTitle: exercise.title,
       exerciseType: 'BLOCKLY',
       exerciseVersion: version.versionNumber,
-      studentName: name,
+      studentName: user.username,
+      displayName: user.displayName,
       answer: workspaceRef.current
         ? javascriptGenerator.workspaceToCode(workspaceRef.current)
         : '',
@@ -210,11 +209,9 @@ export default function BlocklyPracticePage({ exercise }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${name.replace(/\s+/g, '_')}_${exercise.title.replace(/\s+/g, '_')}.json`;
+    a.download = `${user.username}_${exercise.title.replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setExportModal(false);
-    setStudentName('');
   }
 
   return (
@@ -275,7 +272,7 @@ export default function BlocklyPracticePage({ exercise }) {
         )}
 
         <button
-          onClick={() => setExportModal(true)}
+          onClick={handleExport}
           disabled={running}
           style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: running ? 'not-allowed' : 'pointer', marginLeft: 'auto' }}
         >
@@ -321,36 +318,6 @@ export default function BlocklyPracticePage({ exercise }) {
               style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>
               OK
             </button>
-          </div>
-        </div>
-      )}
-
-      {exportModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }}>
-          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320 }}>
-            <h2 style={{ marginTop: 0 }}>Export Answer</h2>
-            <label htmlFor="export-student-name" style={{ display: 'block', marginBottom: 8 }}>Your name:</label>
-            <input
-              id="export-student-name"
-              type="text"
-              value={studentName}
-              onChange={e => setStudentName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleExport()}
-              style={{ width: '100%', padding: 8, marginBottom: 16, boxSizing: 'border-box' }}
-              autoFocus
-            />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setExportModal(false)}>Cancel</button>
-              <button
-                onClick={handleExport}
-                style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
-              >
-                Download JSON
-              </button>
-            </div>
           </div>
         </div>
       )}
