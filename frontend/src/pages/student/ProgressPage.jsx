@@ -1,27 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { progressApi } from '../../api/progressApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
 import Pagination from '../../components/Pagination';
+import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 
-function chipStyle(status, score) {
-  if (status === 'GRADED') {
-    return score >= 60
-      ? { label: 'Graded', bg: '#16a34a', color: '#fff' }
-      : { label: 'Graded', bg: '#dc2626', color: '#fff' };
-  }
-  if (status === 'ATTEMPTED') return { label: 'Attempted', bg: '#f59e0b', color: '#fff' };
-  return { label: 'Not Attempted', bg: '#9e9e9e', color: '#fff' };
-}
-
-function SummaryCard({ label, value }) {
+function ScoreChip({ score, graded }) {
+  if (!graded && score == null) return <span style={{ color: '#888' }}>—</span>;
+  if (!graded) return <span style={{ color: '#888', fontSize: 12 }}>Pending</span>;
+  const val = score != null ? score.toFixed(1) : '—';
+  const pass = score != null && score >= 60;
   return (
-    <div style={{
-      flex: 1, minWidth: 140, border: '1px solid #e0e0e0', borderRadius: 8,
-      padding: '16px 20px', textAlign: 'center',
+    <span style={{
+      background: pass ? '#e8f5e9' : '#ffebee',
+      color: pass ? '#2e7d32' : '#c62828',
+      borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
     }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: '#1976d2' }}>{value}</div>
-      <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{label}</div>
-    </div>
+      {val}
+    </span>
   );
 }
 
@@ -30,6 +25,7 @@ export default function ProgressPage() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(null); // selected submission for detail view
 
   useEffect(() => {
     setLoading(true);
@@ -42,75 +38,168 @@ export default function ProgressPage() {
   if (loading) return <div style={{ padding: 32 }}>Loading...</div>;
   if (error)   return <div style={{ padding: 32, color: 'red' }}>{error}</div>;
 
-  const { summary, exercises } = data;
+  const { submissions } = data;
+
+  if (selected) {
+    return (
+      <SubmissionViewer
+        submission={selected}
+        onBack={() => setSelected(null)}
+      />
+    );
+  }
 
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 24 }}>My Progress</h2>
 
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 32 }}>
-        <SummaryCard label="Total Exercises" value={summary.totalExercises} />
-        <SummaryCard label="Attempted" value={summary.attemptedCount} />
-        <SummaryCard label="Graded" value={summary.gradedCount} />
-        <SummaryCard
-          label="Avg Score / Pass Rate"
-          value={`${summary.averageScore.toFixed(1)} / ${summary.passRate.toFixed(1)}%`}
-        />
-      </div>
-
-      {exercises.totalElements === 0 ? (
-        <p style={{ color: '#888' }}>No exercises available.</p>
+      {submissions.totalElements === 0 ? (
+        <p style={{ color: '#888' }}>No submissions yet.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px' }}>Exercise</th>
               <th style={{ padding: '8px 12px' }}>Type</th>
-              <th style={{ padding: '8px 12px' }}>Status</th>
+              <th style={{ padding: '8px 12px' }}>Source</th>
               <th style={{ padding: '8px 12px' }}>Score</th>
+              <th style={{ padding: '8px 12px' }}>Date</th>
             </tr>
           </thead>
           <tbody>
-            {exercises.content.map(ex => {
-              const chip = chipStyle(ex.status, ex.score);
-              return (
-                <tr key={ex.exerciseId} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 500 }}>{ex.exerciseTitle}</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      background: ex.exerciseType === 'BLOCKLY' ? '#ede9fe' : '#dbeafe',
-                      color: ex.exerciseType === 'BLOCKLY' ? '#7c3aed' : '#1d4ed8',
-                      borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
-                    }}>
-                      {ex.exerciseType}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      background: chip.bg, color: chip.color,
-                      borderRadius: 4, padding: '2px 10px', fontSize: 12, fontWeight: 600,
-                    }}>
-                      {chip.label}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    {ex.score != null ? (
-                      <>
-                        <span style={{ fontWeight: 600 }}>{ex.score.toFixed(1)} / 100</span>
-                        <div style={{ fontSize: 11, color: '#888' }}>
-                          {ex.scoreSource === 'TUTOR' ? 'Tutor Score' : 'Auto Score'}
-                        </div>
-                      </>
-                    ) : '—'}
-                  </td>
-                </tr>
-              );
-            })}
+            {submissions.content.map(sub => (
+              <tr
+                key={sub.submissionId}
+                onClick={() => setSelected(sub)}
+                style={{ borderBottom: '1px solid #f0f0f0', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseLeave={e => e.currentTarget.style.background = ''}
+              >
+                <td style={{ padding: '10px 12px', fontWeight: 500 }}>{sub.exerciseTitle}</td>
+                <td style={{ padding: '10px 12px' }}>
+                  <span style={{
+                    background: sub.exerciseType === 'BLOCKLY' ? '#ede9fe' : '#dbeafe',
+                    color: sub.exerciseType === 'BLOCKLY' ? '#7c3aed' : '#1d4ed8',
+                    borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
+                  }}>
+                    {sub.exerciseType}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 12px', fontSize: 12, color: '#555' }}>
+                  {sub.source === 'STUDENT' ? 'Submitted' : 'Imported'}
+                </td>
+                <td style={{ padding: '10px 12px' }}>
+                  <ScoreChip score={sub.score} graded={sub.graded} />
+                </td>
+                <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
+                  {new Date(sub.createdAt).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       )}
 
-      <Pagination page={page} totalPages={exercises.totalPages} onPageChange={setPage} />
+      <Pagination page={page} totalPages={submissions.totalPages} onPageChange={setPage} />
+    </div>
+  );
+}
+
+function SubmissionViewer({ submission, onBack }) {
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const workerRef = useRef(null);
+  const [output, setOutput] = useState('');
+  const [running, setRunning] = useState(false);
+
+  const isPython = submission.exerciseType === 'PYTHON';
+
+  useEffect(() => {
+    if (!isPython || !editorRef.current) return;
+    import('monaco-editor').then(monaco => {
+      if (monacoRef.current) monacoRef.current.dispose();
+      monacoRef.current = monaco.editor.create(editorRef.current, {
+        value: submission.answerData || '',
+        language: 'python',
+        readOnly: true,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        fontSize: 14,
+      });
+    });
+    return () => { monacoRef.current?.dispose(); monacoRef.current = null; };
+  }, [submission, isPython]);
+
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+    };
+  }, []);
+
+  function handleRun() {
+    setRunning(true);
+    setOutput('');
+    if (workerRef.current) workerRef.current.terminate();
+
+    const worker = new Worker(
+      new URL('../../workers/pyodide-runner.js', import.meta.url)
+    );
+    workerRef.current = worker;
+    const timer = setTimeout(() => {
+      worker.terminate();
+      setOutput('Execution timed out (10s).');
+      setRunning(false);
+    }, 10000);
+    worker.onmessage = e => {
+      clearTimeout(timer);
+      setOutput(e.data.output ?? e.data.error ?? '(no output)');
+      setRunning(false);
+      worker.terminate();
+    };
+    worker.postMessage({ code: submission.answerData });
+  }
+
+  return (
+    <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
+      <button
+        onClick={onBack}
+        style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', padding: 0, marginBottom: 16 }}
+      >
+        ← Back to My Progress
+      </button>
+      <h2 style={{ marginBottom: 4 }}>{submission.exerciseTitle}</h2>
+      <p style={{ color: '#555', margin: '0 0 20px', fontSize: 13 }}>
+        {submission.exerciseType} · {submission.source === 'STUDENT' ? 'Submitted' : 'Imported'} ·{' '}
+        {new Date(submission.createdAt).toLocaleDateString()}
+      </p>
+
+      {isPython ? (
+        <>
+          <div ref={editorRef} style={{ height: 300, border: '1px solid #ddd', borderRadius: 4 }} />
+          <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button
+              onClick={handleRun}
+              disabled={running}
+              style={{
+                background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4,
+                padding: '8px 20px', cursor: 'pointer', fontSize: 14,
+              }}
+            >
+              {running ? 'Running…' : 'Run'}
+            </button>
+          </div>
+          {output && (
+            <pre style={{
+              marginTop: 12, padding: '12px 16px', background: '#1e1e1e', color: '#d4d4d4',
+              borderRadius: 4, fontSize: 13, whiteSpace: 'pre-wrap', overflowX: 'auto',
+            }}>
+              {output}
+            </pre>
+          )}
+        </>
+      ) : (
+        <BlocklySubmissionViewer workspaceXml={submission.workspaceXml} />
+      )}
     </div>
   );
 }
