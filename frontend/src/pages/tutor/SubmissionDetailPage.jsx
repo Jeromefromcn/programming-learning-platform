@@ -235,6 +235,11 @@ export default function SubmissionDetailPage() {
             {rubricDimensions.map(d => (
               <label key={d.name} style={{ fontSize: 14 }}>
                 {d.name} <span style={{ color: '#888', fontSize: 12 }}>(weight: {d.weight})</span>:
+                {d.description && (
+                  <span style={{ display: 'block', color: '#666', fontSize: 12, marginTop: 2 }}>
+                    {d.description}
+                  </span>
+                )}
                 <input
                   type="number" min="0" max="100" step="0.01"
                   value={dimensionScores[d.name] ?? ''}
