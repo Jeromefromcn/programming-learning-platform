@@ -1,5 +1,6 @@
 package com.platform.exercise.submission;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.common.PageResponse;
 import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
@@ -30,6 +31,7 @@ public class ImportBatchService {
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
+    private final ObjectMapper objectMapper;
 
     public PageResponse<ImportBatchDto> list(Long batchId, String gradedStatus, int page, int size) {
         // Load all batches (university scale — manageable without SQL-level gradedStatus filter)
@@ -99,11 +101,9 @@ public class ImportBatchService {
                 if (sub.getTutorGradeDetails() != null) {
                     // Rubric: one row per dimension
                     try {
-                        com.fasterxml.jackson.databind.ObjectMapper om =
-                            new com.fasterxml.jackson.databind.ObjectMapper();
-                        com.fasterxml.jackson.databind.JavaType listType = om.getTypeFactory()
+                        com.fasterxml.jackson.databind.JavaType listType = objectMapper.getTypeFactory()
                             .constructCollectionType(List.class, DimensionScoreDto.class);
-                        List<DimensionScoreDto> dims = om.readValue(sub.getTutorGradeDetails(), listType);
+                        List<DimensionScoreDto> dims = objectMapper.readValue(sub.getTutorGradeDetails(), listType);
                         for (DimensionScoreDto d : dims) {
                             printer.printRecord(sub.getStudentName(), displayName, title,
                                 d.name(), d.weight(), d.score(), totalScore);
@@ -133,7 +133,7 @@ public class ImportBatchService {
         return submissionRepository.countGradedGroupByBatchId(batchIds).stream()
             .collect(Collectors.toMap(
                 row -> ((Number) row[0]).longValue(),
-                row -> new long[]{((Number) row[1]).longValue(), ((Number) row[2]).longValue()}
+                row -> new long[]{((Number) row[1]).longValue(), ((Number) row[2]).longValue()} // [0]=total, [1]=graded
             ));
     }
 }
