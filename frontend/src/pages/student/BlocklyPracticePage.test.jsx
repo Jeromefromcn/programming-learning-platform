@@ -300,6 +300,6 @@ describe('Save and Submit', () => {
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
     await waitFor(() => expect(studentApi.submit).toHaveBeenCalledWith(blocklyExercise.id, expect.any(Object)));
-    expect((await screen.findAllByText(/通過|100/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Pass|100/)).length).toBeGreaterThan(0);
   });
 });

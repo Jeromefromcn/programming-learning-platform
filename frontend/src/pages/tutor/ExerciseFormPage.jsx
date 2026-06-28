@@ -250,7 +250,7 @@ export default function ExerciseFormPage() {
                   onChange={e =>
                     setBlocklyConfig(prev => ({ ...prev, canViewAnswer: e.target.checked }))}
                 />
-                Allow students to view the answer (允许学生查看答案)
+                Allow students to view the answer
               </label>
               <BlocklyAuthoringWorkspace
                 allowedBlocks={blocklyConfig.allowedBlocks || []}
