@@ -92,6 +92,11 @@ public class StudentExerciseService {
     private JsonNode stripConfig(String type, JsonNode config) {
         ObjectNode stripped = (ObjectNode) config.deepCopy();
         stripped.remove("gradingRules");
+        if ("BLOCKLY".equals(type)) {
+            if (!stripped.path("canViewAnswer").asBoolean(false)) {
+                stripped.remove("answerWorkspaceXml");
+            }
+        }
         if ("PYTHON".equals(type)) {
             JsonNode testCases = stripped.get("testCases");
             ArrayNode visible = objectMapper.createArrayNode();

@@ -14,6 +14,7 @@ const EMPTY_BLOCKLY_CONFIG = {
   initialWorkspaceXml: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
   showCodeView: false,
   showResult: true,
+  canViewAnswer: false,
   gradingRules: {
     outputMatch: { enabled: false, expectedOutput: '' },
     requiredBlocks: { enabled: false, blocks: [] },
@@ -91,7 +92,9 @@ export default function ExerciseFormPage() {
     setSaving(true);
     setError(null);
     try {
-      const config = exerciseType === 'BLOCKLY' ? blocklyConfig : pythonConfig;
+      const config = exerciseType === 'BLOCKLY'
+        ? { ...blocklyConfig, answerWorkspaceXml: blocklyConfig.initialWorkspaceXml }
+        : pythonConfig;
       const payload = {
         title,
         description,
@@ -240,6 +243,15 @@ export default function ExerciseFormPage() {
           {exerciseType === 'BLOCKLY' ? (
             <div>
               <h3 style={{ marginTop: 0 }}>Blockly Configuration</h3>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={blocklyConfig.canViewAnswer === true}
+                  onChange={e =>
+                    setBlocklyConfig(prev => ({ ...prev, canViewAnswer: e.target.checked }))}
+                />
+                Allow students to view the answer (允许学生查看答案)
+              </label>
               <BlocklyAuthoringWorkspace
                 allowedBlocks={blocklyConfig.allowedBlocks || []}
                 initialWorkspaceXml={blocklyConfig.initialWorkspaceXml}

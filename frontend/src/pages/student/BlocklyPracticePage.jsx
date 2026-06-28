@@ -7,6 +7,7 @@ import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
+import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 import { studentApi } from '../../api/studentApi';
 
 const OUTPUT_STYLE = {
@@ -36,6 +37,7 @@ export default function BlocklyPracticePage({ exercise }) {
   const [pythonCode, setPythonCode] = useState('');
   const [inputModalMsg, setInputModalMsg] = useState(null);
   const [inputValue, setInputValue] = useState('');
+  const [answerModal, setAnswerModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
@@ -265,6 +267,13 @@ export default function BlocklyPracticePage({ exercise }) {
           {submitting ? 'Submitting…' : 'Submit'}
         </button>
 
+        {config.canViewAnswer && (
+          <button onClick={() => setAnswerModal(true)}
+            style={{ border: '1px solid #f57c00', color: '#f57c00', background: '#fff', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+            Answer
+          </button>
+        )}
+
         <button
           onClick={() => setExportModal(true)}
           disabled={running}
@@ -342,6 +351,22 @@ export default function BlocklyPracticePage({ exercise }) {
                 Download JSON
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {answerModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 24, width: 'min(820px, 92vw)', maxHeight: '90vh', overflow: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <h2 style={{ margin: 0 }}>Answer</h2>
+              <button onClick={() => setAnswerModal(false)}
+                style={{ marginLeft: 'auto', border: '1px solid #ccc', background: '#fff', borderRadius: 4, padding: '6px 14px', cursor: 'pointer' }}>
+                Close
+              </button>
+            </div>
+            <BlocklySubmissionViewer workspaceXml={config.answerWorkspaceXml} />
           </div>
         </div>
       )}

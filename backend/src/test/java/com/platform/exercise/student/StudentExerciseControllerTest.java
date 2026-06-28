@@ -198,6 +198,26 @@ class StudentExerciseControllerTest {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void get_blocklyExercise_viewAnswerOn_keepsAnswerWorkspaceXml() throws Exception {
+        Long exId = createBlocklyExerciseWithAnswer("Viewable", true, tutorId, categoryId);
+        mockMvc.perform(get("/v1/student/exercises/" + exId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version.config.canViewAnswer").value(true))
+            .andExpect(jsonPath("$.version.config.answerWorkspaceXml").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void get_blocklyExercise_viewAnswerOff_stripsAnswerWorkspaceXml() throws Exception {
+        Long exId = createBlocklyExerciseWithAnswer("Hidden", false, tutorId, categoryId);
+        mockMvc.perform(get("/v1/student/exercises/" + exId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version.config.canViewAnswer").value(false))
+            .andExpect(jsonPath("$.version.config.answerWorkspaceXml").doesNotExist());
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Long createPythonExercise(String title, String status, Long createdBy, Long catId) {
@@ -229,6 +249,25 @@ class StudentExerciseControllerTest {
             "\"initialWorkspaceXml\":\"<xml/>\",\"showCodeView\":false," +
             "\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"Hello World\"}," +
             "\"requiredBlocks\":{\"enabled\":false,\"blocks\":[]}}}");
+        Long verId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        jdbcTemplate.update("UPDATE exercises SET current_version_id=? WHERE id=?", verId, exId);
+        return exId;
+    }
+
+    private Long createBlocklyExerciseWithAnswer(String title, boolean canViewAnswer,
+                                                 Long createdBy, Long catId) {
+        jdbcTemplate.update(
+            "INSERT INTO exercises (title, description, type, difficulty, category_id, status, created_by) VALUES (?,?,?,?,?,?,?)",
+            title, "A description", "BLOCKLY", "EASY", catId, "PUBLISHED", createdBy);
+        Long exId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+        jdbcTemplate.update(
+            "INSERT INTO exercise_versions (exercise_id, version_number, title, description, difficulty, hints, config) VALUES (?,?,?,?,?,?,?)",
+            exId, 1, title, "A description", "EASY", null,
+            "{\"allowedBlocks\":[\"text_print\"]," +
+            "\"initialWorkspaceXml\":\"<xml/>\",\"showCodeView\":false," +
+            "\"canViewAnswer\":" + canViewAnswer + "," +
+            "\"answerWorkspaceXml\":\"<xml><block type=\\\"text_print\\\"></block></xml>\"," +
+            "\"gradingRules\":{\"outputMatch\":{\"enabled\":false,\"expectedOutput\":\"\"}}}");
         Long verId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         jdbcTemplate.update("UPDATE exercises SET current_version_id=? WHERE id=?", verId, exId);
         return exId;
