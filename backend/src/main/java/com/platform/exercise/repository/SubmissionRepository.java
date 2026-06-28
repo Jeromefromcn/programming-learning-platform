@@ -73,6 +73,8 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     List<Submission> findByStudentNameAndDeletedFalse(String studentName);
 
+    List<Submission> findByBatchIdAndDeletedFalseOrderByStudentNameAsc(Long batchId);
+
     @Query("""
             SELECT COUNT(s) FROM Submission s
             WHERE s.createdAt < :before
