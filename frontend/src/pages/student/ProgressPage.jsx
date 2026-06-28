@@ -156,6 +156,12 @@ function SubmissionViewer({ submission, onBack }) {
       setRunning(false);
       worker.terminate();
     };
+    worker.onerror = () => {
+      clearTimeout(timer);
+      setOutput('Worker error — could not run Python.');
+      setRunning(false);
+      worker.terminate();
+    };
     worker.postMessage({ code: submission.answerData });
   }
 
