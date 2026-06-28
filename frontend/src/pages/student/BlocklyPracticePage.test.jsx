@@ -262,6 +262,33 @@ describe('Interactive input modal', () => {
   });
 });
 
+vi.mock('../../components/BlocklySubmissionViewer', () => ({
+  default: ({ workspaceXml }) => (
+    <div data-testid="answer-viewer">{workspaceXml}</div>
+  ),
+}));
+
+describe('View answer', () => {
+  test('no Answer button when canViewAnswer is false', async () => {
+    render(<BlocklyPracticePage exercise={makeExercise({ canViewAnswer: false })} />);
+    expect(screen.queryByRole('button', { name: /answer/i })).toBeNull();
+  });
+
+  test('shows Answer button and opens read-only viewer when canViewAnswer is true', async () => {
+    const exercise = makeExercise({
+      canViewAnswer: true,
+      answerWorkspaceXml: '<xml><block type="text_print"></block></xml>',
+    });
+    render(<BlocklyPracticePage exercise={exercise} />);
+
+    const btn = screen.getByRole('button', { name: /answer/i });
+    fireEvent.click(btn);
+
+    const viewer = await screen.findByTestId('answer-viewer');
+    expect(viewer).toHaveTextContent('text_print');
+  });
+});
+
 describe('Save and Submit', () => {
   const blocklyExercise = makeExercise({ showResult: true });
 
