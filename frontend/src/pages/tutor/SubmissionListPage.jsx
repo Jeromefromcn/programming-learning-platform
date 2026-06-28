@@ -18,6 +18,7 @@ export default function SubmissionListPage() {
   const [pendingSource, setPendingSource] = useState('IMPORT');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   async function fetchSubmissions(params) {
     setLoading(true);
@@ -38,7 +39,7 @@ export default function SubmissionListPage() {
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
     if (batchId.trim()) params.batchId = batchId.trim();
     fetchSubmissions(params);
-  }, [page, studentName, exerciseId, batchId, source]);
+  }, [page, studentName, exerciseId, batchId, source, searchTrigger]);
 
   function handleSearch() {
     setPage(0);
@@ -46,6 +47,7 @@ export default function SubmissionListPage() {
     setExerciseId(pendingExerciseId);
     setBatchId(pendingBatchId);
     setSource(pendingSource);
+    setSearchTrigger(s => s + 1);
   }
 
   async function handleDelete(e, id) {

@@ -43,6 +43,7 @@ export default function UserManagementPage() {
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [searchTrigger, setSearchTrigger] = useState(0);
   const [resettingId, setResettingId] = useState(null);
   const [expirationInput, setExpirationInput] = useState({});
   const today = new Date().toISOString().split('T')[0];
@@ -63,13 +64,14 @@ export default function UserManagementPage() {
     }
   }
 
-  useEffect(() => { load(); }, [page, nameFilter, roleFilter, statusFilter]);
+  useEffect(() => { load(); }, [page, nameFilter, roleFilter, statusFilter, searchTrigger]);
 
   function handleSearch() {
     setPage(0);
     setNameFilter(pendingName);
     setRoleFilter(pendingRole);
     setStatusFilter(pendingStatus);
+    setSearchTrigger(s => s + 1);
   }
 
   async function handleRoleChange(id, role) {

@@ -20,6 +20,7 @@ export default function GroupSubmissionPage() {
   const [gradedStatus, setGradedStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   async function fetchBatches(params) {
     setLoading(true);
@@ -39,12 +40,13 @@ export default function GroupSubmissionPage() {
     if (batchId.trim()) params.batchId = batchId.trim();
     if (gradedStatus) params.gradedStatus = gradedStatus;
     fetchBatches(params);
-  }, [page, batchId, gradedStatus]);
+  }, [page, batchId, gradedStatus, searchTrigger]);
 
   function handleSearch() {
     setPage(0);
     setBatchId(pendingBatchId);
     setGradedStatus(pendingGradedStatus);
+    setSearchTrigger(s => s + 1);
   }
 
   async function handleDelete(batch) {
