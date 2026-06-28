@@ -1,6 +1,8 @@
 package com.platform.exercise.submission;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.platform.exercise.common.ErrorCode;
+import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
@@ -24,6 +26,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -139,6 +143,25 @@ class ImportBatchServiceTest {
         // Header must have exactly: Student Name, Display Name, Exercise Title, Total Score
         assertThat(lines[0]).isEqualTo("Student Name,Display Name,Exercise Title,Total Score");
         assertThat(lines[1]).contains("bob").contains("90.00");
+    }
+
+    @Test
+    void deleteBatch_callsDeleteAllByBatchIdThenDeleteById() {
+        when(importBatchRepository.existsById(5L)).thenReturn(true);
+
+        service.deleteBatch(5L);
+
+        verify(submissionRepository).deleteAllByBatchId(5L);
+        verify(importBatchRepository).deleteById(5L);
+    }
+
+    @Test
+    void deleteBatch_throwsBatchNotFound_whenBatchAbsent() {
+        when(importBatchRepository.existsById(99L)).thenReturn(false);
+
+        PlatformException ex = assertThrows(PlatformException.class,
+            () -> service.deleteBatch(99L));
+        assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.BATCH_NOT_FOUND);
     }
 
     @Test

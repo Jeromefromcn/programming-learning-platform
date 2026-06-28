@@ -30,4 +30,10 @@ public class ImportBatchController {
     public void exportCsv(@PathVariable Long id, HttpServletResponse response) throws IOException {
         importBatchService.exportBatchCsv(id, response);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        importBatchService.deleteBatch(id);
+        return ResponseEntity.noContent().build();
+    }
 }

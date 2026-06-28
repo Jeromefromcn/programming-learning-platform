@@ -25,6 +25,7 @@ public enum ErrorCode {
     IMPORT_VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST),
     CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST),
+    BATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
     ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN);
 
     private final HttpStatus httpStatus;

@@ -31,6 +31,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
               AND (:source IS NULL OR source = :source)
+              AND (:batchId IS NULL OR batch_id = :batchId)
               AND is_deleted = false
             ORDER BY created_at DESC
             """,
@@ -39,6 +40,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
               AND (:source IS NULL OR source = :source)
+              AND (:batchId IS NULL OR batch_id = :batchId)
               AND is_deleted = false
             """,
             nativeQuery = true)
@@ -46,6 +48,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             @Param("exerciseId") Long exerciseId,
             @Param("studentName") String studentName,
             @Param("source") String source,
+            @Param("batchId") Long batchId,
             Pageable pageable);
 
     List<Submission> findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(
@@ -110,4 +113,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     int hardDeleteByFilters(@Param("before") LocalDateTime before,
                             @Param("exerciseId") Long exerciseId,
                             @Param("source") String source);
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("DELETE FROM Submission s WHERE s.batchId = :batchId")
+    int deleteAllByBatchId(@Param("batchId") Long batchId);
 }

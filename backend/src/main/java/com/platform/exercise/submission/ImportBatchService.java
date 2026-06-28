@@ -2,7 +2,9 @@ package com.platform.exercise.submission;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PageResponse;
+import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -173,6 +176,15 @@ public class ImportBatchService {
         } catch (Exception e) {
             return Map.of();
         }
+    }
+
+    @Transactional
+    public void deleteBatch(Long id) {
+        if (!importBatchRepository.existsById(id)) {
+            throw new PlatformException(ErrorCode.BATCH_NOT_FOUND, "Batch not found.");
+        }
+        submissionRepository.deleteAllByBatchId(id);
+        importBatchRepository.deleteById(id);
     }
 
     // package-private for unit test
