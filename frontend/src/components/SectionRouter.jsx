@@ -11,6 +11,7 @@ import CategoryManagementPage from '../pages/tutor/CategoryManagementPage';
 import SubmissionListPage from '../pages/tutor/SubmissionListPage';
 import SubmissionImportPage from '../pages/tutor/SubmissionImportPage';
 import SubmissionDetailPage from '../pages/tutor/SubmissionDetailPage';
+import GroupSubmissionPage from '../pages/tutor/GroupSubmissionPage';
 import UserManagementPage from '../pages/admin/UserManagementPage';
 import GlobalSettingsPage from '../pages/admin/GlobalSettingsPage';
 import DataManagementPage from '../pages/admin/DataManagementPage';
@@ -52,6 +53,12 @@ export default function SectionRouter({ section, role }) {
           <Route path="/tutor/submissions" element={<SubmissionListPage />} />
           <Route path="/tutor/submissions/import" element={<SubmissionImportPage />} />
           <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        </>
+      )}
+      {section === 'group-submissions' && (
+        <>
+          <Route path="/tutor/group-submissions" element={<GroupSubmissionPage />} />
+          <Route path="/tutor/group-submissions/import" element={<SubmissionImportPage />} />
         </>
       )}
       {section === 'users' && (

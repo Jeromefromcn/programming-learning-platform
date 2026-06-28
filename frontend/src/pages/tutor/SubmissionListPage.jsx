@@ -78,15 +78,6 @@ export default function SubmissionListPage() {
           }}>
             Export CSV
           </a>
-          <button
-            onClick={() => navigate('/tutor/submissions/import')}
-            style={{
-              background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4,
-              padding: '8px 18px', cursor: 'pointer', fontSize: 14,
-            }}
-          >
-            Import Files
-          </button>
         </div>
       </div>
 
@@ -125,14 +116,14 @@ export default function SubmissionListPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Mismatch', 'Date', ''].map(h => (
+              {['Student Name', 'Exercise', 'Type', 'Auto Score', 'Tutor Score', 'Graded', 'Mismatch', 'Date', ''].map(h => (
                 <th key={h} style={{ padding: '10px 12px', borderBottom: '2px solid #ddd' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {submissions.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
+              <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: '#888' }}>No submissions found.</td></tr>
             ) : submissions.map(sub => (
               <tr
                 key={sub.id}
@@ -146,6 +137,14 @@ export default function SubmissionListPage() {
                 <td style={{ padding: '10px 12px' }}>{sub.exerciseType}</td>
                 <td style={{ padding: '10px 12px' }}>{sub.autoScore ?? '—'}</td>
                 <td style={{ padding: '10px 12px' }}>{sub.tutorScore ?? '—'}</td>
+                <td style={{ padding: '10px 12px' }}>
+                  {sub.graded ? (
+                    <span style={{
+                      background: '#e3f2fd', color: '#1565c0',
+                      borderRadius: 4, padding: '2px 8px', fontSize: 12, fontWeight: 600,
+                    }}>Graded</span>
+                  ) : '—'}
+                </td>
                 <td style={{ padding: '10px 12px' }}>
                   {sub.versionMismatch && (
                     <span style={{
