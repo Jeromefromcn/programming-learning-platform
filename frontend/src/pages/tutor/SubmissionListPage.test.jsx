@@ -6,7 +6,6 @@ import { submissionApi } from '../../api/submissionApi';
 
 vi.mock('../../api/submissionApi', () => ({
   submissionApi: { list: vi.fn(), delete: vi.fn() },
-  csvExportUrl: () => '/api/v1/submissions/export.csv',
 }));
 
 const emptyPage = { content: [], totalPages: 0 };
@@ -147,4 +146,10 @@ it('hides batchId cell content when submission has no batchId', async () => {
   // More specifically: the batch cell (8th td, 0-indexed) should be empty
   const cells = row.querySelectorAll('td');
   expect(cells[7].textContent.trim()).toBe('');
+});
+
+it('does not render an Export CSV button or link', async () => {
+  renderPage();
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText(/export csv/i)).not.toBeInTheDocument();
 });

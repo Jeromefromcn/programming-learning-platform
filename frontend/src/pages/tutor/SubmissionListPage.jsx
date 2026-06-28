@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submissionApi, csvExportUrl } from '../../api/submissionApi';
+import { submissionApi } from '../../api/submissionApi';
 import Pagination from '../../components/Pagination';
 
 export default function SubmissionListPage() {
@@ -70,20 +70,10 @@ export default function SubmissionListPage() {
     }
   }
 
-  const csvHref = csvExportUrl(exerciseId.trim() || null);
-
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ margin: 0 }}>Submissions</h1>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <a href={csvHref} download style={{
-            background: '#388e3c', color: '#fff', padding: '8px 18px', borderRadius: 4,
-            textDecoration: 'none', fontSize: 14,
-          }}>
-            Export CSV
-          </a>
-        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
