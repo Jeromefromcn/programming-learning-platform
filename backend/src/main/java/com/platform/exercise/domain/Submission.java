@@ -59,6 +59,15 @@ public class Submission {
     @Column(name = "import_batch_id", length = 36)
     private String importBatchId;
 
+    @Column(name = "batch_id")
+    private Long batchId;
+
+    @Column(name = "tutor_grade_details", columnDefinition = "JSON")
+    private String tutorGradeDetails;
+
+    @Column(name = "graded", nullable = false)
+    private boolean graded = false;
+
     @Column(name = "source", nullable = false, length = 20)
     private String source = "IMPORT";
 
