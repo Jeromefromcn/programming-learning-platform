@@ -3,7 +3,7 @@ package com.platform.exercise.submission;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.common.PageResponse;
-import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.domain.User;
@@ -73,6 +73,8 @@ public class ImportBatchService {
     public void exportBatchCsv(Long batchId, HttpServletResponse response) throws IOException {
         List<Submission> subs = submissionRepository
             .findByBatchIdAndDeletedFalseOrderByStudentNameAsc(batchId);
+        // All submissions in a batch share one exercise (enforced by importFiles Phase 1b).
+        // The header is derived from the first submission's exercise config.
 
         List<DimensionDef> dimensions = List.of();
         if (!subs.isEmpty()) {
@@ -89,8 +91,7 @@ public class ImportBatchService {
 
         List<Long> exerciseIds = subs.stream().map(Submission::getExerciseId).distinct().toList();
         Map<Long, String> titleMap = exerciseRepository.findAllById(exerciseIds).stream()
-            .collect(Collectors.toMap(com.platform.exercise.domain.Exercise::getId,
-                                      com.platform.exercise.domain.Exercise::getTitle));
+            .collect(Collectors.toMap(Exercise::getId, Exercise::getTitle));
 
         response.setContentType("text/csv; charset=UTF-8");
         response.setHeader("Content-Disposition",

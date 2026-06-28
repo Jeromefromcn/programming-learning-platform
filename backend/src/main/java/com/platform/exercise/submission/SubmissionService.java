@@ -120,7 +120,7 @@ public class SubmissionService {
             try {
                 long eid = objectMapper.readTree(e.bytes()).path("exerciseId").asLong(-1L);
                 if (eid > 0) fileExerciseIds.put(e.name(), eid);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {} // already validated in phase 1; exerciseId parse cannot fail here
         }
         Set<Long> distinctIds = new LinkedHashSet<>(fileExerciseIds.values());
         if (distinctIds.size() > 1) {
@@ -213,8 +213,7 @@ public class SubmissionService {
             sub.setTutorScore(total);
             try {
                 sub.setTutorGradeDetails(
-                    new com.fasterxml.jackson.databind.ObjectMapper()
-                        .writeValueAsString(req.dimensionScores()));
+                    objectMapper.writeValueAsString(req.dimensionScores()));
             } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
                 throw new RuntimeException("Failed to serialize dimension scores", e);
             }
