@@ -1,11 +1,14 @@
 package com.platform.exercise.submission;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.common.PageResponse;
+import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.domain.User;
 import com.platform.exercise.repository.ExerciseRepository;
+import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.ImportBatchRepository;
 import com.platform.exercise.repository.SubmissionRepository;
 import com.platform.exercise.repository.UserRepository;
@@ -19,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +35,7 @@ public class ImportBatchService {
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
+    private final ExerciseVersionRepository versionRepository;
     private final ObjectMapper objectMapper;
 
     public PageResponse<ImportBatchDto> list(Long batchId, String gradedStatus, int page, int size) {
@@ -66,12 +71,14 @@ public class ImportBatchService {
     }
 
     public void exportBatchCsv(Long batchId, HttpServletResponse response) throws IOException {
-        List<Submission> subs = submissionRepository.findByBatchIdAndDeletedFalseOrderByStudentNameAsc(batchId);
+        List<Submission> subs = submissionRepository
+            .findByBatchIdAndDeletedFalseOrderByStudentNameAsc(batchId);
 
-        // Build lookup maps
-        List<Long> exerciseIds = subs.stream().map(Submission::getExerciseId).distinct().toList();
-        Map<Long, String> titleMap = exerciseRepository.findAllById(exerciseIds).stream()
-            .collect(Collectors.toMap(e -> e.getId(), e -> e.getTitle()));
+        List<DimensionDef> dimensions = List.of();
+        if (!subs.isEmpty()) {
+            dimensions = loadDimensions(subs.get(0).getExerciseId());
+        }
+
         Map<Long, String> displayNameMap = subs.stream()
             .filter(s -> s.getUserId() != null)
             .map(Submission::getUserId)
@@ -80,15 +87,21 @@ public class ImportBatchService {
             .collect(Collectors.toMap(User::getId, u ->
                 u.getDisplayName() != null ? u.getDisplayName() : u.getUsername()));
 
+        List<Long> exerciseIds = subs.stream().map(Submission::getExerciseId).distinct().toList();
+        Map<Long, String> titleMap = exerciseRepository.findAllById(exerciseIds).stream()
+            .collect(Collectors.toMap(com.platform.exercise.domain.Exercise::getId,
+                                      com.platform.exercise.domain.Exercise::getTitle));
+
         response.setContentType("text/csv; charset=UTF-8");
         response.setHeader("Content-Disposition",
             "attachment; filename=\"batch_" + batchId + "_" + LocalDate.now() + ".csv\"");
 
+        List<String> headers = buildHeaders(dimensions);
+
         try (CSVPrinter printer = new CSVPrinter(
                 new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8),
                 CSVFormat.DEFAULT.builder()
-                    .setHeader("Student Name", "Display Name", "Exercise Title",
-                               "Dimension", "Weight", "Dimension Score", "Total Score")
+                    .setHeader(headers.toArray(new String[0]))
                     .build())) {
             for (Submission sub : subs) {
                 String displayName = sub.getUserId() != null
@@ -98,26 +111,66 @@ public class ImportBatchService {
                     ? sub.getTutorScore().toPlainString()
                     : (sub.getAutoScore() != null ? sub.getAutoScore().toPlainString() : "");
 
-                if (sub.getTutorGradeDetails() != null) {
-                    // Rubric: one row per dimension
-                    try {
-                        com.fasterxml.jackson.databind.JavaType listType = objectMapper.getTypeFactory()
-                            .constructCollectionType(List.class, DimensionScoreDto.class);
-                        List<DimensionScoreDto> dims = objectMapper.readValue(sub.getTutorGradeDetails(), listType);
-                        for (DimensionScoreDto d : dims) {
-                            printer.printRecord(sub.getStudentName(), displayName, title,
-                                d.name(), d.weight(), d.score(), totalScore);
-                        }
-                    } catch (Exception e) {
-                        printer.printRecord(sub.getStudentName(), displayName, title,
-                            "", "", "", totalScore);
+                List<Object> row = new ArrayList<>();
+                row.add(sub.getStudentName());
+                row.add(displayName);
+                row.add(title);
+
+                if (!dimensions.isEmpty()) {
+                    Map<String, Double> dimScores = parseDimScores(sub.getTutorGradeDetails());
+                    for (DimensionDef d : dimensions) {
+                        Double score = dimScores.get(d.name());
+                        row.add(score != null ? score : "");
                     }
-                } else {
-                    // Auto/instant-feedback: single row, empty dimension columns
-                    printer.printRecord(sub.getStudentName(), displayName, title,
-                        "", "", "", totalScore);
                 }
+                row.add(totalScore);
+                printer.printRecord(row);
             }
+        }
+    }
+
+    private record DimensionDef(String name, double weight) {}
+
+    private List<DimensionDef> loadDimensions(long exerciseId) {
+        return exerciseRepository.findById(exerciseId)
+            .flatMap(ex -> versionRepository.findById(ex.getCurrentVersionId()))
+            .map(v -> parseDimensionConfig(v.getConfig()))
+            .orElse(List.of());
+    }
+
+    private List<DimensionDef> parseDimensionConfig(String configJson) {
+        try {
+            JsonNode dims = objectMapper.readTree(configJson).path("rubric").path("dimensions");
+            if (dims.isMissingNode() || !dims.isArray()) return List.of();
+            List<DimensionDef> result = new ArrayList<>();
+            for (JsonNode d : dims) {
+                result.add(new DimensionDef(d.path("name").asText(), d.path("weight").asDouble()));
+            }
+            return result;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private List<String> buildHeaders(List<DimensionDef> dimensions) {
+        List<String> h = new ArrayList<>(List.of("Student Name", "Display Name", "Exercise Title"));
+        for (DimensionDef d : dimensions) {
+            h.add(d.name() + " (" + (int) Math.round(d.weight() * 100) + "%)");
+        }
+        h.add("Total Score");
+        return h;
+    }
+
+    private Map<String, Double> parseDimScores(String json) {
+        if (json == null || json.isBlank()) return Map.of();
+        try {
+            com.fasterxml.jackson.databind.JavaType listType = objectMapper.getTypeFactory()
+                .constructCollectionType(List.class, DimensionScoreDto.class);
+            List<DimensionScoreDto> dims = objectMapper.readValue(json, listType);
+            return dims.stream()
+                .collect(Collectors.toMap(DimensionScoreDto::name, DimensionScoreDto::score));
+        } catch (Exception e) {
+            return Map.of();
         }
     }
 
