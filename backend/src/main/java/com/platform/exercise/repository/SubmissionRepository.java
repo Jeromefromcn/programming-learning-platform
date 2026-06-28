@@ -51,6 +51,17 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(
             Long userId, Long exerciseId);
 
+    Page<Submission> findByUserIdAndDeletedFalseOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    @Query(value = """
+            SELECT s.batch_id, COUNT(*) AS total,
+                   SUM(CASE WHEN s.graded = 1 THEN 1 ELSE 0 END) AS graded
+            FROM submissions s
+            WHERE s.batch_id IN (:batchIds) AND s.is_deleted = false
+            GROUP BY s.batch_id
+            """, nativeQuery = true)
+    List<Object[]> countGradedGroupByBatchId(@Param("batchIds") List<Long> batchIds);
+
     @Query(value = """
             SELECT * FROM submissions
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)

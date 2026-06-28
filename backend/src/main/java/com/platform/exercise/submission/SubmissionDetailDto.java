@@ -1,7 +1,6 @@
 package com.platform.exercise.submission;
 
 import com.platform.exercise.domain.Submission;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -20,6 +19,8 @@ public record SubmissionDetailDto(
     String autoGradeDetails,
     BigDecimal tutorScore,
     String tutorComment,
+    String tutorGradeDetails,
+    boolean graded,
     LocalDateTime createdAt
 ) {
     public static SubmissionDetailDto of(Submission sub, String exerciseTitle, int gradedVersionNumber) {
@@ -29,6 +30,7 @@ public record SubmissionDetailDto(
             sub.getExportTimestamp(),
             sub.isVersionMismatch(), sub.getStudentVersionNumber(), gradedVersionNumber,
             sub.getAutoScore(), sub.getAutoGradeDetails(),
-            sub.getTutorScore(), sub.getTutorComment(), sub.getCreatedAt());
+            sub.getTutorScore(), sub.getTutorComment(), sub.getTutorGradeDetails(),
+            sub.isGraded(), sub.getCreatedAt());
     }
 }
