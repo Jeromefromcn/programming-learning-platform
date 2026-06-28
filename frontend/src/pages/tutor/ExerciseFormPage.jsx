@@ -244,23 +244,6 @@ export default function ExerciseFormPage() {
             <MarkdownEditor value={description} onChange={setDescription} rows={4} required />
           </div>
 
-          <hr style={{ margin: '20px 0', borderColor: '#eee' }} />
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
-            <input
-              type="checkbox"
-              checked={(exerciseType === 'BLOCKLY' ? blocklyConfig.showResult : pythonConfig.showResult) !== false}
-              onChange={e => {
-                const show = e.target.checked;
-                if (exerciseType === 'BLOCKLY')
-                  setBlocklyConfig(prev => ({ ...prev, showResult: show }));
-                else
-                  setPythonConfig(prev => ({ ...prev, showResult: show }));
-              }}
-            />
-            Show instant result feedback
-          </label>
-
           {exerciseType === 'BLOCKLY' ? (
             <div>
               <h3 style={{ marginTop: 0 }}>Blockly Configuration</h3>
@@ -285,6 +268,15 @@ export default function ExerciseFormPage() {
                   setBlocklyConfig(prev => ({ ...prev, showCodeView: show }))}
               />
 
+              <h4 style={{ marginTop: 24 }}>Grading Configuration</h4>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={blocklyConfig.showResult !== false}
+                  onChange={e => setBlocklyConfig(prev => ({ ...prev, showResult: e.target.checked }))}
+                />
+                Show instant result feedback
+              </label>
               {blocklyConfig.showResult ? (
                 <>
                   <h4 style={{ marginTop: 24 }}>Grading Rules</h4>
@@ -352,6 +344,15 @@ export default function ExerciseFormPage() {
                 onTestCasesChange={cases =>
                   setPythonConfig(prev => ({ ...prev, testCases: cases }))}
               />
+              <h4 style={{ marginTop: 24 }}>Grading Configuration</h4>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={pythonConfig.showResult !== false}
+                  onChange={e => setPythonConfig(prev => ({ ...prev, showResult: e.target.checked }))}
+                />
+                Show instant result feedback
+              </label>
               {!pythonConfig.showResult && (
                 <RubricEditor
                   dimensions={pythonConfig.rubric?.dimensions || []}
