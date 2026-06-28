@@ -19,6 +19,7 @@ export default function GroupSubmissionPage() {
   const [batchId, setBatchId] = useState('');
   const [gradedStatus, setGradedStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   async function fetchBatches(params) {
     setLoading(true);
@@ -44,6 +45,26 @@ export default function GroupSubmissionPage() {
     setPage(0);
     setBatchId(pendingBatchId);
     setGradedStatus(pendingGradedStatus);
+  }
+
+  async function handleDelete(batch) {
+    let msg = `Delete batch #${batch.id} and its ${batch.importedCount} imported submissions?\nThis cannot be undone.`;
+    if (batch.gradedStatus === 'ALL') {
+      msg = `Warning: This batch is fully graded.\n\n` + msg;
+    }
+    if (!window.confirm(msg)) return;
+    setDeletingId(batch.id);
+    try {
+      await importBatchApi.delete(batch.id);
+      const params = { page, size: 20 };
+      if (batchId.trim()) params.batchId = batchId.trim();
+      if (gradedStatus) params.gradedStatus = gradedStatus;
+      fetchBatches(params);
+    } catch {
+      alert('Failed to delete batch.');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function handleExport(batch) {
@@ -132,7 +153,7 @@ export default function GroupSubmissionPage() {
                       {b.gradedStatus}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td style={{ padding: '10px 12px', display: 'flex', gap: 8 }}>
                     <button
                       onClick={() => handleExport(b)}
                       style={{
@@ -141,6 +162,18 @@ export default function GroupSubmissionPage() {
                       }}
                     >
                       Export CSV
+                    </button>
+                    <button
+                      onClick={() => handleDelete(b)}
+                      disabled={deletingId === b.id}
+                      style={{
+                        padding: '4px 14px', color: '#c62828', background: 'none',
+                        border: '1px solid #c62828', borderRadius: 4,
+                        cursor: deletingId === b.id ? 'default' : 'pointer', fontSize: 12,
+                        opacity: deletingId === b.id ? 0.5 : 1,
+                      }}
+                    >
+                      {deletingId === b.id ? 'Deleting…' : 'Delete'}
                     </button>
                   </td>
                 </tr>
