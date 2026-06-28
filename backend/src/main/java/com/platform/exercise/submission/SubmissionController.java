@@ -1,12 +1,14 @@
 package com.platform.exercise.submission;
 
 import com.platform.exercise.common.PageResponse;
+import com.platform.exercise.domain.User;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,8 +25,13 @@ public class SubmissionController {
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportResponseDto> importFiles(
-            @RequestParam("files") List<MultipartFile> files) throws IOException {
-        return ResponseEntity.ok(submissionService.importFiles(files));
+            @RequestParam("files") List<MultipartFile> files,
+            Authentication authentication) throws IOException {
+        Long userId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof User u) {
+            userId = u.getId();
+        }
+        return ResponseEntity.ok(submissionService.importFiles(files, userId));
     }
 
     @PostMapping("/import-duplicate")

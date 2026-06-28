@@ -122,11 +122,13 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importSingleBlocklyJson_valid_returnsImported() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        // studentName must match a registered user — "tutor1" is seeded in @BeforeEach
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         mockMvc.perform(multipart("/v1/submissions/import").file(file))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.summary.imported").value(1))
             .andExpect(jsonPath("$.results[0].status").value("IMPORTED"))
             .andExpect(jsonPath("$.results[0].autoScore").exists())
@@ -136,30 +138,33 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importDuplicateJson_secondTime_returnsDuplicateStatus() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         // First import
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
-        // Second import — same file
+        // Second import — same file; duplicate is NOT a validation-abort, phase 2 proceeds
         mockMvc.perform(multipart("/v1/submissions/import")
-                .file(new MockMultipartFile("files", "alex.json", "application/json",
-                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+                .file(new MockMultipartFile("files", "tutor1.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes())))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.summary.duplicates").value(1))
             .andExpect(jsonPath("$.results[0].status").value("DUPLICATE"));
     }
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
-    void importMissingFields_returnsFailed() throws Exception {
+    void importMissingFields_returnsValidationFailed() throws Exception {
         MockMultipartFile file = new MockMultipartFile("files", "bad.json", "application/json",
             "{\"exerciseId\":1}".getBytes());
 
         mockMvc.perform(multipart("/v1/submissions/import").file(file))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.results[0].status").value("FAILED"));
+            .andExpect(jsonPath("$.ok").value(false))
+            .andExpect(jsonPath("$.problems[0].filename").value("bad.json"))
+            .andExpect(jsonPath("$.problems[0].reason").value(org.hamcrest.Matchers.containsString("Missing required fields")));
     }
 
     @Test
@@ -277,22 +282,24 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importAfterDelete_treatedAsNewSubmission() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        // studentName must match a registered user — "tutor1" is seeded in @BeforeEach
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         // Import once
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
         // Soft-delete it
-        Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("Alex").get(0);
+        Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("tutor1").get(0);
         sub.setDeleted(true);
         submissionRepository.save(sub);
 
         // Re-import same file — should succeed as new import, not duplicate
         mockMvc.perform(multipart("/v1/submissions/import")
-                .file(new MockMultipartFile("files", "alex.json", "application/json",
-                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+                .file(new MockMultipartFile("files", "tutor1.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes())))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.results[0].status").value("IMPORTED"));
     }
 

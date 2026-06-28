@@ -11,7 +11,9 @@ import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
+import com.platform.exercise.repository.ImportBatchRepository;
 import com.platform.exercise.repository.SubmissionRepository;
+import com.platform.exercise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,8 @@ public class FileImportService {
     private final PythonGrader pythonGrader;
     private final ImportBatchCache batchCache;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final ImportBatchRepository importBatchRepository;
 
     List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
         List<ImportResultDto> results = new ArrayList<>();
@@ -154,6 +158,14 @@ public class FileImportService {
             sub.setAutoScore(autoScore);
             sub.setAutoGradeDetails(autoGradeDetails);
             sub.setImportBatchId(batchId);
+
+            // Resolve user_id from studentName
+            userRepository.findByUsername(studentName)
+                .ifPresent(u -> sub.setUserId(u.getId()));
+            // Link to ImportBatch row via UUID
+            importBatchRepository.findByUuid(batchId)
+                .ifPresent(b -> sub.setBatchId(b.getId()));
+
             Submission saved = submissionRepository.save(sub);
 
             return logAndReturn(batchId, ImportResultDto.imported(filename, saved.getId(), studentName,
@@ -163,6 +175,34 @@ public class FileImportService {
             throw e;
         } catch (Exception e) {
             return logAndReturn(batchId, ImportResultDto.failed(filename, "Parse error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Phase-1 validation only — no writes. Returns a problem description if the file is invalid,
+     * or null if the file is valid and its studentName resolves to a known username.
+     */
+    ImportProblemDto validateFile(String filename, byte[] content) {
+        try {
+            JsonNode node = objectMapper.readTree(content);
+            List<String> missing = REQUIRED_FIELDS.stream()
+                .filter(f -> node.path(f).isMissingNode())
+                .toList();
+            if (!missing.isEmpty()) {
+                return new ImportProblemDto(filename,
+                    "Missing required fields: " + String.join(", ", missing));
+            }
+            String studentName = node.path("studentName").asText();
+            if (studentName.isBlank()) {
+                return new ImportProblemDto(filename, "Field 'studentName' is blank.");
+            }
+            if (!userRepository.existsByUsername(studentName)) {
+                return new ImportProblemDto(filename,
+                    "Username '" + studentName + "' not found in the system.");
+            }
+            return null; // valid
+        } catch (Exception e) {
+            return new ImportProblemDto(filename, "Parse error: " + e.getMessage());
         }
     }
 

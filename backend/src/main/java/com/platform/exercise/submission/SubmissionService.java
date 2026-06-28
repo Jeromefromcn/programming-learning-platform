@@ -5,9 +5,11 @@ import com.platform.exercise.common.PageResponse;
 import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
+import com.platform.exercise.repository.ImportBatchRepository;
 import com.platform.exercise.repository.SubmissionRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -38,27 +43,94 @@ public class SubmissionService {
     private final ExerciseVersionRepository versionRepository;
     private final FileImportService fileImportService;
     private final ImportBatchCache batchCache;
+    private final ImportBatchRepository importBatchRepository;
 
     @Transactional
-    public ImportResponseDto importFiles(List<MultipartFile> files) throws IOException {
-        String batchId = UUID.randomUUID().toString();
-        List<ImportResultDto> results = new ArrayList<>();
+    public ImportResponseDto importFiles(List<MultipartFile> files, Long importedByUserId) throws IOException {
+        // --- Phase 1: collect all file bytes and validate (no writes) ---
+        record FileEntry(String name, byte[] bytes) {}
+        List<FileEntry> entries = new ArrayList<>();
+        List<ImportProblemDto> problems = new ArrayList<>();
 
         for (MultipartFile file : files) {
-            String name = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
-            if (name.toLowerCase().endsWith(".zip")) {
-                results.addAll(fileImportService.processZip(file.getBytes(), batchId));
-            } else if (name.toLowerCase().endsWith(".json")) {
-                results.add(fileImportService.processSingleFile(name, file.getBytes(), batchId, false));
+            String originalName = file.getOriginalFilename() != null
+                ? file.getOriginalFilename() : "unknown";
+            byte[] fileBytes = file.getBytes();
+
+            if (originalName.toLowerCase().endsWith(".zip")) {
+                // Expand ZIP and validate each entry
+                try (ZipInputStream zis =
+                         new ZipInputStream(new ByteArrayInputStream(fileBytes))) {
+                    ZipEntry entry;
+                    long totalBytes = 0;
+                    int fileCount = 0;
+                    while ((entry = zis.getNextEntry()) != null) {
+                        if (entry.isDirectory()) { zis.closeEntry(); continue; }
+                        String entryName = entry.getName();
+                        if (entryName.contains("..")) {
+                            throw new PlatformException(
+                                ErrorCode.ZIP_PATH_TRAVERSAL,
+                                "Path traversal detected: " + entryName);
+                        }
+                        if (++fileCount > 500) {
+                            throw new PlatformException(
+                                ErrorCode.ZIP_TOO_LARGE,
+                                "ZIP contains more than 500 files.");
+                        }
+                        byte[] content = zis.readAllBytes();
+                        totalBytes += content.length;
+                        if (totalBytes > 100L * 1024 * 1024) {
+                            throw new PlatformException(
+                                ErrorCode.ZIP_TOO_LARGE,
+                                "Decompressed ZIP exceeds 100 MB.");
+                        }
+                        String filename = new java.io.File(entryName).getName();
+                        if (filename.toLowerCase().endsWith(".json")) {
+                            entries.add(new FileEntry(filename, content));
+                        }
+                        zis.closeEntry();
+                    }
+                }
+            } else if (originalName.toLowerCase().endsWith(".json")) {
+                entries.add(new FileEntry(originalName, fileBytes));
             } else {
-                results.add(ImportResultDto.failed(name, "Unsupported file type."));
+                problems.add(new ImportProblemDto(originalName, "Unsupported file type."));
             }
         }
 
+        // Validate each JSON entry (schema + username)
+        for (FileEntry e : entries) {
+            ImportProblemDto problem = fileImportService.validateFile(e.name(), e.bytes());
+            if (problem != null) problems.add(problem);
+        }
+
+        if (!problems.isEmpty()) {
+            return ImportResponseDto.validationFailed(problems);
+        }
+
+        // --- Phase 2: commit — create batch row, then save each submission ---
+        String batchUuid = UUID.randomUUID().toString();
+        ImportBatch batch = new ImportBatch();
+        batch.setUuid(batchUuid);
+        batch.setImportedBy(importedByUserId);
+        batch.setFileCount(entries.size());
+        batch = importBatchRepository.save(batch);
+
+        List<ImportResultDto> results = new ArrayList<>();
+        for (FileEntry e : entries) {
+            results.add(fileImportService.processSingleFile(e.name(), e.bytes(), batchUuid, false));
+        }
+
+        // Update batch counts
         long imported = results.stream().filter(r -> "IMPORTED".equals(r.status())).count();
         long duplicates = results.stream().filter(r -> "DUPLICATE".equals(r.status())).count();
         long failed = results.stream().filter(r -> "FAILED".equals(r.status())).count();
-        return new ImportResponseDto(batchId, results,
+        batch.setImportedCount((int) imported);
+        batch.setDuplicateCount((int) duplicates);
+        batch.setFailedCount((int) failed);
+        importBatchRepository.save(batch);
+
+        return ImportResponseDto.success(batch.getId(), batchUuid, results,
             new ImportResponseDto.Summary(results.size(), (int) imported, (int) duplicates, (int) failed));
     }
 
