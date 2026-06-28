@@ -48,7 +48,7 @@ public class SubmissionPurgeController {
         try {
             return LocalDate.parse(before).atStartOfDay();
         } catch (DateTimeParseException e) {
-            throw new PlatformException(ErrorCode.VALIDATION_ERROR, "Invalid date format. Use YYYY-MM-DD.");
+            throw new PlatformException(ErrorCode.VALIDATION_ERROR, "Invalid date format. Use DD/MM/YYYY.");
         }
     }
 

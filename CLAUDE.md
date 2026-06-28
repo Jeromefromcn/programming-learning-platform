@@ -119,6 +119,14 @@ Error codes: `INVALID_CREDENTIALS` · `ACCOUNT_DISABLED` · `TOKEN_EXPIRED` · `
 6. **Course filter toggle:** Always show impacted student count before confirming
 7. **Category with exercises:** Block deletion, require removing associations first
 
+## Date Format
+
+All date displays across the entire system use **`dd/MM/yyyy`** format (with `HH:mm` appended when time is needed). This applies to both frontend UI and backend user-facing messages.
+
+- **Frontend:** Use `formatDate(dt)` from `frontend/src/utils/dateFormat.js` for date-only, `formatDateTime(dt)` for date+time.
+- **Backend:** Error messages and CSV data should reference `DD/MM/YYYY`.
+- **API/ISO interchange:** Machine-to-machine communication (JSON API, CSV filenames) still uses ISO-8601. This rule applies only to **user-facing display**.
+
 ## Dev Commands
 
 ```bash

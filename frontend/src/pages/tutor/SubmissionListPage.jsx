@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
 import Pagination from '../../components/Pagination';
+import { formatDate } from '../../utils/dateFormat';
 
 export default function SubmissionListPage() {
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ export default function SubmissionListPage() {
                   {sub.batchId ?? ''}
                 </td>
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
-                  {new Date(sub.createdAt).toLocaleDateString()}
+                  {formatDate(sub.createdAt)}
                 </td>
                 <td style={{ padding: '10px 12px' }}>
                   <button

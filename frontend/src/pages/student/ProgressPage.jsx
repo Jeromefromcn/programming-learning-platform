@@ -3,6 +3,7 @@ import { progressApi } from '../../api/progressApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
 import Pagination from '../../components/Pagination';
 import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
+import { formatDate } from '../../utils/dateFormat';
 
 function ScoreChip({ score, graded }) {
   if (!graded && score == null) return <span style={{ color: '#888' }}>—</span>;
@@ -92,7 +93,7 @@ export default function ProgressPage() {
                   <ScoreChip score={sub.score} graded={sub.graded} />
                 </td>
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
-                  {new Date(sub.createdAt).toLocaleDateString()}
+                  {formatDate(sub.createdAt)}
                 </td>
               </tr>
             ))}
@@ -176,7 +177,7 @@ function SubmissionViewer({ submission, onBack }) {
       <h2 style={{ marginBottom: 4 }}>{submission.exerciseTitle}</h2>
       <p style={{ color: '#555', margin: '0 0 20px', fontSize: 13 }}>
         {submission.exerciseType} · {submission.source === 'STUDENT' ? 'Submitted' : 'Imported'} ·{' '}
-        {new Date(submission.createdAt).toLocaleDateString()}
+        {formatDate(submission.createdAt)}
       </p>
 
       {isPython ? (

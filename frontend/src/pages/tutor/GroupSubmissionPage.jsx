@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importBatchApi, downloadBatchExport } from '../../api/importBatchApi';
 import Pagination from '../../components/Pagination';
+import { formatDateTime } from '../../utils/dateFormat';
 
 const STATUS_COLORS = {
   ALL:     { bg: '#e8f5e9', color: '#2e7d32' },
@@ -141,7 +142,7 @@ export default function GroupSubmissionPage() {
                 <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>#{b.id}</td>
                   <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
-                    {new Date(b.createdAt).toLocaleString()}
+                    {formatDateTime(b.createdAt)}
                   </td>
                   <td style={{ padding: '10px 12px' }}>{b.fileCount}</td>
                   <td style={{ padding: '10px 12px' }}>{b.importedCount}</td>
