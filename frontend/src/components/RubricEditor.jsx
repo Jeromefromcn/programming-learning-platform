@@ -10,7 +10,7 @@ export default function RubricEditor({ dimensions, onChange }) {
   }
 
   function addDim() {
-    onChange([...dimensions, { name: '', weight: '' }]);
+    onChange([...dimensions, { name: '', weight: '', description: '' }]);
   }
 
   function removeDim(index) {
@@ -21,33 +21,44 @@ export default function RubricEditor({ dimensions, onChange }) {
     <div style={{ marginTop: 12 }}>
       <h4 style={{ marginBottom: 8 }}>Scoring Dimensions</h4>
       {dimensions.map((d, i) => (
-        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <div key={i} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+            <input
+              placeholder="Dimension name"
+              value={d.name}
+              onChange={e => updateDim(i, 'name', e.target.value)}
+              style={{ flex: 2, padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            <input
+              type="number"
+              placeholder="Weight (0–1)"
+              min="0"
+              max="1"
+              step="0.01"
+              value={d.weight}
+              onChange={e => updateDim(i, 'weight', e.target.value)}
+              style={{ width: 120, padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4 }}
+            />
+            <button
+              type="button"
+              onClick={() => removeDim(i)}
+              style={{
+                padding: '4px 10px', color: '#c62828', background: 'none',
+                border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+              }}
+            >
+              Remove
+            </button>
+          </div>
           <input
-            placeholder="Dimension name"
-            value={d.name}
-            onChange={e => updateDim(i, 'name', e.target.value)}
-            style={{ flex: 2, padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4 }}
-          />
-          <input
-            type="number"
-            placeholder="Weight (0–1)"
-            min="0"
-            max="1"
-            step="0.01"
-            value={d.weight}
-            onChange={e => updateDim(i, 'weight', e.target.value)}
-            style={{ width: 120, padding: '6px 8px', border: '1px solid #ccc', borderRadius: 4 }}
-          />
-          <button
-            type="button"
-            onClick={() => removeDim(i)}
+            placeholder="Description (optional)"
+            value={d.description || ''}
+            onChange={e => updateDim(i, 'description', e.target.value)}
             style={{
-              padding: '4px 10px', color: '#c62828', background: 'none',
-              border: '1px solid #c62828', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+              width: '100%', padding: '6px 8px', border: '1px solid #ccc',
+              borderRadius: 4, boxSizing: 'border-box',
             }}
-          >
-            Remove
-          </button>
+          />
         </div>
       ))}
       <button
