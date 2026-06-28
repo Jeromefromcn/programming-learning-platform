@@ -140,9 +140,30 @@ class ImportBatchServiceTest {
         service.exportBatchCsv(1L, response);
 
         String[] lines = response.getContentAsString().split("\\r?\\n");
-        // Header must have exactly: Student Name, Display Name, Exercise Title, Total Score
-        assertThat(lines[0]).isEqualTo("Student Name,Display Name,Exercise Title,Total Score");
+        // Header must have exactly: Student Name, Display Name, Exercise Title, Total Score, Tutor Comment
+        assertThat(lines[0]).isEqualTo("Student Name,Display Name,Exercise Title,Total Score,Tutor Comment");
         assertThat(lines[1]).contains("bob").contains("90.00");
+    }
+
+    @Test
+    void exportBatchCsv_includesTutorCommentAsLastColumn() throws IOException {
+        Exercise ex = exercise(4L, 40L, "Exercise With Comment");
+        ExerciseVersion ver = version(40L, "{\"rubric\":{\"dimensions\":[]}}");
+        Submission sub = submission("dave", 4L, null, new BigDecimal("88.00"), null);
+        sub.setTutorComment("Good effort");
+
+        when(submissionRepository.findByBatchIdAndDeletedFalseOrderByStudentNameAsc(1L))
+            .thenReturn(List.of(sub));
+        when(exerciseRepository.findById(4L)).thenReturn(Optional.of(ex));
+        when(versionRepository.findById(40L)).thenReturn(Optional.of(ver));
+        when(exerciseRepository.findAllById(List.of(4L))).thenReturn(List.of(ex));
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        service.exportBatchCsv(1L, response);
+
+        String[] lines = response.getContentAsString().split("\\r?\\n");
+        assertThat(lines[0]).endsWith(",Tutor Comment");
+        assertThat(lines[1]).endsWith(",Good effort");
     }
 
     @Test
@@ -183,9 +204,9 @@ class ImportBatchServiceTest {
         String[] lines = response.getContentAsString().split("\\r?\\n");
         // Header has the dim column
         assertThat(lines[0]).contains("Logic (100%)");
-        // carol's row: student name, empty display, title, empty dim score, empty total
+        // carol's row: student name, empty display, title, empty dim score, empty total, empty comment
         assertThat(lines[1]).startsWith("carol,");
-        // Both the dim score and total score are empty (ends with ",,")
-        assertThat(lines[1]).endsWith(",,");
+        // Both the dim score and total score are empty, plus empty comment column (ends with ",,,")
+        assertThat(lines[1]).endsWith(",,,");
     }
 }

@@ -128,6 +128,7 @@ public class ImportBatchService {
                     }
                 }
                 row.add(totalScore);
+                row.add(sub.getTutorComment() != null ? sub.getTutorComment() : "");
                 printer.printRecord(row);
             }
         }
@@ -162,6 +163,7 @@ public class ImportBatchService {
             h.add(d.name() + " (" + (int) Math.round(d.weight() * 100) + "%)");
         }
         h.add("Total Score");
+        h.add("Tutor Comment");
         return h;
     }
 
