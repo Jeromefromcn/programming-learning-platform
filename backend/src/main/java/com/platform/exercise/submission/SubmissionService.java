@@ -1,5 +1,6 @@
 package com.platform.exercise.submission;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PageResponse;
 import com.platform.exercise.common.PlatformException;
@@ -28,8 +29,11 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -45,6 +49,7 @@ public class SubmissionService {
     private final FileImportService fileImportService;
     private final ImportBatchCache batchCache;
     private final ImportBatchRepository importBatchRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public ImportResponseDto importFiles(List<MultipartFile> files, Long importedByUserId) throws IOException {
@@ -107,6 +112,26 @@ public class SubmissionService {
 
         if (!problems.isEmpty()) {
             return ImportResponseDto.validationFailed(problems);
+        }
+
+        // Phase 1b: all files must belong to the same exercise
+        Map<String, Long> fileExerciseIds = new LinkedHashMap<>();
+        for (FileEntry e : entries) {
+            try {
+                long eid = objectMapper.readTree(e.bytes()).path("exerciseId").asLong(-1L);
+                if (eid > 0) fileExerciseIds.put(e.name(), eid);
+            } catch (Exception ignored) {}
+        }
+        Set<Long> distinctIds = new LinkedHashSet<>(fileExerciseIds.values());
+        if (distinctIds.size() > 1) {
+            long expected = distinctIds.iterator().next();
+            List<ImportProblemDto> mismatchProblems = fileExerciseIds.entrySet().stream()
+                .filter(entry -> entry.getValue() != expected)
+                .map(entry -> new ImportProblemDto(entry.getKey(),
+                    "Exercise mismatch: this file belongs to exercise #" + entry.getValue()
+                    + ", but the batch expects exercise #" + expected))
+                .toList();
+            return ImportResponseDto.validationFailed(mismatchProblems);
         }
 
         // --- Phase 2: commit — create batch row, then save each submission ---
