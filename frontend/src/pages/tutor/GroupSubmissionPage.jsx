@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { importBatchApi, batchExportUrl } from '../../api/importBatchApi';
+import { importBatchApi, downloadBatchExport } from '../../api/importBatchApi';
 import Pagination from '../../components/Pagination';
 
 const STATUS_COLORS = {
@@ -52,7 +52,7 @@ export default function GroupSubmissionPage() {
         `Not all submissions in this batch are graded.\nExport anyway?`
       )) return;
     }
-    window.location.href = batchExportUrl(batch.id);
+    downloadBatchExport(batch.id);
   }
 
   return (

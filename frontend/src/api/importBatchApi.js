@@ -5,5 +5,16 @@ export const importBatchApi = {
     axiosInstance.get('/v1/import-batches', { params }).then(r => r.data),
 };
 
-export const batchExportUrl = (batchId) =>
-  `/api/v1/import-batches/${batchId}/export`;
+export async function downloadBatchExport(batchId) {
+  const response = await axiosInstance.get(`/v1/import-batches/${batchId}/export`, {
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(response.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `batch_${batchId}_export.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

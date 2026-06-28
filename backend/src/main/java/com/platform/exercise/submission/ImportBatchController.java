@@ -27,7 +27,6 @@ public class ImportBatchController {
     }
 
     @GetMapping("/{id}/export")
-    @PreAuthorize("permitAll()")
     public void exportCsv(@PathVariable Long id, HttpServletResponse response) throws IOException {
         importBatchService.exportBatchCsv(id, response);
     }
