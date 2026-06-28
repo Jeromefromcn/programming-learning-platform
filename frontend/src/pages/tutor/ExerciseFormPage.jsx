@@ -268,7 +268,7 @@ export default function ExerciseFormPage() {
                   setBlocklyConfig(prev => ({ ...prev, showCodeView: show }))}
               />
 
-              <h4 style={{ marginTop: 24 }}>Grading Configuration</h4>
+              <h3 style={{ marginTop: 24 }}>Grading Configuration</h3>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
                 <input
                   type="checkbox"
@@ -344,7 +344,7 @@ export default function ExerciseFormPage() {
                 onTestCasesChange={cases =>
                   setPythonConfig(prev => ({ ...prev, testCases: cases }))}
               />
-              <h4 style={{ marginTop: 24 }}>Grading Configuration</h4>
+              <h3 style={{ marginTop: 24 }}>Grading Configuration</h3>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
                 <input
                   type="checkbox"
