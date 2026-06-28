@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -177,8 +178,29 @@ public class SubmissionService {
             .filter(s -> !s.isDeleted())
             .orElseThrow(() -> new PlatformException(ErrorCode.SUBMISSION_NOT_FOUND,
                 "Submission not found."));
-        sub.setTutorScore(req.tutorScore());
+
+        if (req.dimensionScores() != null && !req.dimensionScores().isEmpty()) {
+            // Rubric mode: compute weighted total, store dimension breakdown
+            double weightedSum = req.dimensionScores().stream()
+                .mapToDouble(d -> d.score() * d.weight())
+                .sum();
+            BigDecimal total = BigDecimal.valueOf(weightedSum).setScale(2, java.math.RoundingMode.HALF_UP);
+            sub.setTutorScore(total);
+            try {
+                sub.setTutorGradeDetails(
+                    new com.fasterxml.jackson.databind.ObjectMapper()
+                        .writeValueAsString(req.dimensionScores()));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new RuntimeException("Failed to serialize dimension scores", e);
+            }
+        } else if (req.tutorScore() != null) {
+            // Instant-feedback mode: direct score override
+            sub.setTutorScore(req.tutorScore());
+            sub.setTutorGradeDetails(null);
+        }
+
         sub.setTutorComment(req.tutorComment());
+        sub.setGraded(true);
         submissionRepository.save(sub);
         return getById(id);
     }
