@@ -104,3 +104,39 @@ it('unchecking the toggle sends showResult false', async () => {
     )
   );
 });
+
+it('renders the view-answer checkbox for Blockly and defaults canViewAnswer false', async () => {
+  await renderCreateForm('BLOCKLY');
+  fillRequiredFields();
+
+  expect(screen.getByLabelText(/view the answer/i)).not.toBeChecked();
+
+  fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          canViewAnswer: false,
+          answerWorkspaceXml: expect.any(String),
+        }),
+      })
+    )
+  );
+});
+
+it('checking view-answer sends canViewAnswer true', async () => {
+  await renderCreateForm('BLOCKLY');
+  fillRequiredFields();
+
+  fireEvent.click(screen.getByLabelText(/view the answer/i));
+  fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({ canViewAnswer: true }),
+      })
+    )
+  );
+});
