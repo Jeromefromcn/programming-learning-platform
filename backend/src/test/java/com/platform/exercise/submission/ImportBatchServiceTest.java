@@ -172,7 +172,7 @@ class ImportBatchServiceTest {
 
         service.deleteBatch(5L);
 
-        verify(submissionRepository).deleteAllByBatchId(5L);
+        verify(submissionRepository).softDeleteAllByBatchId(5L);
         verify(importBatchRepository).deleteById(5L);
     }
 

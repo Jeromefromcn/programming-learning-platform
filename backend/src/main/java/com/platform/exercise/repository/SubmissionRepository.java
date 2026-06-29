@@ -116,6 +116,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     @Modifying(clearAutomatically = true)
     @Transactional
-    @Query("DELETE FROM Submission s WHERE s.batchId = :batchId")
-    int deleteAllByBatchId(@Param("batchId") Long batchId);
+    @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
+    int softDeleteAllByBatchId(@Param("batchId") Long batchId);
 }

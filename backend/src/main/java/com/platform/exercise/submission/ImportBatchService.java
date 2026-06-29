@@ -185,7 +185,7 @@ public class ImportBatchService {
         if (!importBatchRepository.existsById(id)) {
             throw new PlatformException(ErrorCode.BATCH_NOT_FOUND, "Batch not found.");
         }
-        submissionRepository.deleteAllByBatchId(id);
+        submissionRepository.softDeleteAllByBatchId(id);
         importBatchRepository.deleteById(id);
     }
 

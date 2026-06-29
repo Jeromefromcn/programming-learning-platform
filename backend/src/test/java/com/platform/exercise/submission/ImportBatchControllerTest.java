@@ -105,7 +105,7 @@ class ImportBatchControllerTest {
         assertThat(importBatchRepository.findById(batch.getId())).isEmpty();
         assertThat(submissionRepository.findAll().stream()
             .filter(s -> batch.getId().equals(s.getBatchId()))
-            .toList()).isEmpty();
+            .allMatch(s -> s.isDeleted())).isTrue();
     }
 
     @Test
