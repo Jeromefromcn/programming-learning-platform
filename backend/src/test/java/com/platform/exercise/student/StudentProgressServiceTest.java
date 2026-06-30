@@ -43,11 +43,11 @@ class StudentProgressServiceTest {
         exercise.setId(10L);
         exercise.setTitle("Loops");
 
-        when(submissionRepository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(
-                eq(42L), any())).thenReturn(new PageImpl<>(List.of(sub)));
+        when(submissionRepository.findByUserIdFiltered(
+                eq(42L), isNull(), isNull(), isNull(), any())).thenReturn(new PageImpl<>(List.of(sub)));
         when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
 
-        StudentProgressDto result = service.getProgress(42L, 0, 20);
+        StudentProgressDto result = service.getProgress(42L, 0, 20, null, null, null);
 
         assertEquals(1, result.submissions().totalElements());
         ProgressSubmissionDto item = result.submissions().content().get(0);
@@ -59,12 +59,25 @@ class StudentProgressServiceTest {
 
     @Test
     void getProgress_emptyWhenNoSubmissions() {
-        when(submissionRepository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(
-                eq(99L), any())).thenReturn(new PageImpl<>(List.of()));
+        when(submissionRepository.findByUserIdFiltered(
+                eq(99L), isNull(), isNull(), isNull(), any())).thenReturn(new PageImpl<>(List.of()));
         when(exerciseRepository.findAllById(List.of())).thenReturn(List.of());
 
-        StudentProgressDto result = service.getProgress(99L, 0, 20);
+        StudentProgressDto result = service.getProgress(99L, 0, 20, null, null, null);
 
         assertEquals(0, result.submissions().totalElements());
+    }
+
+    @Test
+    void getProgress_passesFiltersThroughToRepository() {
+        when(submissionRepository.findByUserIdFiltered(
+                eq(42L), eq("fizz"), eq("PYTHON"), eq("STUDENT"), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(exerciseRepository.findAllById(List.of())).thenReturn(List.of());
+
+        service.getProgress(42L, 0, 20, "fizz", "PYTHON", "STUDENT");
+
+        verify(submissionRepository).findByUserIdFiltered(
+                eq(42L), eq("fizz"), eq("PYTHON"), eq("STUDENT"), any());
     }
 }
