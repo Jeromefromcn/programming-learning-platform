@@ -846,9 +846,9 @@ class SecurityMetricsTest {
         securityMetrics.recordRateLimitExceeded("login");
         securityMetrics.recordRateLimitExceeded("import");
 
-        assertThat(meterRegistry.find("security.rate_limit.exceeded").tag("endpoint", "login").counter().count())
+        assertThat(meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "login").counter().count())
             .isEqualTo(2.0);
-        assertThat(meterRegistry.find("security.rate_limit.exceeded").tag("endpoint", "import").counter().count())
+        assertThat(meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "import").counter().count())
             .isEqualTo(1.0);
     }
 
@@ -904,7 +904,7 @@ public class SecurityMetrics {
     }
 
     public void recordRateLimitExceeded(String endpoint) {
-        Counter.builder("security.rate_limit.exceeded")
+        Counter.builder("security.rate.limit.exceeded")
             .tag("endpoint", endpoint)
             .register(meterRegistry)
             .increment();
@@ -987,7 +987,7 @@ Add this test method:
                 .content(body))
             .andExpect(status().isTooManyRequests());
 
-        Counter counter = meterRegistry.find("security.rate_limit.exceeded").tag("endpoint", "login").counter();
+        Counter counter = meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "login").counter();
         assertThat(counter).isNotNull();
         assertThat(counter.count()).isGreaterThanOrEqualTo(1.0);
     }
