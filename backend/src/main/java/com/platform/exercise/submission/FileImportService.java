@@ -9,6 +9,7 @@ import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.BusinessMetrics;
 import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
@@ -50,6 +51,7 @@ public class FileImportService {
     private final ImportBatchCache batchCache;
     private final ObjectMapper objectMapper;
     private final SecurityMetrics securityMetrics;
+    private final BusinessMetrics businessMetrics;
 
     List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
         List<ImportResultDto> results = new ArrayList<>();
@@ -161,6 +163,7 @@ public class FileImportService {
             sub.setAutoGradeDetails(autoGradeDetails);
             sub.setImportBatchId(batchId);
             Submission saved = submissionRepository.save(sub);
+            businessMetrics.recordSubmissionCreated(exerciseType);
 
             return logAndReturn(batchId, ImportResultDto.imported(filename, saved.getId(), studentName,
                 exercise.getTitle(), exerciseType, autoScore, versionMismatch));

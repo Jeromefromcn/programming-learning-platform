@@ -7,6 +7,7 @@ import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.BusinessMetrics;
 import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
@@ -37,6 +38,7 @@ class FileImportServiceTest {
     @Mock PythonGrader pythonGrader;
     @Mock ImportBatchCache batchCache;
     @Mock SecurityMetrics securityMetrics;
+    @Mock BusinessMetrics businessMetrics;
 
     private FileImportService service;
 
@@ -54,7 +56,8 @@ class FileImportServiceTest {
     void setUp() {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
-            blocklyGrader, pythonGrader, batchCache, new ObjectMapper(), securityMetrics);
+            blocklyGrader, pythonGrader, batchCache, new ObjectMapper(),
+            securityMetrics, businessMetrics);
     }
 
     private void stubExercise(long exerciseId, long versionId) {
@@ -89,6 +92,23 @@ class FileImportServiceTest {
         assertThat(result.status()).isEqualTo("IMPORTED");
         assertThat(result.submissionId()).isEqualTo(42L);
         assertThat(result.autoScore()).isEqualByComparingTo(new BigDecimal("100.00"));
+    }
+
+    @Test
+    void processSingleFile_validJson_recordsSubmissionCreatedMetric() {
+        stubExercise(1L, 10L);
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        verify(businessMetrics).recordSubmissionCreated("BLOCKLY");
     }
 
     @Test
