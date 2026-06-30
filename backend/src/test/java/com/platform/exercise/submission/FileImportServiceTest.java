@@ -150,6 +150,14 @@ class FileImportServiceTest {
         verify(securityMetrics).recordImportRejected("path_traversal");
     }
 
+    @Test
+    void processZip_tooManyFiles_recordsSecurityMetricAndThrows() {
+        byte[] zipBytes = buildZipWithManyEntries(501);
+        assertThatThrownBy(() -> service.processZip(zipBytes, "batch-1"))
+            .hasMessageContaining("more than 500 files");
+        verify(securityMetrics).recordImportRejected("too_large");
+    }
+
     private byte[] blocklyJsonWithXml(long exerciseId) {
         return String.format("""
             {"platformVersion":"1.0","exerciseId":%d,"exerciseTitle":"Hello","exerciseType":"BLOCKLY",
@@ -204,6 +212,22 @@ class FileImportServiceTest {
             zos.putNextEntry(new java.util.zip.ZipEntry(entryName));
             zos.write(content);
             zos.closeEntry();
+            zos.close();
+            return bos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private byte[] buildZipWithManyEntries(int count) {
+        try {
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(bos);
+            for (int i = 0; i < count; i++) {
+                zos.putNextEntry(new java.util.zip.ZipEntry("file" + i + ".json"));
+                zos.write("{}".getBytes());
+                zos.closeEntry();
+            }
             zos.close();
             return bos.toByteArray();
         } catch (Exception e) {

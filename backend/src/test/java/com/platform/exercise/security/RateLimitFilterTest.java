@@ -1,6 +1,5 @@
 package com.platform.exercise.security;
 
-import com.platform.exercise.metrics.SecurityMetrics;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
