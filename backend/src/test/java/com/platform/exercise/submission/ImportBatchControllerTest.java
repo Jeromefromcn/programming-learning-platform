@@ -3,6 +3,7 @@ package com.platform.exercise.submission;
 import com.platform.exercise.domain.*;
 import com.platform.exercise.exercise.SandboxClient;
 import com.platform.exercise.repository.*;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ class ImportBatchControllerTest {
     @Autowired ExerciseVersionRepository versionRepository;
     @Autowired UserRepository userRepository;
     @Autowired PasswordEncoder passwordEncoder;
+    @Autowired EntityManager entityManager;
     @MockBean SandboxClient sandboxClient;
 
     private Long exerciseId;
@@ -96,16 +98,22 @@ class ImportBatchControllerTest {
     @WithMockUser(username = "batch_tutor", roles = "TUTOR")
     void delete_returnsNoContent_andHardDeletesBatchAndAllSubmissions() throws Exception {
         ImportBatch batch = savedBatch();
-        submissionRepository.save(submission("Alice", batch.getId(), false));
-        submissionRepository.save(submission("Bob", batch.getId(), true)); // already soft-deleted
+        Long aliceId = submissionRepository.save(submission("Alice", batch.getId(), false)).getId();
+        Long bobId = submissionRepository.save(submission("Bob", batch.getId(), true)).getId(); // already soft-deleted
 
         mockMvc.perform(delete("/v1/import-batches/{id}", batch.getId()))
             .andExpect(status().isNoContent());
+        entityManager.flush();
+        entityManager.clear();
 
         assertThat(importBatchRepository.findById(batch.getId())).isEmpty();
-        assertThat(submissionRepository.findAll().stream()
-            .filter(s -> batch.getId().equals(s.getBatchId()))
-            .allMatch(s -> s.isDeleted())).isTrue();
+        Submission alice = submissionRepository.findById(aliceId).orElseThrow();
+        Submission bob = submissionRepository.findById(bobId).orElseThrow();
+        assertThat(alice.isDeleted()).isTrue();
+        assertThat(bob.isDeleted()).isTrue();
+        // the deleted batch must not leave a dangling FK on surviving (soft-deleted) submissions
+        assertThat(alice.getBatchId()).isNull();
+        assertThat(bob.getBatchId()).isNull();
     }
 
     @Test
