@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.exercise.SandboxClient;
 import com.platform.exercise.exercise.VerifyRequest;
-import io.micrometer.core.instrument.MeterRegistry;
+import com.platform.exercise.metrics.GradingMetrics;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,7 @@ public class PythonGrader {
 
     private final SandboxClient sandboxClient;
     private final ObjectMapper objectMapper;
-    private final MeterRegistry meterRegistry;
+    private final GradingMetrics gradingMetrics;
 
     public record Result(BigDecimal autoScore, String autoGradeDetailsJson) {}
 
@@ -37,12 +37,12 @@ public class PythonGrader {
                 ));
             }
 
-            Timer.Sample sample = Timer.start(meterRegistry);
+            Timer.Sample sample = gradingMetrics.startPythonTimer();
             JsonNode sandboxResponse;
             try {
                 sandboxResponse = sandboxClient.execute(studentCode, testCases, timeLimitSeconds);
             } finally {
-                sample.stop(meterRegistry.timer("sandbox.grading.duration"));
+                gradingMetrics.stopPythonTimer(sample);
             }
 
             JsonNode results = sandboxResponse.path("results");
@@ -62,11 +62,14 @@ public class PythonGrader {
                 "{\"type\":\"PYTHON\",\"results\":%s,\"passedCount\":%d,\"totalCount\":%d}",
                 results.toString(), passed, total);
 
+            gradingMetrics.recordPythonResult("completed");
             return new Result(score, details);
 
         } catch (SandboxClient.SandboxUnavailableException e) {
+            gradingMetrics.recordPythonResult("sandbox_unavailable");
             return new Result(null, "{\"type\":\"PYTHON\",\"error\":\"SANDBOX_UNAVAILABLE\"}");
         } catch (Exception e) {
+            gradingMetrics.recordPythonResult("error");
             return new Result(null,
                 "{\"type\":\"PYTHON\",\"error\":\"" + e.getMessage() + "\"}");
         }

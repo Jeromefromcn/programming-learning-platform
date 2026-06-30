@@ -1,0 +1,87 @@
+{
+  "annotations": { "list": [] },
+  "description": "Grading Pipeline — Blockly (Rhino) and Python (nsjail) grading throughput, failures, and latency",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        { "expr": "sum(rate(grading_blockly_result_total[1m]))", "legendFormat": "Blockly/s" },
+        { "expr": "sum(rate(grading_python_result_total[1m]))", "legendFormat": "Python/s" }
+      ],
+      "title": "Grading Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate(grading_blockly_result_total{outcome!~\"passed|failed\"}[1m])) by (outcome)",
+          "legendFormat": "blockly: {{outcome}}"
+        },
+        {
+          "expr": "sum(rate(grading_python_result_total{outcome!=\"completed\"}[1m])) by (outcome)",
+          "legendFormat": "python: {{outcome}}"
+        }
+      ],
+      "title": "Failure Breakdown",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grading_blockly_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "Blockly p95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grading_python_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "Python p95"
+        }
+      ],
+      "title": "p95 Grading Duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        { "expr": "sum(increase(grading_python_result_total{outcome=\"sandbox_unavailable\"}[5m]))" }
+      ],
+      "title": "Sandbox Unavailable (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(rate(grading_blockly_result_total{outcome=\"passed\"}[15m])) / sum(rate(grading_blockly_result_total{outcome=~\"passed|failed\"}[15m]))"
+        }
+      ],
+      "title": "Blockly Pass Rate",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["exercise-platform", "grading"],
+  "title": "Grading Pipeline",
+  "uid": "exercise-platform-grading",
+  "version": 1
+}

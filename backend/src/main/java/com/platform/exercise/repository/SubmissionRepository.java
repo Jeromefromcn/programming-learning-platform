@@ -97,4 +97,10 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     int hardDeleteByFilters(@Param("before") LocalDateTime before,
                             @Param("exerciseId") Long exerciseId,
                             @Param("source") String source);
+
+    @Query("""
+            SELECT COUNT(DISTINCT s.studentName) FROM Submission s
+            WHERE s.exportTimestamp >= :since AND s.deleted = false
+            """)
+    long countDistinctActiveStudentsSince(@Param("since") LocalDateTime since);
 }

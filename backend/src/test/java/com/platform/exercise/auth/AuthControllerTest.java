@@ -4,6 +4,7 @@ import com.platform.exercise.domain.User;
 import com.platform.exercise.domain.User.Role;
 import com.platform.exercise.domain.User.UserStatus;
 import com.platform.exercise.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,6 +29,7 @@ class AuthControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private MeterRegistry meterRegistry;
 
     @BeforeEach
     void seed() {
@@ -198,5 +201,25 @@ class AuthControllerTest {
                 .content("{\"username\":\"expireduser\",\"password\":\"password123\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accessToken").isNotEmpty());
+    }
+
+    @Test
+    void login_wrongPassword_recordsBadCredentialsMetric() throws Exception {
+        double before = countAuthFailures("bad_credentials");
+
+        // Distinct X-Forwarded-For so this call lands in its own RateLimitFilter bucket,
+        // isolated from the login-call budget shared by the rest of this test class.
+        mockMvc.perform(post("/v1/auth/login")
+                .header("X-Forwarded-For", "203.0.113.42")
+                .contentType("application/json")
+                .content("{\"username\":\"nonexistent-metrics-test-user\",\"password\":\"wrong\"}"))
+            .andExpect(status().is4xxClientError());
+
+        assertThat(countAuthFailures("bad_credentials")).isEqualTo(before + 1);
+    }
+
+    private double countAuthFailures(String reason) {
+        var counter = meterRegistry.find("security.auth.failure").tag("reason", reason).counter();
+        return counter == null ? 0.0 : counter.count();
     }
 }

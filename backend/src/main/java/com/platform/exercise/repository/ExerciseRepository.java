@@ -13,6 +13,8 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
 
     Optional<Exercise> findByIdAndDeletedFalse(Long id);
 
+    long countByDeletedFalseAndStatus(Exercise.Status status);
+
     @Query(value = """
             SELECT e.id, e.title, e.type, e.difficulty, e.category_id,
                    c.name AS category_name,

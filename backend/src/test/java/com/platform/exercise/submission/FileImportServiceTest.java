@@ -7,6 +7,8 @@ import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.BusinessMetrics;
+import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -35,6 +37,8 @@ class FileImportServiceTest {
     @Mock BlocklyGrader blocklyGrader;
     @Mock PythonGrader pythonGrader;
     @Mock ImportBatchCache batchCache;
+    @Mock SecurityMetrics securityMetrics;
+    @Mock BusinessMetrics businessMetrics;
 
     private FileImportService service;
 
@@ -52,7 +56,8 @@ class FileImportServiceTest {
     void setUp() {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
-            blocklyGrader, pythonGrader, batchCache, new ObjectMapper());
+            blocklyGrader, pythonGrader, batchCache, new ObjectMapper(),
+            securityMetrics, businessMetrics);
     }
 
     private void stubExercise(long exerciseId, long versionId) {
@@ -90,6 +95,23 @@ class FileImportServiceTest {
     }
 
     @Test
+    void processSingleFile_validJson_recordsSubmissionCreatedMetric() {
+        stubExercise(1L, 10L);
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        verify(businessMetrics).recordSubmissionCreated("BLOCKLY");
+    }
+
+    @Test
     void processSingleFile_missingRequiredField_returnsFailed() {
         byte[] badJson = "{\"exerciseId\":1}".getBytes();
         ImportResultDto result = service.processSingleFile("bad.json", badJson, "batch-1", false);
@@ -117,6 +139,7 @@ class FileImportServiceTest {
 
         assertThat(result.status()).isEqualTo("DUPLICATE");
         verify(batchCache).put("batch-1", "dup.json", content);
+        verify(securityMetrics).recordImportRejected("duplicate");
     }
 
     @Test
@@ -124,6 +147,15 @@ class FileImportServiceTest {
         byte[] zipBytes = buildZipWithEntry("../evil.json", "{\"x\":1}".getBytes());
         assertThatThrownBy(() -> service.processZip(zipBytes, "batch-1"))
             .hasMessageContaining("Path traversal");
+        verify(securityMetrics).recordImportRejected("path_traversal");
+    }
+
+    @Test
+    void processZip_tooManyFiles_recordsSecurityMetricAndThrows() {
+        byte[] zipBytes = buildZipWithManyEntries(501);
+        assertThatThrownBy(() -> service.processZip(zipBytes, "batch-1"))
+            .hasMessageContaining("more than 500 files");
+        verify(securityMetrics).recordImportRejected("too_large");
     }
 
     private byte[] blocklyJsonWithXml(long exerciseId) {
@@ -180,6 +212,22 @@ class FileImportServiceTest {
             zos.putNextEntry(new java.util.zip.ZipEntry(entryName));
             zos.write(content);
             zos.closeEntry();
+            zos.close();
+            return bos.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private byte[] buildZipWithManyEntries(int count) {
+        try {
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(bos);
+            for (int i = 0; i < count; i++) {
+                zos.putNextEntry(new java.util.zip.ZipEntry("file" + i + ".json"));
+                zos.write("{}".getBytes());
+                zos.closeEntry();
+            }
             zos.close();
             return bos.toByteArray();
         } catch (Exception e) {

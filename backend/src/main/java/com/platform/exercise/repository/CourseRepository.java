@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
 
+    long countByDeletedFalse();
+
     @Query(value = """
             SELECT c.id, c.name, c.description, c.created_at,
                    COUNT(DISTINCT ce.exercise_id) AS exercise_count,

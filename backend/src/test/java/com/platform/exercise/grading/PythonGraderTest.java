@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.platform.exercise.exercise.SandboxClient;
+import com.platform.exercise.metrics.GradingMetrics;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +43,7 @@ class PythonGraderTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        grader = new PythonGrader(sandboxClient, mapper, meterRegistry);
+        grader = new PythonGrader(sandboxClient, mapper, new GradingMetrics(meterRegistry));
     }
 
     private ObjectNode makeResults(boolean... passes) {
@@ -94,7 +95,7 @@ class PythonGraderTest {
         when(sandboxClient.execute(any(), any(), anyInt())).thenReturn(makeResults(true, true));
         grader.grade("def f(n): return n", PYTHON_CONFIG);
 
-        Timer timer = meterRegistry.find("sandbox.grading.duration").timer();
+        Timer timer = meterRegistry.find("grading.python.duration").timer();
         assertThat(timer).isNotNull();
         assertThat(timer.count()).isEqualTo(1);
     }
@@ -105,8 +106,36 @@ class PythonGraderTest {
             .thenThrow(new SandboxClient.SandboxUnavailableException("down"));
         grader.grade("def f(n): return n", PYTHON_CONFIG);
 
-        Timer timer = meterRegistry.find("sandbox.grading.duration").timer();
+        Timer timer = meterRegistry.find("grading.python.duration").timer();
         assertThat(timer).isNotNull();
         assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    void grade_allPass_recordsCompletedOutcome() {
+        when(sandboxClient.execute(any(), any(), anyInt())).thenReturn(makeResults(true, true));
+        grader.grade("def f(n): return n", PYTHON_CONFIG);
+
+        assertThat(meterRegistry.find("grading.python.result").tag("outcome", "completed").counter().count())
+            .isEqualTo(1.0);
+    }
+
+    @Test
+    void grade_sandboxUnavailable_recordsSandboxUnavailableOutcome() {
+        when(sandboxClient.execute(any(), any(), anyInt()))
+            .thenThrow(new SandboxClient.SandboxUnavailableException("down"));
+        grader.grade("def f(n): return n", PYTHON_CONFIG);
+
+        assertThat(meterRegistry.find("grading.python.result").tag("outcome", "sandbox_unavailable").counter().count())
+            .isEqualTo(1.0);
+    }
+
+    @Test
+    void grade_unexpectedException_recordsErrorOutcome() {
+        when(sandboxClient.execute(any(), any(), anyInt())).thenThrow(new RuntimeException("boom"));
+        grader.grade("def f(n): return n", PYTHON_CONFIG);
+
+        assertThat(meterRegistry.find("grading.python.result").tag("outcome", "error").counter().count())
+            .isEqualTo(1.0);
     }
 }
