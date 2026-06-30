@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
+import { exerciseApi } from '../../api/exerciseApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
 import Breadcrumb from '../../components/Breadcrumb';
 import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
@@ -12,6 +13,8 @@ export default function SubmissionDetailPage() {
   const monacoRef = useRef(null);
 
   const [submission, setSubmission] = useState(null);
+  const [rubricDimensions, setRubricDimensions] = useState(null); // null = auto type
+  const [dimensionScores, setDimensionScores] = useState({});
   const [tutorScore, setTutorScore] = useState('');
   const [tutorComment, setTutorComment] = useState('');
   const [saving, setSaving] = useState(false);
@@ -21,8 +24,28 @@ export default function SubmissionDetailPage() {
   useEffect(() => {
     submissionApi.getById(id).then(data => {
       setSubmission(data);
-      if (data.tutorScore != null) setTutorScore(String(data.tutorScore));
       if (data.tutorComment) setTutorComment(data.tutorComment);
+
+      // Load exercise to get rubric config
+      exerciseApi.get(data.exerciseId).then(ex => {
+        const config = ex.currentVersion?.config;
+        if (config && config.showResult === false && config.rubric?.dimensions?.length) {
+          setRubricDimensions(config.rubric.dimensions);
+          // Pre-fill from saved tutorGradeDetails if present
+          if (data.tutorGradeDetails) {
+            try {
+              const saved = JSON.parse(data.tutorGradeDetails);
+              const map = {};
+              saved.forEach(d => { map[d.name] = String(d.score); });
+              setDimensionScores(map);
+            } catch { /* ignore */ }
+          }
+        } else {
+          if (data.tutorScore != null) setTutorScore(String(data.tutorScore));
+        }
+      }).catch(() => {
+        if (data.tutorScore != null) setTutorScore(String(data.tutorScore));
+      });
     });
   }, [id]);
 
@@ -43,18 +66,38 @@ export default function SubmissionDetailPage() {
   }, [submission]);
 
   async function handleSave() {
-    const score = parseFloat(tutorScore);
-    if (isNaN(score) || score < 0 || score > 100) {
-      setSaveError('Score must be a number between 0 and 100.');
-      return;
-    }
     setSaveError('');
     setSaving(true);
     try {
-      const data = await submissionApi.grade(id, {
-        tutorScore: score,
-        tutorComment: tutorComment || null,
-      });
+      let payload;
+      if (rubricDimensions) {
+        // Validate each dimension score
+        for (const d of rubricDimensions) {
+          const val = parseFloat(dimensionScores[d.name]);
+          if (isNaN(val) || val < 0 || val > 100) {
+            setSaveError(`Score for "${d.name}" must be a number between 0 and 100.`);
+            setSaving(false);
+            return;
+          }
+        }
+        payload = {
+          dimensionScores: rubricDimensions.map(d => ({
+            name: d.name,
+            weight: d.weight,
+            score: parseFloat(dimensionScores[d.name]),
+          })),
+          tutorComment: tutorComment || null,
+        };
+      } else {
+        const score = parseFloat(tutorScore);
+        if (isNaN(score) || score < 0 || score > 100) {
+          setSaveError('Score must be a number between 0 and 100.');
+          setSaving(false);
+          return;
+        }
+        payload = { tutorScore: score, tutorComment: tutorComment || null };
+      }
+      const data = await submissionApi.grade(id, payload);
       setSubmission(data);
     } catch (err) {
       if (isReauthCancelled(err)) return;
@@ -136,7 +179,17 @@ export default function SubmissionDetailPage() {
         ← Back to Submissions
       </button>
 
-      <h1 style={{ marginBottom: 4 }}>{submission.exerciseTitle}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+        <h1 style={{ margin: 0 }}>{submission.exerciseTitle}</h1>
+        {submission.graded && (
+          <span style={{
+            background: '#1976d2', color: '#fff', borderRadius: 12,
+            padding: '3px 12px', fontSize: 12, fontWeight: 700,
+          }}>
+            Tutor Graded
+          </span>
+        )}
+      </div>
       <p style={{ color: '#555', margin: '0 0 16px' }}>
         {submission.exerciseType} · {submission.studentName}
       </p>
@@ -176,16 +229,37 @@ export default function SubmissionDetailPage() {
       </div>
 
       <h2 style={{ marginBottom: 12 }}>Manual Grade</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 400 }}>
-        <label style={{ fontSize: 14 }}>
-          Score (0–100):
-          <input
-            type="number" min="0" max="100" step="0.01"
-            value={tutorScore}
-            onChange={e => setTutorScore(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: '6px 10px', marginTop: 4, borderRadius: 4, border: '1px solid #ccc' }}
-          />
-        </label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 480 }}>
+        {rubricDimensions ? (
+          <>
+            {rubricDimensions.map(d => (
+              <label key={d.name} style={{ fontSize: 14 }}>
+                {d.name} <span style={{ color: '#888', fontSize: 12 }}>(weight: {d.weight})</span>:
+                {d.description && (
+                  <span style={{ display: 'block', color: '#666', fontSize: 12, marginTop: 2 }}>
+                    {d.description}
+                  </span>
+                )}
+                <input
+                  type="number" min="0" max="100" step="0.01"
+                  value={dimensionScores[d.name] ?? ''}
+                  onChange={e => setDimensionScores(prev => ({ ...prev, [d.name]: e.target.value }))}
+                  style={{ display: 'block', width: '100%', padding: '6px 10px', marginTop: 4, borderRadius: 4, border: '1px solid #ccc' }}
+                />
+              </label>
+            ))}
+          </>
+        ) : (
+          <label style={{ fontSize: 14 }}>
+            Score (0–100):
+            <input
+              type="number" min="0" max="100" step="0.01"
+              value={tutorScore}
+              onChange={e => setTutorScore(e.target.value)}
+              style={{ display: 'block', width: '100%', padding: '6px 10px', marginTop: 4, borderRadius: 4, border: '1px solid #ccc' }}
+            />
+          </label>
+        )}
         <label style={{ fontSize: 14 }}>
           Comment (max 500 chars):
           <textarea

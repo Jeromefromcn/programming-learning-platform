@@ -11,7 +11,9 @@ import com.platform.exercise.metrics.BusinessMetrics;
 import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
+import com.platform.exercise.repository.ImportBatchRepository;
 import com.platform.exercise.repository.SubmissionRepository;
+import com.platform.exercise.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,8 @@ class FileImportServiceTest {
     @Mock BlocklyGrader blocklyGrader;
     @Mock PythonGrader pythonGrader;
     @Mock ImportBatchCache batchCache;
+    @Mock UserRepository userRepository;
+    @Mock ImportBatchRepository importBatchRepository;
     @Mock SecurityMetrics securityMetrics;
     @Mock BusinessMetrics businessMetrics;
 
@@ -57,7 +61,7 @@ class FileImportServiceTest {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
             blocklyGrader, pythonGrader, batchCache, new ObjectMapper(),
-            securityMetrics, businessMetrics);
+            userRepository, importBatchRepository, securityMetrics, businessMetrics);
     }
 
     private void stubExercise(long exerciseId, long versionId) {
@@ -86,6 +90,8 @@ class FileImportServiceTest {
         when(blocklyGrader.grade(anyString(), anyString()))
             .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
                 "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+        when(userRepository.findByUsername("Alex")).thenReturn(Optional.empty());
+        when(importBatchRepository.findByUuid("batch-1")).thenReturn(Optional.empty());
 
         ImportResultDto result = service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
 
@@ -177,6 +183,8 @@ class FileImportServiceTest {
         when(blocklyGrader.grade(anyString(), anyString()))
             .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
                 "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+        when(userRepository.findByUsername("Alex")).thenReturn(Optional.empty());
+        when(importBatchRepository.findByUuid("batch-1")).thenReturn(Optional.empty());
 
         service.processSingleFile("alex.json", blocklyJsonWithXml(1L), "batch-1", false);
 
@@ -197,6 +205,8 @@ class FileImportServiceTest {
         when(blocklyGrader.grade(anyString(), anyString()))
             .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
                 "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+        when(userRepository.findByUsername("Alex")).thenReturn(Optional.empty());
+        when(importBatchRepository.findByUuid("batch-1")).thenReturn(Optional.empty());
 
         service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { exerciseApi } from '../../api/exerciseApi';
+import { formatDateTime } from '../../utils/dateFormat';
 
 /**
  * Props:
@@ -49,7 +50,7 @@ export default function VersionHistoryPanel({ exerciseId, versions = [], onRollb
                 v{v.versionNumber}
               </td>
               <td style={{ padding: 8, fontSize: 13, color: '#555' }}>
-                {new Date(v.createdAt).toLocaleString()}
+                {formatDateTime(v.createdAt)}
               </td>
               <td style={{ padding: 8 }}>
                 {v.isCurrent && (

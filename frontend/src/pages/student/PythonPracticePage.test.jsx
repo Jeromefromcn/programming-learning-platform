@@ -4,6 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PythonPracticePage from './PythonPracticePage';
 import { studentApi } from '../../api/studentApi';
 
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { role: 'STUDENT' } }),
+  AuthProvider: ({ children }) => children,
+}));
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');

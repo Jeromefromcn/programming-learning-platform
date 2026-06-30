@@ -23,11 +23,16 @@ test('renders page title and filter form', async () => {
   expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
 });
 
-test('purge buttons are disabled before preview', async () => {
+test('purge button is disabled before preview', async () => {
   render(<DataManagementPage />);
   await waitFor(() => expect(exerciseApi.list).toHaveBeenCalledTimes(1));
   expect(screen.getByRole('button', { name: /soft delete/i })).toBeDisabled();
-  expect(screen.getByRole('button', { name: /hard delete/i })).toBeDisabled();
+});
+
+test('does not render a hard delete button', async () => {
+  render(<DataManagementPage />);
+  await waitFor(() => expect(exerciseApi.list).toHaveBeenCalledTimes(1));
+  expect(screen.queryByRole('button', { name: /hard delete/i })).not.toBeInTheDocument();
 });
 
 test('preview button is disabled when before date is empty', async () => {
@@ -51,7 +56,6 @@ test('clicking preview fetches count and enables purge buttons', async () => {
 
   expect(await screen.findByText(/5 submissions match/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /soft delete/i })).not.toBeDisabled();
-  expect(screen.getByRole('button', { name: /hard delete/i })).not.toBeDisabled();
 });
 
 test('changing filter after preview disables purge buttons again', async () => {
@@ -85,25 +89,6 @@ test('soft delete calls purge with SOFT mode and shows toast', async () => {
     mode: 'SOFT',
   }));
   expect(await screen.findByText(/5 submissions soft-deleted/i)).toBeInTheDocument();
-});
-
-test('hard delete calls purge with HARD mode and shows toast', async () => {
-  render(<DataManagementPage />);
-  await waitFor(() => expect(exerciseApi.list).toHaveBeenCalledTimes(1));
-
-  fireEvent.change(screen.getByLabelText(/before date/i), { target: { value: '2025-01-01' } });
-  fireEvent.click(screen.getByRole('button', { name: /preview/i }));
-  await screen.findByText(/5 submissions match/i);
-
-  fireEvent.click(screen.getByRole('button', { name: /hard delete/i }));
-
-  await waitFor(() => expect(submissionApi.purge).toHaveBeenCalledWith({
-    before: '2025-01-01',
-    exerciseId: undefined,
-    source: undefined,
-    mode: 'HARD',
-  }));
-  expect(await screen.findByText(/5 submissions permanently deleted/i)).toBeInTheDocument();
 });
 
 test('cancelled confirm does not call purge', async () => {

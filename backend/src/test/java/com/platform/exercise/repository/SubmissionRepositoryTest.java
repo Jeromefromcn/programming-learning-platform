@@ -2,6 +2,7 @@ package com.platform.exercise.repository;
 
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.domain.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
+
+import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -94,11 +97,11 @@ class SubmissionRepositoryTest {
         repository.save(sub("STUDENT", userId7, exerciseId));
         repository.save(sub("IMPORT", null, exerciseId));
 
-        var imports = repository.findFiltered(null, null, "IMPORT", PageRequest.of(0, 20));
+        var imports = repository.findFiltered(null, null, "IMPORT", null, PageRequest.of(0, 20));
         assertEquals(1, imports.getTotalElements());
         assertEquals("IMPORT", imports.getContent().get(0).getSource());
 
-        var all = repository.findFiltered(null, null, null, PageRequest.of(0, 20));
+        var all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
         assertEquals(2, all.getTotalElements());
     }
 
@@ -183,5 +186,92 @@ class SubmissionRepositoryTest {
         assertEquals(1, affected);
         assertFalse(repository.findById(s1.getId()).isPresent());
         assertTrue(repository.findById(s2.getId()).isPresent());
+    }
+
+    @Test
+    void findByUserIdAndDeletedFalse_paginates_userSubmissions() {
+        // Save 3 subs for userId7, 1 for userId8
+        for (int i = 0; i < 3; i++) repository.save(sub("STUDENT", userId7, exerciseId));
+        repository.save(sub("STUDENT", userId8, exerciseId));
+
+        Page<Submission> page = repository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(
+                userId7, PageRequest.of(0, 2));
+        assertEquals(3, page.getTotalElements());
+        assertEquals(2, page.getContent().size());
+    }
+
+    @Test
+    void findByUserIdAndDeletedFalse_excludesDeletedRows() {
+        Submission s = sub("STUDENT", userId7, exerciseId);
+        s.setDeleted(true);
+        repository.save(s);
+        repository.save(sub("STUDENT", userId7, exerciseId));
+
+        Page<Submission> page = repository.findByUserIdAndDeletedFalseOrderByCreatedAtDesc(
+                userId7, PageRequest.of(0, 20));
+        assertEquals(1, page.getTotalElements());
+    }
+
+    @Test
+    void findFiltered_byBatchId_returnsOnlyMatchingBatch() {
+        ImportBatch batch = new ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(userId7);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        Long batchId = ((ImportBatch) em.persistAndFlush(batch)).getId();
+
+        Submission withBatch = repository.save(sub("IMPORT", null, exerciseId));
+        Submission noBatch = repository.save(sub("IMPORT", null, exerciseId));
+
+        em.getEntityManager().createNativeQuery(
+            "UPDATE submissions SET batch_id = :b WHERE id = :id")
+            .setParameter("b", batchId)
+            .setParameter("id", withBatch.getId())
+            .executeUpdate();
+        em.flush(); em.clear();
+
+        Page<Submission> result = repository.findFiltered(null, null, null, batchId, PageRequest.of(0, 20));
+        assertEquals(1, result.getTotalElements());
+        assertEquals(withBatch.getId(), result.getContent().get(0).getId());
+
+        Page<Submission> all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
+        assertEquals(2, all.getTotalElements());
+    }
+
+    @Test
+    void countGradedGroupByBatchId_returnsBulkStats() {
+        // Persist a real ImportBatch so the FK constraint is satisfied in H2.
+        ImportBatch batch = new ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(userId7);
+        batch.setFileCount(3);
+        batch.setImportedCount(3);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        Long batchA = ((ImportBatch) em.persistAndFlush(batch)).getId();
+
+        Submission s1 = repository.save(sub("IMPORT", null, exerciseId));
+        Submission s2 = repository.save(sub("IMPORT", null, exerciseId));
+        Submission s3 = repository.save(sub("IMPORT", null, exerciseId));
+        em.getEntityManager().createNativeQuery(
+            "UPDATE submissions SET batch_id = :b WHERE id IN (:ids)")
+            .setParameter("b", batchA)
+            .setParameter("ids", List.of(s1.getId(), s2.getId(), s3.getId()))
+            .executeUpdate();
+        em.getEntityManager().createNativeQuery(
+            "UPDATE submissions SET graded = true WHERE id = :id")
+            .setParameter("id", s1.getId())
+            .executeUpdate();
+        em.flush(); em.clear();
+
+        List<Object[]> rows = repository.countGradedGroupByBatchId(List.of(batchA));
+        assertEquals(1, rows.size());
+        Object[] row = rows.get(0);
+        assertEquals(batchA, ((Number) row[0]).longValue());
+        assertEquals(3L, ((Number) row[1]).longValue()); // total
+        assertEquals(1L, ((Number) row[2]).longValue()); // graded
     }
 }

@@ -53,6 +53,31 @@ class MigrationTest {
     }
 
     @Test
+    void v10AddsImportBatchesTableAndSubmissionColumns() throws Exception {
+        try (Connection conn = dataSource.getConnection()) {
+            // import_batches table exists
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES " +
+                    "WHERE TABLE_SCHEMA='PUBLIC' AND LOWER(TABLE_NAME)='import_batches'")) {
+                ResultSet rs = stmt.executeQuery();
+                rs.next();
+                assertEquals(1, rs.getInt(1), "import_batches table should exist");
+            }
+            // submissions has new columns
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT LOWER(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS " +
+                    "WHERE TABLE_SCHEMA='PUBLIC' AND LOWER(TABLE_NAME)='submissions'")) {
+                ResultSet rs = stmt.executeQuery();
+                Set<String> cols = new HashSet<>();
+                while (rs.next()) cols.add(rs.getString(1));
+                assertTrue(cols.contains("batch_id"), "submissions.batch_id should exist");
+                assertTrue(cols.contains("tutor_grade_details"), "submissions.tutor_grade_details should exist");
+                assertTrue(cols.contains("graded"), "submissions.graded should exist");
+            }
+        }
+    }
+
+    @Test
     void v8AddsExerciseDraftsTableAndSubmissionSourceColumns() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement(

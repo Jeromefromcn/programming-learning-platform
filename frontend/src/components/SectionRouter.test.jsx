@@ -40,6 +40,9 @@ vi.mock('../pages/tutor/SubmissionImportPage', () => ({
 vi.mock('../pages/tutor/SubmissionDetailPage', () => ({
   default: () => <div data-testid="page">SubmissionDetailPage</div>,
 }));
+vi.mock('../pages/tutor/GroupSubmissionPage', () => ({
+  default: () => <div data-testid="page">GroupSubmissionPage</div>,
+}));
 vi.mock('../pages/admin/UserManagementPage', () => ({
   default: () => <div data-testid="page">UserManagementPage</div>,
 }));
@@ -133,4 +136,14 @@ test('users + SUPER_ADMIN renders UserManagementPage', () => {
 test('settings + SUPER_ADMIN renders GlobalSettingsPage', () => {
   wrap('settings', 'SUPER_ADMIN', '/admin/settings');
   expect(screen.getByTestId('page')).toHaveTextContent('GlobalSettingsPage');
+});
+
+test('group-submissions + TUTOR renders GroupSubmissionPage', () => {
+  wrap('group-submissions', 'TUTOR', '/tutor/group-submissions');
+  expect(screen.getByTestId('page')).toHaveTextContent('GroupSubmissionPage');
+});
+
+test('group-submissions/import + TUTOR renders SubmissionImportPage', () => {
+  wrap('group-submissions', 'TUTOR', '/tutor/group-submissions/import');
+  expect(screen.getByTestId('page')).toHaveTextContent('SubmissionImportPage');
 });

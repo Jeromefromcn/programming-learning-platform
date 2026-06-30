@@ -94,6 +94,13 @@ it('unchecking the toggle sends showResult false', async () => {
   fireEvent.click(checkbox);
   expect(checkbox).not.toBeChecked();
 
+  // Manual grading mode requires at least one dimension with weights summing to 1.0
+  fireEvent.click(screen.getByRole('button', { name: /\+ Add Dimension/i }));
+  const nameInputs = screen.getAllByPlaceholderText('Dimension name');
+  fireEvent.change(nameInputs[0], { target: { value: 'Correctness' } });
+  const weightInputs = screen.getAllByPlaceholderText('Weight (0–1)');
+  fireEvent.change(weightInputs[0], { target: { value: '1' } });
+
   fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
 
   await waitFor(() =>

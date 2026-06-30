@@ -27,7 +27,6 @@ public class StudentProgressController {
         User user = (authentication.getPrincipal() instanceof User u) ? u
                 : userRepository.findByUsername(authentication.getName())
                         .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
-        return ResponseEntity.ok(
-                studentProgressService.getProgress(user.getId(), user.getDisplayName(), page, size));
+        return ResponseEntity.ok(studentProgressService.getProgress(user.getId(), page, size));
     }
 }

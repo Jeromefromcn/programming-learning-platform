@@ -3,6 +3,11 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom';
 import BlocklyPracticePage from './BlocklyPracticePage';
 
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { role: 'STUDENT' } }),
+  AuthProvider: ({ children }) => children,
+}));
+
 vi.mock('../../api/studentApi', () => ({
   studentApi: {
     getDraft: vi.fn(),
@@ -180,14 +185,7 @@ describe('Export payload', () => {
 
     render(<BlocklyPracticePage exercise={makeExercise()} />);
 
-    // Open export modal
     fireEvent.click(screen.getByRole('button', { name: /export/i }));
-    // Enter student name
-    fireEvent.change(screen.getByLabelText(/your name/i), { target: { value: 'Alice' } });
-    // Click Download JSON
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /download json/i }));
-    });
 
     expect(global.__lastBlobParts).toBeDefined();
     const json = JSON.parse(global.__lastBlobParts[0]);
