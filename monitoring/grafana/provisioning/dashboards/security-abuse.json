@@ -1,0 +1,59 @@
+{
+  "annotations": { "list": [] },
+  "description": "Security & Abuse — rate limiting, auth failures, and malicious import attempts",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        { "expr": "sum(rate(security_rate_limit_exceeded_total[1m])) by (endpoint)", "legendFormat": "{{endpoint}}" }
+      ],
+      "title": "Rate-Limit Hits/min by Endpoint",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        { "expr": "sum(rate(security_auth_failure_total[1m])) by (reason)", "legendFormat": "{{reason}}" }
+      ],
+      "title": "Auth Failures/min by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        { "expr": "sum(rate(security_import_rejected_total[1m])) by (reason)", "legendFormat": "{{reason}}" }
+      ],
+      "title": "Import Rejections/min by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        { "expr": "sum(increase(security_import_rejected_total{reason=\"path_traversal\"}[1h]))" }
+      ],
+      "title": "Path-Traversal Attempts (1h)",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["exercise-platform", "security"],
+  "title": "Security & Abuse",
+  "uid": "exercise-platform-security",
+  "version": 1
+}
