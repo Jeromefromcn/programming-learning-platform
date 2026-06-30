@@ -74,7 +74,7 @@ Rename to `delete_returnsNoContent_andSoftDeletesBatchAndAllSubmissions`. Assert
 - Response is `204`.
 - `importBatchRepository.findById(batch.getId())` still returns the row (it's not physically gone), with `isDeleted() == true`.
 - `importBatchRepository.findByIdAndDeletedFalse(batch.getId())` returns empty.
-- Submissions previously in the batch: `isDeleted() == true`, `getBatchId() == null` (unchanged from the `V11` fix).
+- Submissions previously in the batch: `isDeleted() == true`, `getBatchId()` unchanged (still equals the batch's id). Now that batch deletion is soft, the `import_batches` row is never physically removed, so `V11`'s `ON DELETE SET NULL` trigger never fires — `batch_id` is deliberately left intact rather than nulled, preserving the audit trail (consistent with how `Submission`'s own soft-delete leaves `exerciseId`/`gradedVersionId` untouched). No FK risk: the parent row always exists once deletion is soft.
 
 ### Backend — `ImportBatchServiceTest.java` (update)
 - `deleteBatch` calls `softDeleteAllByBatchId` then saves the batch with `deleted = true` (no longer calls `importBatchRepository.deleteById`).

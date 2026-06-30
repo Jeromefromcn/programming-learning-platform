@@ -253,9 +253,12 @@ Replace the existing `delete_returnsNoContent_andHardDeletesBatchAndAllSubmissio
         Submission bob = submissionRepository.findById(bobId).orElseThrow();
         assertThat(alice.isDeleted()).isTrue();
         assertThat(bob.isDeleted()).isTrue();
-        // the deleted batch must not leave a dangling FK on surviving (soft-deleted) submissions
-        assertThat(alice.getBatchId()).isNull();
-        assertThat(bob.getBatchId()).isNull();
+        // batch deletion is now soft (the import_batches row is preserved), so V11's
+        // ON DELETE SET NULL never fires here — batch_id is deliberately left intact
+        // for audit-trail purposes, consistent with how Submission's other FKs
+        // (exerciseId, gradedVersionId) survive its own soft-delete.
+        assertThat(alice.getBatchId()).isEqualTo(batch.getId());
+        assertThat(bob.getBatchId()).isEqualTo(batch.getId());
     }
 
     @Test
