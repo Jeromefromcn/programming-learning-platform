@@ -5,6 +5,7 @@ import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
+import com.platform.exercise.domain.ImportBatch;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.domain.User;
 import com.platform.exercise.repository.ExerciseRepository;
@@ -167,18 +168,22 @@ class ImportBatchServiceTest {
     }
 
     @Test
-    void deleteBatch_callsDeleteAllByBatchIdThenDeleteById() {
-        when(importBatchRepository.existsById(5L)).thenReturn(true);
+    void deleteBatch_softDeletesSubmissionsThenSoftDeletesBatch() {
+        ImportBatch batch = new ImportBatch();
+        batch.setId(5L);
+        batch.setDeleted(false);
+        when(importBatchRepository.findByIdAndDeletedFalse(5L)).thenReturn(Optional.of(batch));
 
         service.deleteBatch(5L);
 
         verify(submissionRepository).softDeleteAllByBatchId(5L);
-        verify(importBatchRepository).deleteById(5L);
+        assertThat(batch.isDeleted()).isTrue();
+        verify(importBatchRepository).save(batch);
     }
 
     @Test
-    void deleteBatch_throwsBatchNotFound_whenBatchAbsent() {
-        when(importBatchRepository.existsById(99L)).thenReturn(false);
+    void deleteBatch_throwsBatchNotFound_whenBatchAbsentOrAlreadyDeleted() {
+        when(importBatchRepository.findByIdAndDeletedFalse(99L)).thenReturn(Optional.empty());
 
         PlatformException ex = assertThrows(PlatformException.class,
             () -> service.deleteBatch(99L));

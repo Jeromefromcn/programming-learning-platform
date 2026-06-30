@@ -43,7 +43,7 @@ public class ImportBatchService {
 
     public PageResponse<ImportBatchDto> list(Long batchId, String gradedStatus, int page, int size) {
         // Load all batches (university scale — manageable without SQL-level gradedStatus filter)
-        List<ImportBatch> all = importBatchRepository.findAllByOrderByCreatedAtDesc();
+        List<ImportBatch> all = importBatchRepository.findAllByDeletedFalseOrderByCreatedAtDesc();
         if (batchId != null) {
             all = all.stream().filter(b -> b.getId().equals(batchId)).toList();
         }
@@ -182,11 +182,11 @@ public class ImportBatchService {
 
     @Transactional
     public void deleteBatch(Long id) {
-        if (!importBatchRepository.existsById(id)) {
-            throw new PlatformException(ErrorCode.BATCH_NOT_FOUND, "Batch not found.");
-        }
+        ImportBatch batch = importBatchRepository.findByIdAndDeletedFalse(id)
+            .orElseThrow(() -> new PlatformException(ErrorCode.BATCH_NOT_FOUND, "Batch not found."));
         submissionRepository.softDeleteAllByBatchId(id);
-        importBatchRepository.deleteById(id);
+        batch.setDeleted(true);
+        importBatchRepository.save(batch);
     }
 
     // package-private for unit test

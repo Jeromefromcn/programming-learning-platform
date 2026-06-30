@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface ImportBatchRepository extends JpaRepository<ImportBatch, Long> {
     Optional<ImportBatch> findByUuid(String uuid);
     List<ImportBatch> findAllByOrderByCreatedAtDesc();
+    Optional<ImportBatch> findByIdAndDeletedFalse(Long id);
+    List<ImportBatch> findAllByDeletedFalseOrderByCreatedAtDesc();
 }
