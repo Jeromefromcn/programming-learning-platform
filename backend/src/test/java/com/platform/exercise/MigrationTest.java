@@ -78,6 +78,19 @@ class MigrationTest {
     }
 
     @Test
+    void v12AddsImportBatchesSoftDeleteColumn() throws Exception {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                 "SELECT LOWER(COLUMN_NAME) FROM INFORMATION_SCHEMA.COLUMNS " +
+                 "WHERE TABLE_SCHEMA='PUBLIC' AND LOWER(TABLE_NAME)='import_batches'")) {
+            ResultSet rs = stmt.executeQuery();
+            Set<String> cols = new HashSet<>();
+            while (rs.next()) cols.add(rs.getString(1));
+            assertTrue(cols.contains("is_deleted"), "import_batches.is_deleted should exist");
+        }
+    }
+
+    @Test
     void v8AddsExerciseDraftsTableAndSubmissionSourceColumns() throws Exception {
         try (Connection conn = dataSource.getConnection()) {
             try (PreparedStatement stmt = conn.prepareStatement(
