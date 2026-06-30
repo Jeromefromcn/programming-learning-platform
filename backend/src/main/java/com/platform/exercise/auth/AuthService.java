@@ -4,6 +4,7 @@ import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.RefreshToken;
 import com.platform.exercise.domain.User;
+import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.RefreshTokenRepository;
 import com.platform.exercise.repository.UserRepository;
 import com.platform.exercise.security.JwtUtil;
@@ -31,22 +32,29 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityMetrics securityMetrics;
 
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         User user = userRepository.findByUsername(request.username())
-            .orElseThrow(() -> new PlatformException(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials"));
+            .orElseThrow(() -> {
+                securityMetrics.recordAuthFailure("bad_credentials");
+                return new PlatformException(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
+            });
 
         if (user.isExpired()) {
+            securityMetrics.recordAuthFailure("account_expired");
             throw new PlatformException(ErrorCode.ACCOUNT_EXPIRED,
                 "Account has expired — please contact an administrator");
         }
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            securityMetrics.recordAuthFailure("bad_credentials");
             throw new PlatformException(ErrorCode.INVALID_CREDENTIALS, "Invalid credentials");
         }
 
         if (user.getStatus() == User.UserStatus.DISABLED) {
+            securityMetrics.recordAuthFailure("account_disabled");
             throw new PlatformException(ErrorCode.ACCOUNT_DISABLED,
                 "Account disabled — please contact an administrator");
         }
