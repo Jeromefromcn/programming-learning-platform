@@ -1,5 +1,8 @@
 package com.platform.exercise.security;
 
+import com.platform.exercise.metrics.SecurityMetrics;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -10,6 +13,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,6 +33,9 @@ class RateLimitFilterTest {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     @Test
     void eleventhLoginRequest_returns429() throws Exception {
@@ -70,5 +77,26 @@ class RateLimitFilterTest {
         MockHttpServletResponse blocked = new MockHttpServletResponse();
         filter.doFilter(req, blocked, new MockFilterChain());
         assertEquals(429, blocked.getStatus());
+    }
+
+    @Test
+    void loginRateLimitExceeded_recordsSecurityMetric() throws Exception {
+        String body = "{\"username\":\"x\",\"password\":\"y\"}";
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/v1/auth/login")
+                    .header("X-Forwarded-For", "10.0.0.77")
+                    .contentType("application/json")
+                    .content(body))
+                .andExpect(status().is4xxClientError());
+        }
+        mockMvc.perform(post("/v1/auth/login")
+                .header("X-Forwarded-For", "10.0.0.77")
+                .contentType("application/json")
+                .content(body))
+            .andExpect(status().isTooManyRequests());
+
+        Counter counter = meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "login").counter();
+        assertThat(counter).isNotNull();
+        assertThat(counter.count()).isGreaterThanOrEqualTo(1.0);
     }
 }

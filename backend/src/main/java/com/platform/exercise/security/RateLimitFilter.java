@@ -2,6 +2,7 @@ package com.platform.exercise.security;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.platform.exercise.metrics.SecurityMetrics;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final SecurityMetrics securityMetrics;
 
     private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
             .maximumSize(10_000)
@@ -47,7 +49,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             String ip = resolveIp(request);
             Bucket bucket = buckets.get(ip, k -> newBucket(10, 1));
             if (!bucket.tryConsume(1)) {
-                writeRateLimitResponse(response, "Too many login attempts. Try again in 1 minute.");
+                writeRateLimitResponse(response, "Too many login attempts. Try again in 1 minute.", "login");
                 return;
             }
         }
@@ -59,7 +61,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             if (userId != null) {
                 Bucket bucket = buckets.get("import:" + userId, k -> newBucket(5, 1));
                 if (!bucket.tryConsume(1)) {
-                    writeRateLimitResponse(response, "Import rate limit exceeded. Try again in 1 minute.");
+                    writeRateLimitResponse(response, "Import rate limit exceeded. Try again in 1 minute.", "import");
                     return;
                 }
             }
@@ -72,7 +74,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             if (userId != null) {
                 Bucket bucket = buckets.get("submit:" + userId, k -> newBucket(20, 1));
                 if (!bucket.tryConsume(1)) {
-                    writeRateLimitResponse(response, "Submit rate limit exceeded. Try again in 1 minute.");
+                    writeRateLimitResponse(response, "Submit rate limit exceeded. Try again in 1 minute.", "submit");
                     return;
                 }
             }
@@ -106,7 +108,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
-    private void writeRateLimitResponse(HttpServletResponse response, String message) throws IOException {
+    private void writeRateLimitResponse(HttpServletResponse response, String message, String endpoint) throws IOException {
+        securityMetrics.recordRateLimitExceeded(endpoint);
         response.setStatus(429);
         response.setContentType("application/json");
         response.getWriter().write(
