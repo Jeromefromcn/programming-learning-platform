@@ -6,10 +6,10 @@ import {
 } from './sectionConfig';
 
 describe('SECTIONS', () => {
-  test('contains all 8 expected section keys', () => {
+  test('contains all 9 expected section keys', () => {
     const keys = SECTIONS.map(s => s.key);
     expect(keys).toEqual([
-      'exercises', 'progress', 'courses', 'categories', 'submissions', 'users', 'settings', 'data',
+      'exercises', 'progress', 'courses', 'categories', 'submissions', 'group-submissions', 'users', 'settings', 'data',
     ]);
   });
 });
@@ -20,15 +20,15 @@ describe('sectionsForRole', () => {
     expect(keys).toEqual(['exercises', 'progress']);
   });
 
-  test('TUTOR gets exercises, courses, categories, submissions', () => {
+  test('TUTOR gets exercises, courses, categories, submissions, group-submissions', () => {
     const keys = sectionsForRole('TUTOR').map(s => s.key);
-    expect(keys).toEqual(['exercises', 'courses', 'categories', 'submissions']);
+    expect(keys).toEqual(['exercises', 'courses', 'categories', 'submissions', 'group-submissions']);
   });
 
   test('SUPER_ADMIN gets all sections except progress', () => {
     const keys = sectionsForRole('SUPER_ADMIN').map(s => s.key);
     expect(keys).toEqual([
-      'exercises', 'courses', 'categories', 'submissions', 'users', 'settings', 'data',
+      'exercises', 'courses', 'categories', 'submissions', 'group-submissions', 'users', 'settings', 'data',
     ]);
   });
 });

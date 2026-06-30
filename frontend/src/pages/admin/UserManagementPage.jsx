@@ -12,15 +12,21 @@ const STATUS_BADGE = { ACTIVE: '#2e7d32', DISABLED: '#c62828' };
 function fmtDate(dt) {
   if (!dt) return null;
   const d = new Date(dt);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 function fmtDateTime(dt) {
   if (!dt) return '—';
-  return new Date(dt).toLocaleString('zh-CN', {
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
-  });
+  const d = new Date(dt);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 function isExpired(dt) {
@@ -43,6 +49,7 @@ export default function UserManagementPage() {
   const [showImport, setShowImport] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [searchTrigger, setSearchTrigger] = useState(0);
   const [resettingId, setResettingId] = useState(null);
   const [expirationInput, setExpirationInput] = useState({});
   const today = new Date().toISOString().split('T')[0];
@@ -63,13 +70,14 @@ export default function UserManagementPage() {
     }
   }
 
-  useEffect(() => { load(); }, [page, nameFilter, roleFilter, statusFilter]);
+  useEffect(() => { load(); }, [page, nameFilter, roleFilter, statusFilter, searchTrigger]);
 
   function handleSearch() {
     setPage(0);
     setNameFilter(pendingName);
     setRoleFilter(pendingRole);
     setStatusFilter(pendingStatus);
+    setSearchTrigger(s => s + 1);
   }
 
   async function handleRoleChange(id, role) {

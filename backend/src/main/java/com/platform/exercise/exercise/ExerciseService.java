@@ -190,10 +190,13 @@ public class ExerciseService {
                         "Blockly exercises must have at least one allowed block");
             }
         } else if (type == ExerciseType.PYTHON) {
-            JsonNode testCases = config.get("testCases");
-            if (testCases == null || !testCases.isArray() || testCases.isEmpty()) {
-                throw new PlatformException(ErrorCode.VALIDATION_ERROR,
-                        "Python exercises must have at least one test case");
+            boolean showResult = config.path("showResult").asBoolean(true); // default true
+            if (showResult) {
+                JsonNode testCases = config.get("testCases");
+                if (testCases == null || !testCases.isArray() || testCases.isEmpty()) {
+                    throw new PlatformException(ErrorCode.VALIDATION_ERROR,
+                            "Python exercises must have at least one test case");
+                }
             }
         }
     }

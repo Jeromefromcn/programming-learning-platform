@@ -6,7 +6,7 @@ export default function DataManagementPage() {
   const [exercises, setExercises] = useState([]);
   const [form, setForm] = useState({ before: '', exerciseId: '', source: '' });
   const [previewCount, setPreviewCount] = useState(null);
-  const [loading, setLoading] = useState({ preview: false, soft: false, hard: false });
+  const [loading, setLoading] = useState({ preview: false, soft: false });
   const [toast, setToast] = useState('');
 
   useEffect(() => {
@@ -38,28 +38,22 @@ export default function DataManagementPage() {
     }
   }
 
-  async function handlePurge(mode) {
+  async function handlePurge() {
     const sourceLabel = form.source || 'all sources';
     const exLabel = exercises.find(e => String(e.id) === form.exerciseId)?.title ?? 'all exercises';
-    const msg = mode === 'HARD'
-      ? `Permanently delete ${previewCount} submissions created before ${form.before} (exercise: ${exLabel}, source: ${sourceLabel})? This cannot be undone and rows will be removed from the database.`
-      : `Soft-delete ${previewCount} submissions created before ${form.before} (exercise: ${exLabel}, source: ${sourceLabel})? Records will be marked as deleted but remain in the database.`;
+    const msg = `Soft-delete ${previewCount} submissions created before ${form.before} (exercise: ${exLabel}, source: ${sourceLabel})? Records will be marked as deleted but remain in the database.`;
 
     if (!window.confirm(msg)) return;
 
-    const key = mode === 'HARD' ? 'hard' : 'soft';
-    setLoading(l => ({ ...l, [key]: true }));
+    setLoading(l => ({ ...l, soft: true }));
     try {
-      const res = await submissionApi.purge({ ...buildParams(), mode });
-      const count = res.deletedCount;
-      showToast(mode === 'HARD'
-        ? `${count} submissions permanently deleted.`
-        : `${count} submissions soft-deleted.`);
+      const res = await submissionApi.purge({ ...buildParams(), mode: 'SOFT' });
+      showToast(`${res.deletedCount} submissions soft-deleted.`);
       setPreviewCount(null);
     } catch {
       showToast('Purge failed — please try again.');
     } finally {
-      setLoading(l => ({ ...l, [key]: false }));
+      setLoading(l => ({ ...l, soft: false }));
     }
   }
 
@@ -153,7 +147,7 @@ export default function DataManagementPage() {
 
         <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
           <button
-            onClick={() => handlePurge('SOFT')}
+            onClick={handlePurge}
             disabled={purgeDisabled || loading.soft}
             style={{
               background: purgeDisabled ? '#ccc' : '#388e3c', color: '#fff', border: 'none',
@@ -163,21 +157,6 @@ export default function DataManagementPage() {
           >
             {loading.soft ? 'Deleting…' : `Soft Delete${previewCount !== null ? ` (${previewCount} records)` : ''}`}
           </button>
-
-          <div>
-            <button
-              onClick={() => handlePurge('HARD')}
-              disabled={purgeDisabled || loading.hard}
-              style={{
-                background: purgeDisabled ? '#ccc' : '#c62828', color: '#fff', border: 'none',
-                padding: '8px 20px', borderRadius: 4, fontSize: 14,
-                cursor: (purgeDisabled || loading.hard) ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {loading.hard ? 'Deleting…' : `Hard Delete${previewCount !== null ? ` (${previewCount} records)` : ''}`}
-            </button>
-            <div style={{ fontSize: 11, color: '#c62828', marginTop: 4 }}>Permanent — cannot be undone</div>
-          </div>
         </div>
       </div>
     </div>

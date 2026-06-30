@@ -39,6 +39,7 @@ export default function SubmissionImportPage() {
     try {
       const data = await submissionApi.importFiles(formData);
       setResponse(data);
+      if (!data.ok) return; // problems are shown below
     } catch (err) {
       alert(err.response?.data?.error?.message || 'Import failed.');
     } finally {
@@ -70,18 +71,18 @@ export default function SubmissionImportPage() {
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <Breadcrumb items={[
-        { label: 'Submissions', to: '/tutor/submissions' },
+        { label: 'Group Submissions', to: '/tutor/group-submissions' },
         { label: 'Import' },
       ]} />
       <div style={{ padding: '12px 20px 0' }}>
         <button
-          onClick={() => navigate('/tutor/submissions')}
+          onClick={() => navigate('/tutor/group-submissions')}
           style={{
             background: 'none', border: '1px solid #ccc', borderRadius: 4,
             padding: '5px 12px', fontSize: 13, cursor: 'pointer', color: '#555',
           }}
         >
-          ← Back to Submissions
+          ← Back to Group Submissions
         </button>
       </div>
       <h1>Import Submissions</h1>
@@ -124,6 +125,19 @@ export default function SubmissionImportPage() {
             {summary.duplicates} duplicates &nbsp;·&nbsp;
             {summary.failed} failed
           </strong>
+        </div>
+      )}
+
+      {response && !response.ok && response.problems && (
+        <div style={{ marginBottom: 16, padding: '12px 16px', background: '#ffebee', borderRadius: 4, border: '1px solid #ef9a9a' }}>
+          <strong style={{ color: '#c62828' }}>Import failed — fix the following issues and re-import:</strong>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+            {response.problems.map((p, i) => (
+              <li key={i} style={{ color: '#c62828', fontSize: 13, marginTop: 4 }}>
+                <strong>{p.filename}</strong>: {p.reason}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

@@ -31,6 +31,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
               AND (:source IS NULL OR source = :source)
+              AND (:batchId IS NULL OR batch_id = :batchId)
               AND is_deleted = false
             ORDER BY created_at DESC
             """,
@@ -39,6 +40,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             WHERE (:exerciseId IS NULL OR exercise_id = :exerciseId)
               AND (:studentName IS NULL OR student_name LIKE CONCAT('%', :studentName, '%'))
               AND (:source IS NULL OR source = :source)
+              AND (:batchId IS NULL OR batch_id = :batchId)
               AND is_deleted = false
             """,
             nativeQuery = true)
@@ -46,10 +48,22 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             @Param("exerciseId") Long exerciseId,
             @Param("studentName") String studentName,
             @Param("source") String source,
+            @Param("batchId") Long batchId,
             Pageable pageable);
 
     List<Submission> findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(
             Long userId, Long exerciseId);
+
+    Page<Submission> findByUserIdAndDeletedFalseOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    @Query(value = """
+            SELECT s.batch_id, COUNT(*) AS total,
+                   SUM(CASE WHEN s.graded = 1 THEN 1 ELSE 0 END) AS graded
+            FROM submissions s
+            WHERE s.batch_id IN (:batchIds) AND s.is_deleted = false
+            GROUP BY s.batch_id
+            """, nativeQuery = true)
+    List<Object[]> countGradedGroupByBatchId(@Param("batchIds") List<Long> batchIds);
 
     @Query(value = """
             SELECT * FROM submissions
@@ -61,6 +75,8 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findAllForExport(@Param("exerciseId") Long exerciseId);
 
     List<Submission> findByStudentNameAndDeletedFalse(String studentName);
+
+    List<Submission> findByBatchIdAndDeletedFalseOrderByStudentNameAsc(Long batchId);
 
     @Query("""
             SELECT COUNT(s) FROM Submission s
@@ -103,4 +119,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
             WHERE s.exportTimestamp >= :since AND s.deleted = false
             """)
     long countDistinctActiveStudentsSince(@Param("since") LocalDateTime since);
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
+    int softDeleteAllByBatchId(@Param("batchId") Long batchId);
 }

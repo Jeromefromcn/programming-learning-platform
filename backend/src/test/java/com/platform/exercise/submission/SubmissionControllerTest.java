@@ -45,6 +45,7 @@ class SubmissionControllerTest {
     @Autowired ExerciseVersionRepository versionRepository;
     @Autowired SubmissionRepository submissionRepository;
     @Autowired UserRepository userRepository;
+    @Autowired com.platform.exercise.repository.ImportBatchRepository importBatchRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
     @Autowired MeterRegistry meterRegistry;
@@ -124,11 +125,13 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importSingleBlocklyJson_valid_returnsImported() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        // studentName must match a registered user — "tutor1" is seeded in @BeforeEach
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         mockMvc.perform(multipart("/v1/submissions/import").file(file))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.summary.imported").value(1))
             .andExpect(jsonPath("$.results[0].status").value("IMPORTED"))
             .andExpect(jsonPath("$.results[0].autoScore").exists())
@@ -138,30 +141,33 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importDuplicateJson_secondTime_returnsDuplicateStatus() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         // First import
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
-        // Second import — same file
+        // Second import — same file; duplicate is NOT a validation-abort, phase 2 proceeds
         mockMvc.perform(multipart("/v1/submissions/import")
-                .file(new MockMultipartFile("files", "alex.json", "application/json",
-                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+                .file(new MockMultipartFile("files", "tutor1.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes())))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.summary.duplicates").value(1))
             .andExpect(jsonPath("$.results[0].status").value("DUPLICATE"));
     }
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
-    void importMissingFields_returnsFailed() throws Exception {
+    void importMissingFields_returnsValidationFailed() throws Exception {
         MockMultipartFile file = new MockMultipartFile("files", "bad.json", "application/json",
             "{\"exerciseId\":1}".getBytes());
 
         mockMvc.perform(multipart("/v1/submissions/import").file(file))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.results[0].status").value("FAILED"));
+            .andExpect(jsonPath("$.ok").value(false))
+            .andExpect(jsonPath("$.problems[0].filename").value("bad.json"))
+            .andExpect(jsonPath("$.problems[0].reason").value(org.hamcrest.Matchers.containsString("Missing required fields")));
     }
 
     @Test
@@ -279,22 +285,24 @@ class SubmissionControllerTest {
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
     void importAfterDelete_treatedAsNewSubmission() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("files", "alex.json", "application/json",
-            blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes());
+        // studentName must match a registered user — "tutor1" is seeded in @BeforeEach
+        MockMultipartFile file = new MockMultipartFile("files", "tutor1.json", "application/json",
+            blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes());
 
         // Import once
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
         // Soft-delete it
-        Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("Alex").get(0);
+        Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("tutor1").get(0);
         sub.setDeleted(true);
         submissionRepository.save(sub);
 
         // Re-import same file — should succeed as new import, not duplicate
         mockMvc.perform(multipart("/v1/submissions/import")
-                .file(new MockMultipartFile("files", "alex.json", "application/json",
-                    blocklyExportJson(blocklyExercise.getId(), "Alex", 1).getBytes())))
+                .file(new MockMultipartFile("files", "tutor1.json", "application/json",
+                    blocklyExportJson(blocklyExercise.getId(), "tutor1", 1).getBytes())))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true))
             .andExpect(jsonPath("$.results[0].status").value("IMPORTED"));
     }
 
@@ -335,6 +343,70 @@ class SubmissionControllerTest {
         var counter = meterRegistry.find("security.import.rejected").tag("reason", "invalid").counter();
         assertThat(counter).isNotNull();
         assertThat(counter.count()).isGreaterThanOrEqualTo(1.0);
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_includesBatchIdInResponse() throws Exception {
+        com.platform.exercise.domain.ImportBatch batch = new com.platform.exercise.domain.ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(null);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        com.platform.exercise.domain.ImportBatch savedBatch = importBatchRepository.save(batch);
+
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setBatchId(savedBatch.getId());
+        submissionRepository.save(sub);
+
+        mockMvc.perform(get("/v1/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].batchId").value(savedBatch.getId()));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_filterByBatchId_returnsOnlyMatchingSubmissions() throws Exception {
+        com.platform.exercise.domain.ImportBatch batch = new com.platform.exercise.domain.ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(null);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        com.platform.exercise.domain.ImportBatch savedBatch = importBatchRepository.save(batch);
+
+        Submission withBatch = new Submission();
+        withBatch.setExerciseId(blocklyExercise.getId());
+        withBatch.setGradedVersionId(blocklyVersion.getId());
+        withBatch.setStudentName("Alice");
+        withBatch.setExerciseType("BLOCKLY");
+        withBatch.setAnswerData("code");
+        withBatch.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        withBatch.setBatchId(savedBatch.getId());
+        submissionRepository.save(withBatch);
+
+        Submission noBatch = new Submission();
+        noBatch.setExerciseId(blocklyExercise.getId());
+        noBatch.setGradedVersionId(blocklyVersion.getId());
+        noBatch.setStudentName("Bob");
+        noBatch.setExerciseType("BLOCKLY");
+        noBatch.setAnswerData("code");
+        noBatch.setExportTimestamp(LocalDateTime.of(2026, 5, 2, 10, 0));
+        submissionRepository.save(noBatch);
+
+        mockMvc.perform(get("/v1/submissions").param("batchId", savedBatch.getId().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].studentName").value("Alice"));
     }
 
     @Test
