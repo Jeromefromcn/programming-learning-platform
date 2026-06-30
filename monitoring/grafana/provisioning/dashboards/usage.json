@@ -1,0 +1,59 @@
+{
+  "annotations": { "list": [] },
+  "description": "Usage — submission volume, active students, published exercises and courses",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        { "expr": "sum(rate(business_submission_created_total[1h])) by (exercise_type)", "legendFormat": "{{exercise_type}}" }
+      ],
+      "title": "Submissions/hour by Exercise Type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 2,
+      "targets": [
+        { "expr": "business_active_students" }
+      ],
+      "title": "Active Students (30d)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        { "expr": "business_published_exercises" }
+      ],
+      "title": "Published Exercises",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "id": 4,
+      "targets": [
+        { "expr": "business_active_courses" }
+      ],
+      "title": "Active Courses",
+      "type": "stat"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["exercise-platform", "usage"],
+  "title": "Usage",
+  "uid": "exercise-platform-usage",
+  "version": 1
+}
