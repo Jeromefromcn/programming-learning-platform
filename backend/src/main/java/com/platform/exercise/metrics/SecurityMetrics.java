@@ -14,7 +14,7 @@ public class SecurityMetrics {
     }
 
     public void recordRateLimitExceeded(String endpoint) {
-        Counter.builder("security.rate_limit.exceeded")
+        Counter.builder("security.rate.limit.exceeded")
             .tag("endpoint", endpoint)
             .register(meterRegistry)
             .increment();

@@ -23,9 +23,9 @@ class SecurityMetricsTest {
         securityMetrics.recordRateLimitExceeded("login");
         securityMetrics.recordRateLimitExceeded("import");
 
-        assertThat(meterRegistry.find("security.rate_limit.exceeded").tag("endpoint", "login").counter().count())
+        assertThat(meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "login").counter().count())
             .isEqualTo(2.0);
-        assertThat(meterRegistry.find("security.rate_limit.exceeded").tag("endpoint", "import").counter().count())
+        assertThat(meterRegistry.find("security.rate.limit.exceeded").tag("endpoint", "import").counter().count())
             .isEqualTo(1.0);
     }
 
