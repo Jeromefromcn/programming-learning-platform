@@ -12,6 +12,7 @@ import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
 import com.platform.exercise.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,7 @@ class SubmissionControllerTest {
     @Autowired UserRepository userRepository;
     @Autowired PasswordEncoder passwordEncoder;
     @Autowired ObjectMapper objectMapper;
+    @Autowired MeterRegistry meterRegistry;
     @MockBean SandboxClient sandboxClient;
 
     private Exercise blocklyExercise;
@@ -318,6 +320,21 @@ class SubmissionControllerTest {
         mockMvc.perform(get("/v1/submissions").param("source", "STUDENT"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void forceImport_expiredBatch_recordsSecurityMetric() throws Exception {
+        String body = "{\"batchId\":\"nonexistent-batch\",\"filename\":\"nonexistent.json\"}";
+
+        mockMvc.perform(post("/v1/submissions/import-duplicate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+
+        var counter = meterRegistry.find("security.import.rejected").tag("reason", "invalid").counter();
+        assertThat(counter).isNotNull();
+        assertThat(counter.count()).isGreaterThanOrEqualTo(1.0);
     }
 
     @Test

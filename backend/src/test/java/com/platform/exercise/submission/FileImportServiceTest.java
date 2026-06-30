@@ -7,6 +7,7 @@ import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -35,6 +36,7 @@ class FileImportServiceTest {
     @Mock BlocklyGrader blocklyGrader;
     @Mock PythonGrader pythonGrader;
     @Mock ImportBatchCache batchCache;
+    @Mock SecurityMetrics securityMetrics;
 
     private FileImportService service;
 
@@ -52,7 +54,7 @@ class FileImportServiceTest {
     void setUp() {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
-            blocklyGrader, pythonGrader, batchCache, new ObjectMapper());
+            blocklyGrader, pythonGrader, batchCache, new ObjectMapper(), securityMetrics);
     }
 
     private void stubExercise(long exerciseId, long versionId) {
@@ -117,6 +119,7 @@ class FileImportServiceTest {
 
         assertThat(result.status()).isEqualTo("DUPLICATE");
         verify(batchCache).put("batch-1", "dup.json", content);
+        verify(securityMetrics).recordImportRejected("duplicate");
     }
 
     @Test
@@ -124,6 +127,7 @@ class FileImportServiceTest {
         byte[] zipBytes = buildZipWithEntry("../evil.json", "{\"x\":1}".getBytes());
         assertThatThrownBy(() -> service.processZip(zipBytes, "batch-1"))
             .hasMessageContaining("Path traversal");
+        verify(securityMetrics).recordImportRejected("path_traversal");
     }
 
     private byte[] blocklyJsonWithXml(long exerciseId) {

@@ -6,6 +6,7 @@ import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
+import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -38,6 +39,7 @@ public class SubmissionService {
     private final ExerciseVersionRepository versionRepository;
     private final FileImportService fileImportService;
     private final ImportBatchCache batchCache;
+    private final SecurityMetrics securityMetrics;
 
     @Transactional
     public ImportResponseDto importFiles(List<MultipartFile> files) throws IOException {
@@ -65,8 +67,11 @@ public class SubmissionService {
     @Transactional
     public ImportResultDto forceImport(ForceImportRequest req) throws IOException {
         byte[] bytes = batchCache.get(req.batchId(), req.filename())
-            .orElseThrow(() -> new PlatformException(ErrorCode.IMPORT_FILE_INVALID,
-                "Batch expired — please re-import the file."));
+            .orElseThrow(() -> {
+                securityMetrics.recordImportRejected("invalid");
+                return new PlatformException(ErrorCode.IMPORT_FILE_INVALID,
+                    "Batch expired — please re-import the file.");
+            });
         return fileImportService.processSingleFile(req.filename(), bytes, req.batchId(), true);
     }
 

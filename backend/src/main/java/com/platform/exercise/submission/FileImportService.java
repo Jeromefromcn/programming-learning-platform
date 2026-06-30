@@ -9,6 +9,7 @@ import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.SecurityMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -48,6 +49,7 @@ public class FileImportService {
     private final PythonGrader pythonGrader;
     private final ImportBatchCache batchCache;
     private final ObjectMapper objectMapper;
+    private final SecurityMetrics securityMetrics;
 
     List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
         List<ImportResultDto> results = new ArrayList<>();
@@ -60,16 +62,19 @@ public class FileImportService {
                 if (entry.isDirectory()) { zis.closeEntry(); continue; }
                 String entryName = entry.getName();
                 if (entryName.contains("..")) {
+                    securityMetrics.recordImportRejected("path_traversal");
                     throw new PlatformException(ErrorCode.ZIP_PATH_TRAVERSAL,
                         "Path traversal detected: " + entryName);
                 }
                 if (++fileCount > MAX_ZIP_FILES) {
+                    securityMetrics.recordImportRejected("too_large");
                     throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
                         "ZIP contains more than " + MAX_ZIP_FILES + " files.");
                 }
                 byte[] content = zis.readAllBytes();
                 totalBytes += content.length;
                 if (totalBytes > MAX_ZIP_DECOMPRESSED_BYTES) {
+                    securityMetrics.recordImportRejected("too_large");
                     throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
                         "Decompressed ZIP exceeds 100 MB.");
                 }
@@ -110,6 +115,7 @@ public class FileImportService {
                     .existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
                         studentName, exerciseId, exportedAt)) {
                 batchCache.put(batchId, filename, content);
+                securityMetrics.recordImportRejected("duplicate");
                 return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));
             }
 
