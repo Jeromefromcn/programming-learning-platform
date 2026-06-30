@@ -20,6 +20,8 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -96,7 +98,7 @@ class ImportBatchControllerTest {
 
     @Test
     @WithMockUser(username = "batch_tutor", roles = "TUTOR")
-    void delete_returnsNoContent_andHardDeletesBatchAndAllSubmissions() throws Exception {
+    void delete_returnsNoContent_andSoftDeletesBatchAndAllSubmissions() throws Exception {
         ImportBatch batch = savedBatch();
         Long aliceId = submissionRepository.save(submission("Alice", batch.getId(), false)).getId();
         Long bobId = submissionRepository.save(submission("Bob", batch.getId(), true)).getId(); // already soft-deleted
@@ -106,14 +108,45 @@ class ImportBatchControllerTest {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(importBatchRepository.findById(batch.getId())).isEmpty();
+        // batch row still physically exists, but is flagged deleted
+        ImportBatch reloaded = importBatchRepository.findById(batch.getId()).orElseThrow();
+        assertThat(reloaded.isDeleted()).isTrue();
+        assertThat(importBatchRepository.findByIdAndDeletedFalse(batch.getId())).isEmpty();
+
         Submission alice = submissionRepository.findById(aliceId).orElseThrow();
         Submission bob = submissionRepository.findById(bobId).orElseThrow();
         assertThat(alice.isDeleted()).isTrue();
         assertThat(bob.isDeleted()).isTrue();
-        // the deleted batch must not leave a dangling FK on surviving (soft-deleted) submissions
-        assertThat(alice.getBatchId()).isNull();
-        assertThat(bob.getBatchId()).isNull();
+        // batch deletion is now soft (the import_batches row is preserved), so V11's
+        // ON DELETE SET NULL never fires here — batch_id is deliberately left intact
+        // for audit-trail purposes, consistent with how Submission's other FKs
+        // (exerciseId, gradedVersionId) survive its own soft-delete.
+        assertThat(alice.getBatchId()).isEqualTo(batch.getId());
+        assertThat(bob.getBatchId()).isEqualTo(batch.getId());
+    }
+
+    @Test
+    @WithMockUser(username = "batch_tutor", roles = "TUTOR")
+    void delete_thenBatchExcludedFromList() throws Exception {
+        ImportBatch batch = savedBatch();
+
+        mockMvc.perform(delete("/v1/import-batches/{id}", batch.getId()))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/v1/import-batches"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.id==" + batch.getId() + ")]").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "batch_tutor", roles = "TUTOR")
+    void delete_alreadyDeletedBatch_returnsNotFound() throws Exception {
+        ImportBatch batch = savedBatch();
+        mockMvc.perform(delete("/v1/import-batches/{id}", batch.getId()))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/v1/import-batches/{id}", batch.getId()))
+            .andExpect(status().isNotFound());
     }
 
     @Test
