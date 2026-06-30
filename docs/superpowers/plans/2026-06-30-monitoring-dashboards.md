@@ -1208,31 +1208,89 @@ git commit -m "feat(metrics): record auth-failure security metric on login"
 
 ---
 
-### Task 8: Wire `SecurityMetrics` into `SubmissionService` ZIP validation
+### Task 8: Wire `SecurityMetrics` into `FileImportService` (ZIP/duplicate) and `SubmissionService` (expired batch)
+
+> **REVISED 2026-06-30** — the original version of this task was written against `SubmissionService.java`/`FileImportService.java` as they exist on `feature/multidimensional-grading-batches` (two-phase import validation, `ImportBatchRepository`, 7+ constructor fields). This worktree branches from `origin/main`, where those files are simpler: `FileImportService.processZip()` is the live production ZIP-handling path (not dead code), there is no two-phase validation, and `SubmissionService` has only 5 constructor fields. This revision targets the actual code in this worktree. See `.superpowers/sdd/task-8-report.md` (original attempt) for the discovery.
 
 **Files:**
+- Modify: `backend/src/main/java/com/platform/exercise/submission/FileImportService.java`
 - Modify: `backend/src/main/java/com/platform/exercise/submission/SubmissionService.java`
-- Modify: `backend/src/test/java/com/platform/exercise/submission/SubmissionImportRestrictionTest.java`
+- Modify: `backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java`
+- Modify: `backend/src/test/java/com/platform/exercise/submission/SubmissionControllerTest.java`
 
 **Interfaces:**
 - Consumes: `SecurityMetrics` from Task 5 (`recordImportRejected`).
-- Produces: `SubmissionService` constructor gains an 8th parameter, `SecurityMetrics securityMetrics`, appended after `objectMapper`.
+- Produces: `FileImportService` constructor gains an 8th parameter, `SecurityMetrics securityMetrics`, appended after `objectMapper`. `SubmissionService` constructor gains a 6th parameter, `SecurityMetrics securityMetrics`, appended after `batchCache`.
 
-- [ ] **Step 1: Write the failing test**
+**Current actual code being modified** (`FileImportService.java`, confirmed in this worktree):
+```java
+    List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
+        List<ImportResultDto> results = new ArrayList<>();
+        long totalBytes = 0;
+        int fileCount = 0;
 
-Modify `backend/src/test/java/com/platform/exercise/submission/SubmissionImportRestrictionTest.java`:
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) { zis.closeEntry(); continue; }
+                String entryName = entry.getName();
+                if (entryName.contains("..")) {
+                    throw new PlatformException(ErrorCode.ZIP_PATH_TRAVERSAL,
+                        "Path traversal detected: " + entryName);
+                }
+                if (++fileCount > MAX_ZIP_FILES) {
+                    throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
+                        "ZIP contains more than " + MAX_ZIP_FILES + " files.");
+                }
+                byte[] content = zis.readAllBytes();
+                totalBytes += content.length;
+                if (totalBytes > MAX_ZIP_DECOMPRESSED_BYTES) {
+                    throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
+                        "Decompressed ZIP exceeds 100 MB.");
+                }
+                String filename = new File(entryName).getName();
+                if (filename.toLowerCase().endsWith(".json")) {
+                    results.add(processSingleFile(filename, content, batchId, false));
+                }
+                zis.closeEntry();
+            }
+        }
+        return results;
+    }
+```
+and in `processSingleFile()`:
+```java
+            if (!skipDuplicateCheck && submissionRepository
+                    .existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
+                        studentName, exerciseId, exportedAt)) {
+                batchCache.put(batchId, filename, content);
+                return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));
+            }
+```
+and `SubmissionService.forceImport()`:
+```java
+    @Transactional
+    public ImportResultDto forceImport(ForceImportRequest req) throws IOException {
+        byte[] bytes = batchCache.get(req.batchId(), req.filename())
+            .orElseThrow(() -> new PlatformException(ErrorCode.IMPORT_FILE_INVALID,
+                "Batch expired — please re-import the file."));
+        return fileImportService.processSingleFile(req.filename(), bytes, req.batchId(), true);
+    }
+```
+
+- [ ] **Step 1: Write the failing tests**
+
+Modify `backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java`:
 
 Add imports:
 ```java
 import com.platform.exercise.metrics.SecurityMetrics;
-import java.io.ByteArrayOutputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import static org.mockito.Mockito.verify;
 ```
+(`verify` may already be imported — check before adding a duplicate import line.)
 
-Add mock field:
+Add mock field next to the other `@Mock` fields:
 ```java
     @Mock SecurityMetrics securityMetrics;
 ```
@@ -1241,46 +1299,76 @@ Update `setUp()`:
 ```java
     @BeforeEach
     void setUp() {
-        submissionService = new SubmissionService(
-            submissionRepository, exerciseRepository, versionRepository,
-            fileImportService, batchCache, importBatchRepository, objectMapper,
-            securityMetrics);
+        service = new FileImportService(
+            exerciseRepository, versionRepository, submissionRepository,
+            blocklyGrader, pythonGrader, batchCache, new ObjectMapper(), securityMetrics);
     }
 ```
 
-Add this test method:
+Extend the existing `processZip_pathTraversal_throwsPlatformException` test (do not duplicate it — add the verify assertion to the existing test):
 ```java
     @Test
-    void importFiles_zipWithPathTraversalEntry_recordsSecurityMetricAndThrows() throws IOException {
-        byte[] maliciousZip = zipWithEntry("../../etc/passwd", "x".getBytes(StandardCharsets.UTF_8));
-        MockMultipartFile zipFile = new MockMultipartFile("files", "evil.zip", "application/zip", maliciousZip);
-
-        org.junit.jupiter.api.Assertions.assertThrows(
-            com.platform.exercise.common.PlatformException.class,
-            () -> submissionService.importFiles(List.of(zipFile), null));
-
+    void processZip_pathTraversal_throwsPlatformException() {
+        byte[] zipBytes = buildZipWithEntry("../evil.json", "{\"x\":1}".getBytes());
+        assertThatThrownBy(() -> service.processZip(zipBytes, "batch-1"))
+            .hasMessageContaining("Path traversal");
         verify(securityMetrics).recordImportRejected("path_traversal");
-    }
-
-    private static byte[] zipWithEntry(String entryName, byte[] content) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-            zos.putNextEntry(new ZipEntry(entryName));
-            zos.write(content);
-            zos.closeEntry();
-        }
-        return baos.toByteArray();
     }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+Extend the existing `processSingleFile_duplicate_returnsDuplicateAndCachesBytes` test the same way:
+```java
+    @Test
+    void processSingleFile_duplicate_returnsDuplicateAndCachesBytes() {
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(true);
+        byte[] content = validBlocklyJson(1L);
 
-Run: `cd backend && mvn test -Dtest=SubmissionImportRestrictionTest`
-Expected: FAIL — compilation error, `SubmissionService` has no 8-arg constructor.
+        ImportResultDto result = service.processSingleFile("dup.json", content, "batch-1", false);
+
+        assertThat(result.status()).isEqualTo("DUPLICATE");
+        verify(batchCache).put("batch-1", "dup.json", content);
+        verify(securityMetrics).recordImportRejected("duplicate");
+    }
+```
+
+Modify `backend/src/test/java/com/platform/exercise/submission/SubmissionControllerTest.java` — add import:
+```java
+import io.micrometer.core.instrument.MeterRegistry;
+```
+
+Add field next to the other `@Autowired` fields:
+```java
+    @Autowired MeterRegistry meterRegistry;
+```
+
+Add this test method, modeled on the existing `importDuplicateJson_secondTime_returnsDuplicateStatus` test in the same file:
+```java
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void forceImport_expiredBatch_recordsSecurityMetric() throws Exception {
+        String body = "{\"batchId\":\"nonexistent-batch\",\"filename\":\"nonexistent.json\"}";
+
+        mockMvc.perform(post("/v1/submissions/import-duplicate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isBadRequest());
+
+        var counter = meterRegistry.find("security.import.rejected").tag("reason", "invalid").counter();
+        assertThat(counter).isNotNull();
+        assertThat(counter.count()).isGreaterThanOrEqualTo(1.0);
+    }
+```
+(`MediaType` is already imported in this file — confirm before adding.)
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `cd backend && mvn test -Dtest=FileImportServiceTest,SubmissionControllerTest`
+Expected: FAIL — compilation error, `FileImportService` has no 8-arg constructor; `forceImport_expiredBatch_recordsSecurityMetric` also fails to compile/run until `SubmissionService` is updated.
 
 - [ ] **Step 3: Write the implementation**
 
-Modify `backend/src/main/java/com/platform/exercise/submission/SubmissionService.java`:
+Modify `backend/src/main/java/com/platform/exercise/submission/FileImportService.java`:
 
 Add import:
 ```java
@@ -1292,73 +1380,67 @@ Add field (after `objectMapper`):
     private final SecurityMetrics securityMetrics;
 ```
 
-Update the ZIP-expansion block inside `importFiles()`:
+Update `processZip()`:
 ```java
-            if (originalName.toLowerCase().endsWith(".zip")) {
-                // Expand ZIP and validate each entry
-                try (ZipInputStream zis =
-                         new ZipInputStream(new ByteArrayInputStream(fileBytes))) {
-                    ZipEntry entry;
-                    long totalBytes = 0;
-                    int fileCount = 0;
-                    while ((entry = zis.getNextEntry()) != null) {
-                        if (entry.isDirectory()) { zis.closeEntry(); continue; }
-                        String entryName = entry.getName();
-                        if (entryName.contains("..")) {
-                            securityMetrics.recordImportRejected("path_traversal");
-                            throw new PlatformException(
-                                ErrorCode.ZIP_PATH_TRAVERSAL,
-                                "Path traversal detected: " + entryName);
-                        }
-                        if (++fileCount > 500) {
-                            securityMetrics.recordImportRejected("too_large");
-                            throw new PlatformException(
-                                ErrorCode.ZIP_TOO_LARGE,
-                                "ZIP contains more than 500 files.");
-                        }
-                        byte[] content = zis.readAllBytes();
-                        totalBytes += content.length;
-                        if (totalBytes > 100L * 1024 * 1024) {
-                            securityMetrics.recordImportRejected("too_large");
-                            throw new PlatformException(
-                                ErrorCode.ZIP_TOO_LARGE,
-                                "Decompressed ZIP exceeds 100 MB.");
-                        }
-                        String filename = new java.io.File(entryName).getName();
-                        if (filename.toLowerCase().endsWith(".json")) {
-                            entries.add(new FileEntry(filename, content));
-                        }
-                        zis.closeEntry();
-                    }
+    List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
+        List<ImportResultDto> results = new ArrayList<>();
+        long totalBytes = 0;
+        int fileCount = 0;
+
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) { zis.closeEntry(); continue; }
+                String entryName = entry.getName();
+                if (entryName.contains("..")) {
+                    securityMetrics.recordImportRejected("path_traversal");
+                    throw new PlatformException(ErrorCode.ZIP_PATH_TRAVERSAL,
+                        "Path traversal detected: " + entryName);
                 }
-            } else if (originalName.toLowerCase().endsWith(".json")) {
-                entries.add(new FileEntry(originalName, fileBytes));
-            } else {
-                problems.add(new ImportProblemDto(originalName, "Unsupported file type."));
+                if (++fileCount > MAX_ZIP_FILES) {
+                    securityMetrics.recordImportRejected("too_large");
+                    throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
+                        "ZIP contains more than " + MAX_ZIP_FILES + " files.");
+                }
+                byte[] content = zis.readAllBytes();
+                totalBytes += content.length;
+                if (totalBytes > MAX_ZIP_DECOMPRESSED_BYTES) {
+                    securityMetrics.recordImportRejected("too_large");
+                    throw new PlatformException(ErrorCode.ZIP_TOO_LARGE,
+                        "Decompressed ZIP exceeds 100 MB.");
+                }
+                String filename = new File(entryName).getName();
+                if (filename.toLowerCase().endsWith(".json")) {
+                    results.add(processSingleFile(filename, content, batchId, false));
+                }
+                zis.closeEntry();
+            }
+        }
+        return results;
+    }
+```
+
+Update the duplicate branch inside `processSingleFile()`:
+```java
+            if (!skipDuplicateCheck && submissionRepository
+                    .existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
+                        studentName, exerciseId, exportedAt)) {
+                batchCache.put(batchId, filename, content);
+                securityMetrics.recordImportRejected("duplicate");
+                return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));
             }
 ```
 
-Update the post-phase-1 validation check:
+Modify `backend/src/main/java/com/platform/exercise/submission/SubmissionService.java`:
+
+Add import:
 ```java
-        if (!problems.isEmpty()) {
-            securityMetrics.recordImportRejected("invalid");
-            return ImportResponseDto.validationFailed(problems);
-        }
+import com.platform.exercise.metrics.SecurityMetrics;
 ```
 
-Update the exercise-mismatch check:
+Add field (after `batchCache`):
 ```java
-        if (distinctIds.size() > 1) {
-            long expected = distinctIds.iterator().next();
-            List<ImportProblemDto> mismatchProblems = fileExerciseIds.entrySet().stream()
-                .filter(entry -> entry.getValue() != expected)
-                .map(entry -> new ImportProblemDto(entry.getKey(),
-                    "Exercise mismatch: this file belongs to exercise #" + entry.getValue()
-                    + ", but the batch expects exercise #" + expected))
-                .toList();
-            securityMetrics.recordImportRejected("invalid");
-            return ImportResponseDto.validationFailed(mismatchProblems);
-        }
+    private final SecurityMetrics securityMetrics;
 ```
 
 Update `forceImport()`:
@@ -1375,16 +1457,16 @@ Update `forceImport()`:
     }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd backend && mvn test -Dtest=SubmissionImportRestrictionTest`
-Expected: PASS, all 4 tests green.
+Run: `cd backend && mvn test -Dtest=FileImportServiceTest,SubmissionControllerTest`
+Expected: PASS, all tests green.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/main/java/com/platform/exercise/submission/SubmissionService.java backend/src/test/java/com/platform/exercise/submission/SubmissionImportRestrictionTest.java
-git commit -m "feat(metrics): record import-rejected security metric for ZIP validation failures"
+git add backend/src/main/java/com/platform/exercise/submission/FileImportService.java backend/src/main/java/com/platform/exercise/submission/SubmissionService.java backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java backend/src/test/java/com/platform/exercise/submission/SubmissionControllerTest.java
+git commit -m "feat(metrics): record import-rejected security metric for ZIP, duplicate, and expired-batch rejections"
 ```
 
 ---
@@ -1739,46 +1821,45 @@ git commit -m "feat(metrics): add scheduled refresh of active-students gauge"
 
 ---
 
-### Task 12: Wire `SecurityMetrics` (duplicate) + `BusinessMetrics` (submission created) into `FileImportService`
+### Task 12: Wire `BusinessMetrics` (submission created) into `FileImportService`
+
+> **REVISED 2026-06-30** — originally this task also wired the `SecurityMetrics` duplicate-rejection metric, but that was moved into the revised Task 8 once Task 8's implementer discovered this worktree's `FileImportService`/`SubmissionService` diverge from what the plan was written against (see Task 8's revision note). This task now covers only the `BusinessMetrics.recordSubmissionCreated` wiring. By the time this task runs, `FileImportService`'s constructor already has 8 parameters ending in `securityMetrics` (added by Task 8) — this task appends a 9th.
 
 **Files:**
 - Modify: `backend/src/main/java/com/platform/exercise/submission/FileImportService.java`
 - Modify: `backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java`
 
 **Interfaces:**
-- Consumes: `SecurityMetrics.recordImportRejected(String)` (Task 5), `BusinessMetrics.recordSubmissionCreated(String)` (Task 10).
-- Produces: `FileImportService` constructor gains two parameters, `SecurityMetrics securityMetrics` and `BusinessMetrics businessMetrics`, appended after `importBatchRepository`.
+- Consumes: `BusinessMetrics.recordSubmissionCreated(String)` (Task 10).
+- Produces: `FileImportService` constructor gains a 9th parameter, `BusinessMetrics businessMetrics`, appended after `securityMetrics` (added in Task 8).
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing test**
 
 Modify `backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java`:
 
-Add imports:
+Add import:
 ```java
 import com.platform.exercise.metrics.BusinessMetrics;
-import com.platform.exercise.metrics.SecurityMetrics;
-
-import static org.mockito.Mockito.verify;
 ```
+(`verify` and `Mockito` should already be imported from Task 8 — check before adding duplicates.)
 
-Add mock fields:
+Add mock field:
 ```java
-    @Mock SecurityMetrics securityMetrics;
     @Mock BusinessMetrics businessMetrics;
 ```
 
-Update `setUp()`:
+Update `setUp()` (matches the 8-arg constructor left by Task 8, plus this task's new 9th arg):
 ```java
     @BeforeEach
     void setUp() {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
             blocklyGrader, pythonGrader, batchCache, new ObjectMapper(),
-            userRepository, importBatchRepository, securityMetrics, businessMetrics);
+            securityMetrics, businessMetrics);
     }
 ```
 
-Add these test methods (place near `processSingleFile_validJson_returnsImported`):
+Add this test method (place near `processSingleFile_validJson_returnsImported`):
 ```java
     @Test
     void processSingleFile_validJson_recordsSubmissionCreatedMetric() {
@@ -1791,60 +1872,34 @@ Add these test methods (place near `processSingleFile_validJson_returnsImported`
         when(blocklyGrader.grade(anyString(), anyString()))
             .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
                 "{\"type\":\"BLOCKLY\",\"passed\":true}"));
-        when(userRepository.findByUsername("Alex")).thenReturn(Optional.empty());
-        when(importBatchRepository.findByUuid("batch-1")).thenReturn(Optional.empty());
 
         service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
 
         verify(businessMetrics).recordSubmissionCreated("BLOCKLY");
     }
-
-    @Test
-    void processSingleFile_duplicate_recordsSecurityMetric() {
-        stubExercise(1L, 10L);
-        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
-            .thenReturn(true);
-
-        ImportResultDto result = service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
-
-        assertThat(result.status()).isEqualTo("DUPLICATE");
-        verify(securityMetrics).recordImportRejected("duplicate");
-    }
 ```
+(Do not stub `userRepository`/`importBatchRepository` — those fields don't exist on this worktree's `FileImportService`; only stub what `stubExercise`/the existing constructor actually require. Check the existing `processSingleFile_validJson_returnsImported` test in the same file for the exact stub set already proven to work, and mirror it minus the metric-specific addition.)
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && mvn test -Dtest=FileImportServiceTest`
-Expected: FAIL — compilation error, `FileImportService` has no 11-arg constructor.
+Expected: FAIL — compilation error, `FileImportService` has no 9-arg constructor.
 
 - [ ] **Step 3: Write the implementation**
 
 Modify `backend/src/main/java/com/platform/exercise/submission/FileImportService.java`:
 
-Add imports:
+Add import:
 ```java
 import com.platform.exercise.metrics.BusinessMetrics;
-import com.platform.exercise.metrics.SecurityMetrics;
 ```
 
-Add fields (after `importBatchRepository`):
+Add field (after `securityMetrics`):
 ```java
-    private final SecurityMetrics securityMetrics;
     private final BusinessMetrics businessMetrics;
 ```
 
-Update the duplicate-check branch inside `processSingleFile()`:
-```java
-            if (!skipDuplicateCheck && submissionRepository
-                    .existsActiveByStudentNameAndExerciseIdAndExportTimestamp(
-                        studentName, exerciseId, exportedAt)) {
-                batchCache.put(batchId, filename, content);
-                securityMetrics.recordImportRejected("duplicate");
-                return logAndReturn(batchId, ImportResultDto.duplicate(filename, studentName, null));
-            }
-```
-
-Update the submission-save block:
+Update the submission-save block inside `processSingleFile()`:
 ```java
             Submission saved = submissionRepository.save(sub);
             businessMetrics.recordSubmissionCreated(exerciseType);
@@ -1856,13 +1911,13 @@ Update the submission-save block:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && mvn test -Dtest=FileImportServiceTest`
-Expected: PASS, all tests green including the two new ones.
+Expected: PASS, all tests green including the new one.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add backend/src/main/java/com/platform/exercise/submission/FileImportService.java backend/src/test/java/com/platform/exercise/submission/FileImportServiceTest.java
-git commit -m "feat(metrics): record duplicate-import security metric and submission-created business metric"
+git commit -m "feat(metrics): record submission-created business metric"
 ```
 
 ---
@@ -1992,6 +2047,6 @@ No commit for this task — it is verification-only. If any step surfaces a bug,
 
 ## Self-Review Notes
 
-- **Spec coverage:** every metric, dashboard panel, and component named in `docs/superpowers/specs/2026-06-30-monitoring-dashboards-design.md` has a corresponding task. Two refinements made during planning, both consistent with spec intent: (1) `FileImportService.processZip()` is dead code (only called from its own test) — actual production ZIP validation lives in `SubmissionService.importFiles()`, so Task 8 instruments the real call site instead. (2) `AuthService` has a third failure path (`ACCOUNT_EXPIRED`) not anticipated in the spec's two-reason list — Task 7 adds `account_expired` as a third tag value for completeness.
+- **Spec coverage:** every metric, dashboard panel, and component named in `docs/superpowers/specs/2026-06-30-monitoring-dashboards-design.md` has a corresponding task. Refinements made during planning and execution, all consistent with spec intent: (1) `AuthService` has a third failure path (`ACCOUNT_EXPIRED`) not anticipated in the spec's two-reason list — Task 7 adds `account_expired` as a third tag value for completeness. (2) Tasks 8 and 12 were originally written against `SubmissionService.java`/`FileImportService.java` as they exist on `feature/multidimensional-grading-batches` (the branch the spec/plan were researched on); this worktree branches from `origin/main`, where those files are an earlier, simpler version — `FileImportService.processZip()` is live production code here (not dead code), there's no two-phase import validation, and the constructors have fewer fields. Both tasks were revised in place on 2026-06-30 to target the actual code in this worktree; see each task's "REVISED" note for detail.
 - **Placeholder scan:** no TBD/TODO markers; every step has complete code.
 - **Type consistency:** `GradingMetrics`, `SecurityMetrics`, `BusinessMetrics` method signatures are identical between their defining task and every consuming task. Constructor parameter lists for `BlocklyGrader`, `PythonGrader`, `SubmissionService`, `FileImportService` are stated explicitly in each task with exact append position.
