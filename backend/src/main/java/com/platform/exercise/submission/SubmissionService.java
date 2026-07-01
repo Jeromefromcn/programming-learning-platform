@@ -175,12 +175,14 @@ public class SubmissionService {
 
     public PageResponse<SubmissionListItemDto> list(Long exerciseId, String studentName,
                                                      String source, Long batchId,
+                                                     Boolean graded,
                                                      int page, int size) {
         Page<Submission> submissionPage = submissionRepository.findFiltered(
             exerciseId,
             (studentName != null && studentName.isBlank()) ? null : studentName,
             (source != null && source.isBlank()) ? null : source,
             batchId,
+            graded,
             PageRequest.of(page, size));
 
         List<Long> exerciseIds = submissionPage.map(Submission::getExerciseId).toList();

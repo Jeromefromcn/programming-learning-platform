@@ -97,11 +97,11 @@ class SubmissionRepositoryTest {
         repository.save(sub("STUDENT", userId7, exerciseId));
         repository.save(sub("IMPORT", null, exerciseId));
 
-        var imports = repository.findFiltered(null, null, "IMPORT", null, PageRequest.of(0, 20));
+        var imports = repository.findFiltered(null, null, "IMPORT", null, null, PageRequest.of(0, 20));
         assertEquals(1, imports.getTotalElements());
         assertEquals("IMPORT", imports.getContent().get(0).getSource());
 
-        var all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
+        var all = repository.findFiltered(null, null, null, null, null, PageRequest.of(0, 20));
         assertEquals(2, all.getTotalElements());
     }
 
@@ -233,11 +233,11 @@ class SubmissionRepositoryTest {
             .executeUpdate();
         em.flush(); em.clear();
 
-        Page<Submission> result = repository.findFiltered(null, null, null, batchId, PageRequest.of(0, 20));
+        Page<Submission> result = repository.findFiltered(null, null, null, batchId, null, PageRequest.of(0, 20));
         assertEquals(1, result.getTotalElements());
         assertEquals(withBatch.getId(), result.getContent().get(0).getId());
 
-        Page<Submission> all = repository.findFiltered(null, null, null, null, PageRequest.of(0, 20));
+        Page<Submission> all = repository.findFiltered(null, null, null, null, null, PageRequest.of(0, 20));
         assertEquals(2, all.getTotalElements());
     }
 
@@ -376,5 +376,24 @@ class SubmissionRepositoryTest {
                 userId7, null, null, null, PageRequest.of(0, 20));
 
         assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void findFiltered_byGraded_returnsOnlyMatchingGradedState() {
+        Submission gradedSub = sub("IMPORT", null, exerciseId);
+        gradedSub.setGraded(true);
+        repository.save(gradedSub);
+        repository.save(sub("IMPORT", null, exerciseId));
+
+        Page<Submission> gradedOnly = repository.findFiltered(null, null, null, null, true, PageRequest.of(0, 20));
+        assertEquals(1, gradedOnly.getTotalElements());
+        assertTrue(gradedOnly.getContent().get(0).isGraded());
+
+        Page<Submission> ungradedOnly = repository.findFiltered(null, null, null, null, false, PageRequest.of(0, 20));
+        assertEquals(1, ungradedOnly.getTotalElements());
+        assertFalse(ungradedOnly.getContent().get(0).isGraded());
+
+        Page<Submission> all = repository.findFiltered(null, null, null, null, null, PageRequest.of(0, 20));
+        assertEquals(2, all.getTotalElements());
     }
 }

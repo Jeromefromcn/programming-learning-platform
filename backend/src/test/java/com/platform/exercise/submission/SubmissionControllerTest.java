@@ -410,6 +410,40 @@ class SubmissionControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void listSubmissions_filterByGraded_returnsOnlyMatchingGradedState() throws Exception {
+        Submission gradedSub = new Submission();
+        gradedSub.setExerciseId(blocklyExercise.getId());
+        gradedSub.setGradedVersionId(blocklyVersion.getId());
+        gradedSub.setStudentName("Alice");
+        gradedSub.setExerciseType("BLOCKLY");
+        gradedSub.setAnswerData("code");
+        gradedSub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        gradedSub.setGraded(true);
+        gradedSub.setAutoScore(new BigDecimal("100.00"));
+        submissionRepository.save(gradedSub);
+
+        Submission ungradedSub = new Submission();
+        ungradedSub.setExerciseId(blocklyExercise.getId());
+        ungradedSub.setGradedVersionId(blocklyVersion.getId());
+        ungradedSub.setStudentName("Bob");
+        ungradedSub.setExerciseType("BLOCKLY");
+        ungradedSub.setAnswerData("code");
+        ungradedSub.setExportTimestamp(LocalDateTime.of(2026, 5, 2, 10, 0));
+        submissionRepository.save(ungradedSub);
+
+        mockMvc.perform(get("/v1/submissions").param("graded", "true"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].studentName").value("Alice"));
+
+        mockMvc.perform(get("/v1/submissions").param("graded", "false"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].studentName").value("Bob"));
+    }
+
+    @Test
     void exportCsv_unauthenticated_returns200WithCsv() throws Exception {
         Submission sub = new Submission();
         sub.setExerciseId(blocklyExercise.getId());
