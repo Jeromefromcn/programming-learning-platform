@@ -23,10 +23,19 @@ public class StudentProgressController {
     public ResponseEntity<StudentProgressDto> getProgress(
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String exercise,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String source) {
         User user = (authentication.getPrincipal() instanceof User u) ? u
                 : userRepository.findByUsername(authentication.getName())
                         .orElseThrow(() -> new PlatformException(ErrorCode.USER_NOT_FOUND));
-        return ResponseEntity.ok(studentProgressService.getProgress(user.getId(), page, size));
+        return ResponseEntity.ok(studentProgressService.getProgress(
+                user.getId(), page, size,
+                blankToNull(exercise), blankToNull(type), blankToNull(source)));
+    }
+
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
     }
 }
