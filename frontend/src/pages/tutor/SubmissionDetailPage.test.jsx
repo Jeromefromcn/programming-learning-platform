@@ -51,7 +51,7 @@ it('shows dimension description below the dimension label in the grading panel',
   exerciseApi.get.mockResolvedValue({
     currentVersion: {
       config: {
-        showResult: false,
+        autoGrade: false,
         rubric: {
           dimensions: [
             { name: 'Logic', weight: 0.6, description: 'Correctness of the algorithm' },
@@ -72,7 +72,7 @@ it('does not render description text when description is absent', async () => {
   exerciseApi.get.mockResolvedValue({
     currentVersion: {
       config: {
-        showResult: false,
+        autoGrade: false,
         rubric: {
           dimensions: [{ name: 'Logic', weight: 0.6 }],
         },

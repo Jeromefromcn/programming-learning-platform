@@ -29,7 +29,7 @@ export default function SubmissionDetailPage() {
       // Load exercise to get rubric config
       exerciseApi.get(data.exerciseId).then(ex => {
         const config = ex.currentVersion?.config;
-        if (config && config.showResult === false && config.rubric?.dimensions?.length) {
+        if (config && config.autoGrade === false && config.rubric?.dimensions?.length) {
           setRubricDimensions(config.rubric.dimensions);
           // Pre-fill from saved tutorGradeDetails if present
           if (data.tutorGradeDetails) {
