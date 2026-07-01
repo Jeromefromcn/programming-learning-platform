@@ -7,7 +7,15 @@ vi.mock('./axiosInstance');
 describe('progressApi', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('getProgress with no params sends page/size defaults via params object', async () => {
+  it('getProgress with no args sends an empty params object', async () => {
+    axiosInstance.get.mockResolvedValue({ data: { submissions: { content: [] } } });
+
+    await progressApi.getProgress();
+
+    expect(axiosInstance.get).toHaveBeenCalledWith('/v1/student/progress', { params: {} });
+  });
+
+  it('getProgress with explicit page/size sends those params', async () => {
     axiosInstance.get.mockResolvedValue({ data: { submissions: { content: [] } } });
 
     await progressApi.getProgress({ page: 0, size: 20 });

@@ -125,6 +125,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
     int softDeleteAllByBatchId(@Param("batchId") Long batchId);
 
+    // LOWER() is explicit here (unlike findFiltered's studentName search) because H2 in test
+    // mode defaults to case-sensitive LIKE. MySQL's utf8mb4_general_ci already ignores case,
+    // so LOWER() is redundant but harmless on MySQL and necessary for H2 test fidelity.
     @Query(value = """
             SELECT s.* FROM submissions s
             LEFT JOIN exercises e ON e.id = s.exercise_id

@@ -32,9 +32,10 @@ beforeEach(() => {
   progressApi.getProgress = vi.fn().mockResolvedValue(emptyData);
 });
 
-it('calls progressApi.getProgress once on mount', async () => {
+it('calls progressApi.getProgress once on mount with page=0, size=20, no filters', async () => {
   render(<ProgressPage />);
   await waitFor(() => expect(progressApi.getProgress).toHaveBeenCalledTimes(1));
+  expect(progressApi.getProgress).toHaveBeenCalledWith({ page: 0, size: 20 });
 });
 
 it('changing Exercise input alone does not trigger another call', async () => {
