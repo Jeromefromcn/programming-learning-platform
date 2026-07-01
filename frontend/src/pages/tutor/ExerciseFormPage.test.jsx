@@ -69,7 +69,7 @@ const fillRequiredFields = () => {
   });
 };
 
-it('includes showResult true in the create payload by default', async () => {
+it('includes autoGrade true in the create payload by default', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();
 
@@ -78,17 +78,17 @@ it('includes showResult true in the create payload by default', async () => {
   await waitFor(() =>
     expect(exerciseApi.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        config: expect.objectContaining({ showResult: true }),
+        config: expect.objectContaining({ autoGrade: true }),
       })
     )
   );
 });
 
-it('unchecking the toggle sends showResult false', async () => {
+it('unchecking the toggle sends autoGrade false', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();
 
-  const checkbox = screen.getByRole('checkbox', { name: /Show instant result feedback/ });
+  const checkbox = screen.getByRole('checkbox', { name: /Enable automatic grading/ });
   expect(checkbox).toBeChecked();
 
   fireEvent.click(checkbox);
@@ -106,7 +106,7 @@ it('unchecking the toggle sends showResult false', async () => {
   await waitFor(() =>
     expect(exerciseApi.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        config: expect.objectContaining({ showResult: false }),
+        config: expect.objectContaining({ autoGrade: false }),
       })
     )
   );

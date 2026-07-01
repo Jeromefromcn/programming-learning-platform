@@ -14,7 +14,7 @@ const EMPTY_BLOCKLY_CONFIG = {
   allowedBlocks: [],
   initialWorkspaceXml: '<xml xmlns="https://developers.google.com/blockly/xml"></xml>',
   showCodeView: false,
-  showResult: true,
+  autoGrade: true,
   canViewAnswer: false,
   rubric: { dimensions: [] },
   gradingRules: {
@@ -29,7 +29,7 @@ const EMPTY_PYTHON_CONFIG = {
   starterCode: '',
   timeLimitSeconds: 5,
   testCases: [],
-  showResult: true,
+  autoGrade: true,
   rubric: { dimensions: [] },
 };
 
@@ -97,7 +97,7 @@ export default function ExerciseFormPage() {
 
     // Validate rubric if manual grading mode
     const activeConfig = exerciseType === 'BLOCKLY' ? blocklyConfig : pythonConfig;
-    if (!activeConfig.showResult) {
+    if (!activeConfig.autoGrade) {
       const dims = activeConfig.rubric?.dimensions || [];
       if (dims.length === 0) {
         setError('Add at least one scoring dimension.');
@@ -272,12 +272,12 @@ export default function ExerciseFormPage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
                 <input
                   type="checkbox"
-                  checked={blocklyConfig.showResult !== false}
-                  onChange={e => setBlocklyConfig(prev => ({ ...prev, showResult: e.target.checked }))}
+                  checked={blocklyConfig.autoGrade !== false}
+                  onChange={e => setBlocklyConfig(prev => ({ ...prev, autoGrade: e.target.checked }))}
                 />
-                Show instant result feedback
+                Enable automatic grading
               </label>
-              {blocklyConfig.showResult ? (
+              {blocklyConfig.autoGrade ? (
                 <>
                   <h4 style={{ marginTop: 24 }}>Grading Rules</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -348,12 +348,12 @@ export default function ExerciseFormPage() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0' }}>
                 <input
                   type="checkbox"
-                  checked={pythonConfig.showResult !== false}
-                  onChange={e => setPythonConfig(prev => ({ ...prev, showResult: e.target.checked }))}
+                  checked={pythonConfig.autoGrade !== false}
+                  onChange={e => setPythonConfig(prev => ({ ...prev, autoGrade: e.target.checked }))}
                 />
-                Show instant result feedback
+                Enable automatic grading
               </label>
-              {!pythonConfig.showResult && (
+              {!pythonConfig.autoGrade && (
                 <RubricEditor
                   dimensions={pythonConfig.rubric?.dimensions || []}
                   onChange={dims => setPythonConfig(prev => ({
