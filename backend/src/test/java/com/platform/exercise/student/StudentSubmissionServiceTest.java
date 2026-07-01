@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
+import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
 import com.platform.exercise.repository.ExerciseRepository;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,7 +39,7 @@ class StudentSubmissionServiceTest {
         blocklyGrader = mock(BlocklyGrader.class);
         pythonGrader = mock(PythonGrader.class);
         service = new StudentSubmissionService(submissionRepo, exerciseRepo, versionRepo,
-            blocklyGrader, pythonGrader, new ObjectMapper());
+            blocklyGrader, pythonGrader, new AutoGradeConfigResolver(new ObjectMapper()));
         when(submissionRepo.save(any())).thenAnswer(inv -> {
             Submission s = inv.getArgument(0);
             s.setId(123L);
@@ -61,8 +64,8 @@ class StudentSubmissionServiceTest {
     }
 
     @Test
-    void submit_showResultTrue_returnsScoreAndPassed_andPersistsStudentSource() {
-        stubExercise("{\"showResult\":true,\"testCases\":[]}");
+    void submit_autoGradeTrue_returnsScoreAndPassed_andPersistsStudentSource() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
         SubmitResultDto result = service.submit(7L, "Alice", 2L,
             new SubmitRequest("print(1)", null));
 
@@ -76,22 +79,52 @@ class StudentSubmissionServiceTest {
     }
 
     @Test
-    void submit_showResultFalse_hidesScoreButStillStoresIt() {
-        stubExercise("{\"showResult\":false,\"testCases\":[]}");
+    void submit_autoGradeFalse_skipsGradingAndStoresNullScore() {
+        stubExercise("{\"autoGrade\":false,\"rubric\":{}}");
         SubmitResultDto result = service.submit(7L, "Alice", 2L,
             new SubmitRequest("print(1)", null));
 
         assertFalse(result.showResult());
         assertNull(result.score());
         assertNull(result.passed());
-        verify(submissionRepo).save(argThat(s -> s.getAutoScore() != null));
+        verify(submissionRepo).save(argThat(s -> s.getAutoScore() == null));
+        verifyNoInteractions(pythonGrader);
     }
 
     @Test
-    void submit_showResultAbsent_defaultsToTrue() {
+    void submit_autoGradeAbsent_defaultsToTrue() {
         stubExercise("{\"testCases\":[]}");
         SubmitResultDto result = service.submit(7L, "Alice", 2L,
             new SubmitRequest("print(1)", null));
         assertTrue(result.showResult());
+    }
+
+    @Test
+    void history_autoGradeFalse_hidesStoredScores() {
+        Exercise ex = new Exercise();
+        ex.setId(2L);
+        ex.setType(Exercise.ExerciseType.PYTHON);
+        ex.setStatus(Exercise.Status.PUBLISHED);
+        ex.setCurrentVersionId(9L);
+        when(exerciseRepo.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(ex));
+
+        ExerciseVersion v = new ExerciseVersion();
+        v.setId(9L);
+        v.setConfig("{\"autoGrade\":false}");
+        when(versionRepo.findById(9L)).thenReturn(Optional.of(v));
+
+        Submission s = new Submission();
+        s.setId(5L);
+        s.setCreatedAt(LocalDateTime.now());
+        s.setAutoScore(BigDecimal.valueOf(80));
+        when(submissionRepo.findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(7L, 2L))
+            .thenReturn(List.of(s));
+
+        List<SubmissionHistoryItemDto> history = service.history(7L, 2L);
+
+        assertEquals(1, history.size());
+        assertFalse(history.get(0).showResult());
+        assertNull(history.get(0).score());
+        assertNull(history.get(0).passed());
     }
 }

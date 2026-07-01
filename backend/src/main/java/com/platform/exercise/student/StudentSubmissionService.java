@@ -1,12 +1,11 @@
 package com.platform.exercise.student;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.platform.exercise.common.ErrorCode;
 import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
+import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
 import com.platform.exercise.repository.ExerciseRepository;
@@ -31,7 +30,7 @@ public class StudentSubmissionService {
     private final ExerciseVersionRepository versionRepository;
     private final BlocklyGrader blocklyGrader;
     private final PythonGrader pythonGrader;
-    private final ObjectMapper objectMapper;
+    private final AutoGradeConfigResolver autoGradeConfigResolver;
 
     @Transactional
     public SubmitResultDto submit(Long userId, String studentName, Long exerciseId, SubmitRequest req) {
@@ -41,17 +40,20 @@ public class StudentSubmissionService {
         ExerciseVersion version = versionRepository.findById(exercise.getCurrentVersionId())
             .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
 
+        boolean autoGrade = autoGradeConfigResolver.isEnabled(version.getConfig());
         String type = exercise.getType().name();
-        BigDecimal autoScore;
-        String autoGradeDetails;
-        if ("BLOCKLY".equals(type)) {
-            BlocklyGrader.Result gr = blocklyGrader.grade(req.answerData(), version.getConfig());
-            autoScore = gr.autoScore();
-            autoGradeDetails = gr.autoGradeDetailsJson();
-        } else {
-            PythonGrader.Result gr = pythonGrader.grade(req.answerData(), version.getConfig());
-            autoScore = gr.autoScore();
-            autoGradeDetails = gr.autoGradeDetailsJson();
+        BigDecimal autoScore = null;
+        String autoGradeDetails = null;
+        if (autoGrade) {
+            if ("BLOCKLY".equals(type)) {
+                BlocklyGrader.Result gr = blocklyGrader.grade(req.answerData(), version.getConfig());
+                autoScore = gr.autoScore();
+                autoGradeDetails = gr.autoGradeDetailsJson();
+            } else {
+                PythonGrader.Result gr = pythonGrader.grade(req.answerData(), version.getConfig());
+                autoScore = gr.autoScore();
+                autoGradeDetails = gr.autoGradeDetailsJson();
+            }
         }
 
         Submission sub = new Submission();
@@ -70,12 +72,11 @@ public class StudentSubmissionService {
         sub.setUserId(userId);
         Submission saved = submissionRepository.save(sub);
 
-        boolean showResult = showResult(version.getConfig());
         return new SubmitResultDto(
             saved.getId(),
-            showResult,
-            showResult ? autoScore : null,
-            showResult ? passed(autoScore) : null);
+            autoGrade,
+            autoGrade ? autoScore : null,
+            autoGrade ? passed(autoScore) : null);
     }
 
     @Transactional(readOnly = true)
@@ -83,32 +84,21 @@ public class StudentSubmissionService {
         Exercise exercise = exerciseRepository.findByIdAndDeletedFalse(exerciseId)
             .filter(e -> e.getStatus() == Exercise.Status.PUBLISHED)
             .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
-        boolean showResult = exercise.getCurrentVersionId() != null
+        boolean autoGrade = exercise.getCurrentVersionId() != null
             && versionRepository.findById(exercise.getCurrentVersionId())
-                .map(v -> showResult(v.getConfig())).orElse(true);
+                .map(v -> autoGradeConfigResolver.isEnabled(v.getConfig())).orElse(true);
 
         return submissionRepository
             .findByUserIdAndExerciseIdAndDeletedFalseOrderByCreatedAtDesc(userId, exerciseId)
             .stream()
             .map(s -> new SubmissionHistoryItemDto(
-                s.getId(), s.getCreatedAt(), showResult,
-                showResult ? s.getAutoScore() : null,
-                showResult ? passed(s.getAutoScore()) : null))
+                s.getId(), s.getCreatedAt(), autoGrade,
+                autoGrade ? s.getAutoScore() : null,
+                autoGrade ? passed(s.getAutoScore()) : null))
             .toList();
     }
 
     private boolean passed(BigDecimal score) {
         return score != null && score.compareTo(PASS_THRESHOLD) >= 0;
-    }
-
-    private boolean showResult(String configJson) {
-        try {
-            JsonNode config = objectMapper.readTree(configJson);
-            if (config.isTextual()) config = objectMapper.readTree(config.asText());
-            JsonNode node = config.get("showResult");
-            return node == null || node.asBoolean(true);
-        } catch (Exception e) {
-            return true;
-        }
     }
 }
