@@ -1,0 +1,283 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: Platform Alerts
+    folder: Platform Alerts
+    interval: 1m
+    rules:
+
+      - uid: alert-jvm-heap
+        title: High JVM Heap Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: sum(jvm_memory_used_bytes{area="heap"}) / sum(jvm_memory_max_bytes{area="heap"})
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.85]
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: JVM heap usage has exceeded 85% for 5 minutes
+        labels: {}
+        isPaused: false
+
+      - uid: alert-api-error-rate
+        title: High API Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: >
+                sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+                /
+                sum(rate(http_server_requests_seconds_count[5m]))
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: More than 5% of API requests are returning 5xx errors
+        labels: {}
+        isPaused: false
+
+      - uid: alert-api-latency
+        title: High API Latency (p99)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [2]
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: API p99 response time has exceeded 2 seconds for 5 minutes
+        labels: {}
+        isPaused: false
+
+      - uid: alert-db-connections
+        title: High Database Connection Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: hikaricp_connections_active / hikaricp_connections_max
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.8]
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Database connection pool is more than 80% utilized for 5 minutes
+        labels: {}
+        isPaused: false
+
+      - uid: alert-cpu-usage
+        title: High CPU Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: process_cpu_usage
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.9]
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: API server CPU usage has exceeded 90% for 5 minutes
+        labels: {}
+        isPaused: false
+
+      - uid: alert-api-down
+        title: API Server Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="exercise-platform"}
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: Prometheus cannot reach the API server — application may be down
+        labels: {}
+        isPaused: false
+
+      - uid: alert-sandbox-unavailable
+        title: Python Sandbox Unavailable
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: sum(increase(grading_python_result_total{outcome="sandbox_unavailable"}[5m]))
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              refId: B
+              expression: A
+              reducer: last
+              settings:
+                mode: dropNN
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              refId: C
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+        noDataState: NoData
+        execErrState: Error
+        for: 0s
+        annotations:
+          summary: Python sandbox returned sandbox_unavailable — grading container may be down
+        labels: {}
+        isPaused: false

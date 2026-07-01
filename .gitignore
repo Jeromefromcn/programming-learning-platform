@@ -42,3 +42,4 @@ __pycache__/
 
 # opencode tool config
 .opencode/
+monitoring/grafana/provisioning/alerting/contact-points.yaml

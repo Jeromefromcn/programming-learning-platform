@@ -104,6 +104,8 @@ BACKUP_DIR=/var/backups/exercise-platform
 | `DB_ROOT_PASSWORD` | Root (administrator) password for the database itself. Choose a different strong password. |
 | `JWT_SECRET` | A secret key used to sign login tokens. Must be at least 32 random characters. |
 | `GRAFANA_ADMIN_PASSWORD` | Password for the Grafana monitoring dashboard. |
+| `TELEGRAM_BOT_TOKEN` | (Optional) Telegram bot token for Grafana alert notifications. Leave blank to disable. |
+| `TELEGRAM_CHAT_ID` | (Optional) Telegram group or chat ID to receive alerts. Leave blank to disable. |
 | `BACKUP_DIR` | Host directory where daily database dumps are stored. Change this if `/var/backups` is not writable on your server (e.g. set to `/home/ubuntu/backups/exercise-platform`). The directory is created automatically by Docker if it does not exist. |
 | `DB_URL`, `DB_USERNAME`, `MYSQL_HOST`, `MYSQL_DATABASE` | Leave these unchanged unless you have a specific reason to modify them. |
 
@@ -295,6 +297,19 @@ GET http://<your-server>/api/actuator/health
 ```
 
 Returns `{"status":"UP"}` when the application and database connection are healthy.
+
+**Telegram alerts (optional):** Grafana can send alert notifications to a Telegram group. To enable:
+
+1. Create a bot via [@BotFather](https://t.me/BotFather) and copy the bot token.
+2. Add the bot to your Telegram group.
+3. Set the following in `.env`:
+   ```
+   TELEGRAM_BOT_TOKEN=<your-bot-token>
+   TELEGRAM_CHAT_ID=<your-group-chat-id>
+   ```
+4. Restart the Grafana container: `docker compose restart grafana`
+
+If left blank, no alerts are sent and Grafana starts normally. Alert rules can be configured in Grafana at **Alerting → Alert rules**.
 
 ---
 
