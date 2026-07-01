@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { importBatchApi, downloadBatchExport } from '../../api/importBatchApi';
 import { useTab } from '../../contexts/TabContext';
 import Pagination from '../../components/Pagination';
@@ -11,6 +12,7 @@ const STATUS_COLORS = {
 };
 
 export default function GroupSubmissionPage() {
+  const navigate = useNavigate();
   const { openTabAt } = useTab();
   const [batches, setBatches] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
