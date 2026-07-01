@@ -32,7 +32,7 @@ class TabErrorBoundary extends Component {
 }
 
 function TabPanel({ tab, isActive, role }) {
-  const initialPath = getInitialPath(tab.section, role);
+  const initialPath = tab.initialPath ?? getInitialPath(tab.section, role);
   return (
     <div style={{ display: isActive ? 'flex' : 'none', flex: 1, overflow: 'hidden' }}>
       <UNSAFE_RouteContext.Provider value={{ outlet: null, matches: [], isDataRoute: false }}>

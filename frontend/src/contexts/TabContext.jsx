@@ -23,6 +23,17 @@ export function TabProvider({ children, initialSection }) {
     });
   }
 
+  function openTabAt(section, path) {
+    setState(prev => {
+      const withoutSection = prev.tabs.filter(t => t.section !== section);
+      const id = uid();
+      return {
+        tabs: [...withoutSection, { id, section, initialPath: path }],
+        activeTabId: id,
+      };
+    });
+  }
+
   function closeTab(id) {
     setState(prev => {
       const idx = prev.tabs.findIndex(t => t.id === id);
@@ -42,7 +53,7 @@ export function TabProvider({ children, initialSection }) {
   }
 
   return (
-    <TabContext.Provider value={{ tabs, activeTabId, openTab, closeTab, switchTab }}>
+    <TabContext.Provider value={{ tabs, activeTabId, openTab, openTabAt, closeTab, switchTab }}>
       {children}
     </TabContext.Provider>
   );

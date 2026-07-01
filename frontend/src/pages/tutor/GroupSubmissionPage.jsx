@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { importBatchApi, downloadBatchExport } from '../../api/importBatchApi';
+import { useTab } from '../../contexts/TabContext';
 import Pagination from '../../components/Pagination';
 import { formatDateTime } from '../../utils/dateFormat';
 
@@ -11,7 +11,7 @@ const STATUS_COLORS = {
 };
 
 export default function GroupSubmissionPage() {
-  const navigate = useNavigate();
+  const { openTabAt } = useTab();
   const [batches, setBatches] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(0);
@@ -158,7 +158,7 @@ export default function GroupSubmissionPage() {
                   </td>
                   <td style={{ padding: '10px 12px', display: 'flex', gap: 8 }}>
                     <button
-                      onClick={() => navigate(`/tutor/submissions?batchId=${b.id}`)}
+                      onClick={() => openTabAt('submissions', `/tutor/submissions?batchId=${b.id}`)}
                       style={{
                         padding: '4px 14px', background: '#1976d2', color: '#fff',
                         border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,

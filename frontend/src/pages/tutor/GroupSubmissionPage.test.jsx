@@ -9,11 +9,10 @@ vi.mock('../../api/importBatchApi', () => ({
   downloadBatchExport: vi.fn(),
 }));
 
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return { ...actual, useNavigate: () => mockNavigate };
-});
+const mockOpenTabAt = vi.fn();
+vi.mock('../../contexts/TabContext', () => ({
+  useTab: () => ({ openTabAt: mockOpenTabAt }),
+}));
 
 const batch = (id, gradedStatus, importedCount = 3) => ({
   id,
@@ -29,7 +28,7 @@ beforeEach(() => {
   importBatchApi.list = vi.fn().mockResolvedValue({ content: [], totalPages: 0 });
   importBatchApi.delete = vi.fn().mockResolvedValue(undefined);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  mockNavigate.mockClear();
+  mockOpenTabAt.mockClear();
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -111,5 +110,5 @@ it('View Submissions button navigates to submissions page filtered by batch id',
 
   fireEvent.click(screen.getByRole('button', { name: /view submissions/i }));
 
-  expect(mockNavigate).toHaveBeenCalledWith('/tutor/submissions?batchId=5');
+  expect(mockOpenTabAt).toHaveBeenCalledWith('submissions', '/tutor/submissions?batchId=5');
 });
