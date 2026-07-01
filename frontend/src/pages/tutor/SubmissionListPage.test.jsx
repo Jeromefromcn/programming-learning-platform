@@ -14,8 +14,8 @@ beforeEach(() => {
   submissionApi.list = vi.fn().mockResolvedValue(emptyPage);
 });
 
-const renderPage = () =>
-  render(<MemoryRouter><SubmissionListPage /></MemoryRouter>);
+const renderPage = (url = '/') =>
+  render(<MemoryRouter initialEntries={[url]}><SubmissionListPage /></MemoryRouter>);
 
 it('does not call submissionApi.list again when student name input changes without clicking Search', async () => {
   renderPage();
@@ -152,4 +152,34 @@ it('does not render an Export CSV button or link', async () => {
   renderPage();
   await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
   expect(screen.queryByText(/export csv/i)).not.toBeInTheDocument();
+});
+
+it('pre-fills batchId and uses all sources when batchId is in the URL', async () => {
+  renderPage('/tutor/submissions?batchId=42');
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
+    expect.objectContaining({ batchId: '42', source: '' })
+  ));
+  expect(screen.getByPlaceholderText(/filter by batch id/i).value).toBe('42');
+});
+
+it('does not call submissionApi.list when graded dropdown changes without clicking Search', async () => {
+  renderPage();
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText(/graded/i), { target: { value: 'true' } });
+
+  expect(submissionApi.list).toHaveBeenCalledTimes(1);
+});
+
+it('calls submissionApi.list with graded=true after clicking Search', async () => {
+  renderPage();
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText(/graded/i), { target: { value: 'true' } });
+  fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(2));
+  expect(submissionApi.list).toHaveBeenLastCalledWith(
+    expect.objectContaining({ graded: 'true', page: 0 })
+  );
 });

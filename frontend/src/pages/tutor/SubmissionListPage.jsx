@@ -1,22 +1,29 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
 import Pagination from '../../components/Pagination';
 import { formatDate } from '../../utils/dateFormat';
 
 export default function SubmissionListPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const initialBatchId = searchParams.get('batchId') || '';
+  const hasUrlBatchId = Boolean(initialBatchId);
+
   const [submissions, setSubmissions] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [page, setPage] = useState(0);
   const [pendingStudentName, setPendingStudentName] = useState('');
   const [pendingExerciseId, setPendingExerciseId] = useState('');
-  const [pendingBatchId, setPendingBatchId] = useState('');
+  const [pendingBatchId, setPendingBatchId] = useState(initialBatchId);
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
-  const [batchId, setBatchId] = useState('');
-  const [source, setSource] = useState('IMPORT');
-  const [pendingSource, setPendingSource] = useState('IMPORT');
+  const [batchId, setBatchId] = useState(initialBatchId);
+  const [source, setSource] = useState(hasUrlBatchId ? '' : 'IMPORT');
+  const [pendingSource, setPendingSource] = useState(hasUrlBatchId ? '' : 'IMPORT');
+  const [pendingGraded, setPendingGraded] = useState('');
+  const [graded, setGraded] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTrigger, setSearchTrigger] = useState(0);
@@ -39,8 +46,9 @@ export default function SubmissionListPage() {
     if (studentName.trim()) params.studentName = studentName.trim();
     if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
     if (batchId.trim()) params.batchId = batchId.trim();
+    if (graded !== '') params.graded = graded;
     fetchSubmissions(params);
-  }, [page, studentName, exerciseId, batchId, source, searchTrigger]);
+  }, [page, studentName, exerciseId, batchId, source, graded, searchTrigger]);
 
   function handleSearch() {
     setPage(0);
@@ -48,6 +56,7 @@ export default function SubmissionListPage() {
     setExerciseId(pendingExerciseId);
     setBatchId(pendingBatchId);
     setSource(pendingSource);
+    setGraded(pendingGraded);
     setSearchTrigger(s => s + 1);
   }
 
@@ -58,12 +67,13 @@ export default function SubmissionListPage() {
     try {
       await submissionApi.delete(id);
       if (submissions.length === 1 && page > 0) {
-        setPage(page - 1); // useEffect will fetch the previous page
+        setPage(page - 1);
       } else {
         const params = { page, size: 20, source };
         if (studentName.trim()) params.studentName = studentName.trim();
         if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
         if (batchId.trim()) params.batchId = batchId.trim();
+        if (graded !== '') params.graded = graded;
         fetchSubmissions(params);
       }
     } catch {
@@ -104,8 +114,17 @@ export default function SubmissionListPage() {
         <label>
           Source:
           <select value={pendingSource} onChange={e => setPendingSource(e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="">All</option>
             <option value="IMPORT">Imported</option>
             <option value="STUDENT">Student</option>
+          </select>
+        </label>
+        <label>
+          Graded:
+          <select value={pendingGraded} onChange={e => setPendingGraded(e.target.value)} style={{ marginLeft: 8 }}>
+            <option value="">All</option>
+            <option value="true">Graded</option>
+            <option value="false">Not Graded</option>
           </select>
         </label>
         <button
