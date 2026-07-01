@@ -5,6 +5,8 @@ import Pagination from '../../components/Pagination';
 import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 import { formatDate } from '../../utils/dateFormat';
 
+const EMPTY_FILTERS = { exercise: '', type: '', source: '' };
+
 function ScoreChip({ score, graded }) {
   if (!graded && score == null) return <span style={{ color: '#888' }}>—</span>;
   if (!graded) return <span style={{ color: '#888', fontSize: 12 }}>Pending</span>;
@@ -26,15 +28,34 @@ export default function ProgressPage() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selected, setSelected] = useState(null); // selected submission for detail view
+  const [selected, setSelected] = useState(null);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [pendingFilters, setPendingFilters] = useState(EMPTY_FILTERS);
 
-  useEffect(() => {
+  async function load(p, f) {
     setLoading(true);
-    progressApi.getProgress(page, 20)
-      .then(setData)
-      .catch(err => { if (!isReauthCancelled(err)) setError('Failed to load progress.'); })
-      .finally(() => setLoading(false));
-  }, [page]);
+    setError(null);
+    try {
+      const params = { page: p, size: 20 };
+      if (f.exercise) params.exercise = f.exercise;
+      if (f.type) params.type = f.type;
+      if (f.source) params.source = f.source;
+      const result = await progressApi.getProgress(params);
+      setData(result);
+      setPage(p);
+    } catch (err) {
+      if (!isReauthCancelled(err)) setError('Failed to load progress.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(0, EMPTY_FILTERS); }, []);
+
+  function handleSearch() {
+    setFilters(pendingFilters);
+    load(0, pendingFilters);
+  }
 
   if (loading) return <div style={{ padding: 32 }}>Loading...</div>;
   if (error)   return <div style={{ padding: 32, color: 'red' }}>{error}</div>;
@@ -53,6 +74,49 @@ export default function ProgressPage() {
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 24 }}>My Progress</h2>
+
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <label>
+          Exercise:
+          <input
+            type="text"
+            value={pendingFilters.exercise}
+            onChange={e => setPendingFilters(prev => ({ ...prev, exercise: e.target.value }))}
+            placeholder="Search by title"
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          />
+        </label>
+        <label>
+          Type:
+          <select
+            value={pendingFilters.type}
+            onChange={e => setPendingFilters(prev => ({ ...prev, type: e.target.value }))}
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          >
+            <option value="">All Types</option>
+            <option value="BLOCKLY">Blockly</option>
+            <option value="PYTHON">Python</option>
+          </select>
+        </label>
+        <label>
+          Source:
+          <select
+            value={pendingFilters.source}
+            onChange={e => setPendingFilters(prev => ({ ...prev, source: e.target.value }))}
+            style={{ marginLeft: 6, padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4 }}
+          >
+            <option value="">All Sources</option>
+            <option value="STUDENT">Submitted</option>
+            <option value="IMPORT">Imported</option>
+          </select>
+        </label>
+        <button
+          onClick={handleSearch}
+          style={{ padding: '6px 18px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+        >
+          Search
+        </button>
+      </div>
 
       {submissions.totalElements === 0 ? (
         <p style={{ color: '#888' }}>No submissions yet.</p>
@@ -101,7 +165,7 @@ export default function ProgressPage() {
         </table>
       )}
 
-      <Pagination page={page} totalPages={submissions.totalPages} onPageChange={setPage} />
+      <Pagination page={page} totalPages={submissions.totalPages} onPageChange={p => load(p, filters)} />
     </div>
   );
 }
