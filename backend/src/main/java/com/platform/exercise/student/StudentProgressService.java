@@ -21,9 +21,10 @@ public class StudentProgressService {
     private final SubmissionRepository submissionRepository;
     private final ExerciseRepository exerciseRepository;
 
-    public StudentProgressDto getProgress(Long userId, int page, int size) {
+    public StudentProgressDto getProgress(Long userId, int page, int size,
+                                           String exerciseTitle, String exerciseType, String source) {
         Page<Submission> subPage = submissionRepository
-            .findByUserIdAndDeletedFalseOrderByCreatedAtDesc(userId, PageRequest.of(page, size));
+            .findByUserIdFiltered(userId, exerciseTitle, exerciseType, source, PageRequest.of(page, size));
 
         List<Long> exerciseIds = subPage.map(Submission::getExerciseId).toList();
         Map<Long, String> titleMap = exerciseRepository.findAllById(exerciseIds).stream()

@@ -124,4 +124,34 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Transactional
     @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
     int softDeleteAllByBatchId(@Param("batchId") Long batchId);
+
+    // LOWER() is explicit here (unlike findFiltered's studentName search) because H2 in test
+    // mode defaults to case-sensitive LIKE. MySQL's utf8mb4_general_ci already ignores case,
+    // so LOWER() is redundant but harmless on MySQL and necessary for H2 test fidelity.
+    @Query(value = """
+            SELECT s.* FROM submissions s
+            LEFT JOIN exercises e ON e.id = s.exercise_id
+            WHERE s.user_id = :userId
+              AND s.is_deleted = false
+              AND (:exerciseTitle IS NULL OR LOWER(e.title) LIKE CONCAT('%', LOWER(:exerciseTitle), '%'))
+              AND (:exerciseType IS NULL OR s.exercise_type = :exerciseType)
+              AND (:source IS NULL OR s.source = :source)
+            ORDER BY s.created_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM submissions s
+            LEFT JOIN exercises e ON e.id = s.exercise_id
+            WHERE s.user_id = :userId
+              AND s.is_deleted = false
+              AND (:exerciseTitle IS NULL OR LOWER(e.title) LIKE CONCAT('%', LOWER(:exerciseTitle), '%'))
+              AND (:exerciseType IS NULL OR s.exercise_type = :exerciseType)
+              AND (:source IS NULL OR s.source = :source)
+            """,
+            nativeQuery = true)
+    Page<Submission> findByUserIdFiltered(
+            @Param("userId") Long userId,
+            @Param("exerciseTitle") String exerciseTitle,
+            @Param("exerciseType") String exerciseType,
+            @Param("source") String source,
+            Pageable pageable);
 }
