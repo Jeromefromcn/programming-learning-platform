@@ -5,6 +5,7 @@ import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.Exercise.ExerciseType;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
+import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
 import com.platform.exercise.metrics.BusinessMetrics;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +47,7 @@ class FileImportServiceTest {
     @Mock BusinessMetrics businessMetrics;
 
     private FileImportService service;
+    private final AutoGradeConfigResolver autoGradeConfigResolver = new AutoGradeConfigResolver(new ObjectMapper());
 
     private static final String BLOCKLY_CONFIG =
         "{\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"Hello\"}}}";
@@ -61,7 +64,8 @@ class FileImportServiceTest {
         service = new FileImportService(
             exerciseRepository, versionRepository, submissionRepository,
             blocklyGrader, pythonGrader, batchCache, new ObjectMapper(),
-            userRepository, importBatchRepository, securityMetrics, businessMetrics);
+            userRepository, importBatchRepository, securityMetrics, businessMetrics,
+            autoGradeConfigResolver);
     }
 
     private void stubExercise(long exerciseId, long versionId) {
@@ -213,6 +217,33 @@ class FileImportServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(Submission.class);
         verify(submissionRepository).save(captor.capture());
         assertThat(captor.getValue().getWorkspaceXml()).isNull();
+    }
+
+    @Test
+    void processSingleFile_autoGradeFalse_skipsGradingAndStoresNullScore() {
+        String manualConfig = "{\"autoGrade\":false,\"gradingRules\":{\"outputMatch\":{\"enabled\":true,\"expectedOutput\":\"Hello\"}}}";
+        Exercise exercise = new Exercise();
+        exercise.setId(1L);
+        exercise.setTitle("Hello");
+        exercise.setType(ExerciseType.BLOCKLY);
+        exercise.setCurrentVersionId(10L);
+        when(exerciseRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(exercise));
+        ExerciseVersion version = new ExerciseVersion();
+        version.setId(10L);
+        version.setVersionNumber(1);
+        version.setConfig(manualConfig);
+        when(versionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+
+        ImportResultDto result = service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        assertThat(result.status()).isEqualTo("IMPORTED");
+        assertThat(result.autoScore()).isNull();
+        verifyNoInteractions(blocklyGrader);
     }
 
     private byte[] buildZipWithEntry(String entryName, byte[] content) {

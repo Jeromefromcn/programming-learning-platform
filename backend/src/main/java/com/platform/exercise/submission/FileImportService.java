@@ -7,6 +7,7 @@ import com.platform.exercise.common.PlatformException;
 import com.platform.exercise.domain.Exercise;
 import com.platform.exercise.domain.ExerciseVersion;
 import com.platform.exercise.domain.Submission;
+import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
 import com.platform.exercise.metrics.BusinessMetrics;
@@ -56,6 +57,7 @@ public class FileImportService {
     private final ImportBatchRepository importBatchRepository;
     private final SecurityMetrics securityMetrics;
     private final BusinessMetrics businessMetrics;
+    private final AutoGradeConfigResolver autoGradeConfigResolver;
 
     List<ImportResultDto> processZip(byte[] zipBytes, String batchId) throws IOException {
         List<ImportResultDto> results = new ArrayList<>();
@@ -139,18 +141,22 @@ public class FileImportService {
             boolean versionMismatch = studentVersion != null
                 && studentVersion != currentVersion.getVersionNumber();
 
-            BigDecimal autoScore;
-            String autoGradeDetails;
-            if ("BLOCKLY".equals(exerciseType)) {
-                BlocklyGrader.Result gr = blocklyGrader.grade(answer, currentVersion.getConfig());
-                autoScore = gr.autoScore();
-                autoGradeDetails = gr.autoGradeDetailsJson();
-            } else if ("PYTHON".equals(exerciseType)) {
-                PythonGrader.Result gr = pythonGrader.grade(answer, currentVersion.getConfig());
-                autoScore = gr.autoScore();
-                autoGradeDetails = gr.autoGradeDetailsJson();
-            } else {
+            if (!"BLOCKLY".equals(exerciseType) && !"PYTHON".equals(exerciseType)) {
                 return logAndReturn(batchId, ImportResultDto.failed(filename, "Unknown exercise type: " + exerciseType));
+            }
+
+            BigDecimal autoScore = null;
+            String autoGradeDetails = null;
+            if (autoGradeConfigResolver.isEnabled(currentVersion.getConfig())) {
+                if ("BLOCKLY".equals(exerciseType)) {
+                    BlocklyGrader.Result gr = blocklyGrader.grade(answer, currentVersion.getConfig());
+                    autoScore = gr.autoScore();
+                    autoGradeDetails = gr.autoGradeDetailsJson();
+                } else {
+                    PythonGrader.Result gr = pythonGrader.grade(answer, currentVersion.getConfig());
+                    autoScore = gr.autoScore();
+                    autoGradeDetails = gr.autoGradeDetailsJson();
+                }
             }
 
             Submission sub = new Submission();
