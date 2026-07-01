@@ -9,6 +9,12 @@ vi.mock('../../api/importBatchApi', () => ({
   downloadBatchExport: vi.fn(),
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const batch = (id, gradedStatus, importedCount = 3) => ({
   id,
   createdAt: '2026-06-01T10:00:00',
@@ -23,6 +29,7 @@ beforeEach(() => {
   importBatchApi.list = vi.fn().mockResolvedValue({ content: [], totalPages: 0 });
   importBatchApi.delete = vi.fn().mockResolvedValue(undefined);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
+  mockNavigate.mockClear();
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -92,4 +99,17 @@ it('does not call importBatchApi.delete when user cancels', async () => {
   fireEvent.click(screen.getByRole('button', { name: /^delete$/i }));
 
   expect(importBatchApi.delete).not.toHaveBeenCalled();
+});
+
+it('View Submissions button navigates to submissions page filtered by batch id', async () => {
+  importBatchApi.list = vi.fn().mockResolvedValue({
+    content: [batch(5, 'PARTIAL')],
+    totalPages: 1,
+  });
+  renderPage();
+  await waitFor(() => screen.getByRole('button', { name: /view submissions/i }));
+
+  fireEvent.click(screen.getByRole('button', { name: /view submissions/i }));
+
+  expect(mockNavigate).toHaveBeenCalledWith('/tutor/submissions?batchId=5');
 });

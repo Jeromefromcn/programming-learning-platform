@@ -158,6 +158,15 @@ export default function GroupSubmissionPage() {
                   </td>
                   <td style={{ padding: '10px 12px', display: 'flex', gap: 8 }}>
                     <button
+                      onClick={() => navigate(`/tutor/submissions?batchId=${b.id}`)}
+                      style={{
+                        padding: '4px 14px', background: '#1976d2', color: '#fff',
+                        border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                      }}
+                    >
+                      View Submissions
+                    </button>
+                    <button
                       onClick={() => handleExport(b)}
                       style={{
                         padding: '4px 14px', background: '#388e3c', color: '#fff',
