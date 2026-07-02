@@ -49,6 +49,7 @@ export default function ExerciseFormPage() {
   const [exerciseType, setExerciseType] = useState('');
   const [difficulty, setDifficulty] = useState('EASY');
   const [categoryId, setCategoryId] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [hints, setHints] = useState('');
   const [blocklyConfig, setBlocklyConfig] = useState(EMPTY_BLOCKLY_CONFIG);
   const [pythonConfig, setPythonConfig] = useState(EMPTY_PYTHON_CONFIG);
@@ -69,6 +70,7 @@ export default function ExerciseFormPage() {
       setExerciseType(ex.type);
       setDifficulty(ex.currentVersion.difficulty);
       setCategoryId(ex.categoryId ? String(ex.categoryId) : '');
+      setDeadline(ex.deadline ? ex.deadline.slice(0, 16) : '');
       setHints((ex.currentVersion.hints || []).join('\n'));
       if (ex.type === 'BLOCKLY') {
         setBlocklyConfig(ex.currentVersion.config || EMPTY_BLOCKLY_CONFIG);
@@ -123,6 +125,7 @@ export default function ExerciseFormPage() {
         categoryId: categoryId ? Number(categoryId) : null,
         hints: hints.split('\n').map(h => h.trim()).filter(Boolean),
         config,
+        deadline: deadline || null,
       };
 
       if (isEdit) {
@@ -235,6 +238,14 @@ export default function ExerciseFormPage() {
               <label style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>Hints (one per line)</label>
               <textarea value={hints} onChange={e => setHints(e.target.value)} rows={3}
                 placeholder="Optional hints for students"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label htmlFor="deadline" style={{ display: 'block', fontWeight: 600, marginBottom: 4 }}>
+                Deadline (optional)
+              </label>
+              <input id="deadline" type="datetime-local" value={deadline}
+                onChange={e => setDeadline(e.target.value)}
                 style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }} />
             </div>
           </div>

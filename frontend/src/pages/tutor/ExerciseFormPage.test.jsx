@@ -84,6 +84,50 @@ it('includes autoGrade true in the create payload by default', async () => {
   );
 });
 
+it('sends deadline null in the create payload when left blank', async () => {
+  await renderCreateForm('PYTHON');
+  fillRequiredFields();
+
+  fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ deadline: null })
+    )
+  );
+});
+
+it('sends the entered deadline in the create payload', async () => {
+  await renderCreateForm('PYTHON');
+  fillRequiredFields();
+  fireEvent.change(screen.getByLabelText(/deadline/i), { target: { value: '2026-07-15T23:59' } });
+
+  fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({ deadline: '2026-07-15T23:59' })
+    )
+  );
+});
+
+it('prefills the deadline field when editing an exercise that has one', async () => {
+  exerciseApi.get = vi.fn().mockResolvedValue({
+    id: 1, title: 'Existing', type: 'PYTHON', categoryId: null,
+    currentVersion: { description: 'd', difficulty: 'EASY', hints: [], config: {} },
+    deadline: '2026-07-15T23:59:00',
+  });
+  render(
+    <MemoryRouter initialEntries={['/tutor/exercises/1/edit']}>
+      <Routes>
+        <Route path="/tutor/exercises/:id/edit" element={<ExerciseFormPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => expect(screen.getByLabelText(/deadline/i).value).toBe('2026-07-15T23:59'));
+});
+
 it('unchecking the toggle sends autoGrade false', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();
