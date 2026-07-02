@@ -23,6 +23,7 @@ export default function GroupSubmissionPage() {
   const [gradedStatus, setGradedStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [exportingId, setExportingId] = useState(null);
   const [searchTrigger, setSearchTrigger] = useState(0);
 
   async function fetchBatches(params) {
@@ -72,13 +73,20 @@ export default function GroupSubmissionPage() {
     }
   }
 
-  function handleExport(batch) {
-    if (batch.gradedStatus !== 'ALL') {
-      if (!window.confirm(
+  async function handleExport(batch) {
+    setExportingId(batch.id);
+    try {
+      const fresh = await importBatchApi.list({ batchId: batch.id, page: 0, size: 1 });
+      const status = fresh.content[0]?.gradedStatus;
+      if (status !== 'ALL' && !window.confirm(
         `Not all submissions in this batch are graded.\nExport anyway?`
       )) return;
+      downloadBatchExport(batch.id);
+    } catch {
+      alert('Failed to check batch status. Please try again.');
+    } finally {
+      setExportingId(null);
     }
-    downloadBatchExport(batch.id);
   }
 
   return (
@@ -170,12 +178,14 @@ export default function GroupSubmissionPage() {
                     </button>
                     <button
                       onClick={() => handleExport(b)}
+                      disabled={exportingId === b.id}
                       style={{
                         padding: '4px 14px', background: '#388e3c', color: '#fff',
-                        border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12,
+                        border: 'none', borderRadius: 4, cursor: exportingId === b.id ? 'default' : 'pointer',
+                        fontSize: 12, opacity: exportingId === b.id ? 0.5 : 1,
                       }}
                     >
-                      Export CSV
+                      {exportingId === b.id ? 'Checking…' : 'Export CSV'}
                     </button>
                     <button
                       onClick={() => handleDelete(b)}
