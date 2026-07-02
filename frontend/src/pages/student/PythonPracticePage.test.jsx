@@ -103,3 +103,21 @@ describe('PythonPracticePage submit/draft', () => {
     expect(await screen.findByText(/already been graded and cannot be resubmitted/i)).toBeInTheDocument();
   });
 });
+
+describe('PythonPracticePage deadline', () => {
+  it('disables Submit and shows a message when the deadline has passed', async () => {
+    studentApi.getDraft.mockResolvedValue(null);
+    const pastDeadlineExercise = { ...exercise, deadline: '2020-01-01T00:00:00' };
+    render(<MemoryRouter><PythonPracticePage exercise={pastDeadlineExercise} /></MemoryRouter>);
+
+    expect(screen.getByRole('button', { name: /submit/i })).toBeDisabled();
+    expect(screen.getByText(/deadline for this exercise has passed/i)).toBeInTheDocument();
+  });
+
+  it('keeps Submit enabled when there is no deadline', async () => {
+    studentApi.getDraft.mockResolvedValue(null);
+    render(<MemoryRouter><PythonPracticePage exercise={exercise} /></MemoryRouter>);
+
+    expect(screen.getByRole('button', { name: /submit/i })).not.toBeDisabled();
+  });
+});

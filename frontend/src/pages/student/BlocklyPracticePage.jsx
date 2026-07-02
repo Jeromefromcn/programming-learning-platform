@@ -6,6 +6,7 @@ import { javascriptGenerator } from 'blockly/javascript';
 import { pythonGenerator } from 'blockly/python';
 import { applyTrashcanStyles } from '../../utils/blocklyTrashcan';
 import { createBlocklyBlobWorker } from '../../utils/blocklyWorker';
+import { formatDateTime } from '../../utils/dateFormat';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 import { studentApi } from '../../api/studentApi';
@@ -48,6 +49,7 @@ export default function BlocklyPracticePage({ exercise }) {
   const config = version.config;
   const hints = version.hints || [];
   const showCodeView = config.showCodeView || false;
+  const deadlinePassed = exercise.deadline != null && new Date(exercise.deadline) < new Date();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -227,6 +229,12 @@ export default function BlocklyPracticePage({ exercise }) {
         ← Back to exercises
       </button>
       <h1>{exercise.title}</h1>
+      {exercise.deadline && (
+        <p style={{ fontSize: 13, color: deadlinePassed ? '#c62828' : '#555', margin: '0 0 12px' }}>
+          Deadline: {formatDateTime(exercise.deadline)}
+          {deadlinePassed && ' — the deadline for this exercise has passed. Submissions are closed.'}
+        </p>
+      )}
       <div style={{ color: '#555', marginBottom: 16 }}>
         <MarkdownRenderer content={version.description} />
       </div>
@@ -263,8 +271,9 @@ export default function BlocklyPracticePage({ exercise }) {
           style={{ border: '1px solid #1976d2', color: '#1976d2', background: '#fff', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
           {saving ? 'Saving…' : 'Save'}
         </button>
-        <button onClick={handleSubmit} disabled={submitting}
-          style={{ background: '#7b1fa2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}>
+        <button onClick={handleSubmit} disabled={submitting || deadlinePassed}
+          style={{ background: '#7b1fa2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px',
+            cursor: deadlinePassed ? 'not-allowed' : 'pointer' }}>
           {submitting ? 'Submitting…' : 'Submit'}
         </button>
 
