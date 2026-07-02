@@ -28,7 +28,8 @@ public enum ErrorCode {
     BATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
     ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN),
     SUBMISSION_ALREADY_GRADED(HttpStatus.CONFLICT),
-    SUBMISSION_CONFLICT(HttpStatus.CONFLICT);
+    SUBMISSION_CONFLICT(HttpStatus.CONFLICT),
+    EXERCISE_DEADLINE_PASSED(HttpStatus.CONFLICT);
 
     private final HttpStatus httpStatus;
 

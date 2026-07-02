@@ -40,6 +40,9 @@ public class Exercise {
     @Column(nullable = false, columnDefinition = "VARCHAR(20)")
     private Status status = Status.DRAFT;
 
+    @Column(name = "deadline")
+    private LocalDateTime deadline;
+
     @Column(name = "current_version_id")
     private Long currentVersionId;
 
