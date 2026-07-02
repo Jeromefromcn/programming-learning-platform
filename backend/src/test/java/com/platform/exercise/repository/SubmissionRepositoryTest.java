@@ -396,4 +396,47 @@ class SubmissionRepositoryTest {
         Page<Submission> all = repository.findFiltered(null, null, null, null, null, PageRequest.of(0, 20));
         assertEquals(2, all.getTotalElements());
     }
+
+    @Test
+    void findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse_returnsActiveMatchOnly() {
+        Submission activeStudent = repository.save(sub("STUDENT", userId7, exerciseId));
+        Submission deletedStudent = sub("STUDENT", userId7, exerciseId);
+        deletedStudent.setDeleted(true);
+        repository.save(deletedStudent);
+        repository.save(sub("IMPORT", userId7, exerciseId)); // different source, must not match
+
+        var found = repository.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(userId7, exerciseId, "STUDENT");
+
+        assertTrue(found.isPresent());
+        assertEquals(activeStudent.getId(), found.get().getId());
+    }
+
+    @Test
+    void findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse_emptyWhenNoActiveMatch() {
+        var found = repository.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(userId7, exerciseId, "STUDENT");
+        assertTrue(found.isEmpty());
+    }
+
+    @Test
+    void softDeleteActiveByStudentNameAndExerciseIdAndSource_marksOnlyMatchingActiveImportRows() {
+        Exercise other = new Exercise();
+        other.setTitle("Other Exercise");
+        other.setDescription("desc");
+        other.setType(Exercise.ExerciseType.PYTHON);
+        other.setDifficulty(Exercise.Difficulty.EASY);
+        other.setStatus(Exercise.Status.PUBLISHED);
+        other.setCreatedBy(userId7);
+        Long otherExerciseId = ((Exercise) em.persistAndFlush(other)).getId();
+
+        Submission targetImport = repository.save(sub("IMPORT", null, exerciseId));
+        Submission differentSource = repository.save(sub("STUDENT", userId7, exerciseId));
+        Submission differentExercise = repository.save(sub("IMPORT", null, otherExerciseId));
+
+        int affected = repository.softDeleteActiveByStudentNameAndExerciseIdAndSource("Alice", exerciseId, "IMPORT");
+
+        assertEquals(1, affected);
+        assertTrue(repository.findById(targetImport.getId()).map(Submission::isDeleted).orElse(false));
+        assertFalse(repository.findById(differentSource.getId()).map(Submission::isDeleted).orElse(true));
+        assertFalse(repository.findById(differentExercise.getId()).map(Submission::isDeleted).orElse(true));
+    }
 }

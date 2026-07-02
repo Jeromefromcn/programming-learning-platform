@@ -26,7 +26,8 @@ public enum ErrorCode {
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST),
     CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST),
     BATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
-    ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN);
+    ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN),
+    SUBMISSION_ALREADY_GRADED(HttpStatus.CONFLICT);
 
     private final HttpStatus httpStatus;
 

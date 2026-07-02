@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
@@ -127,6 +128,21 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Transactional
     @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
     int softDeleteAllByBatchId(@Param("batchId") Long batchId);
+
+    Optional<Submission> findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(
+            Long userId, Long exerciseId, String source);
+
+    @Modifying(clearAutomatically = true)
+    @Transactional
+    @Query("""
+            UPDATE Submission s SET s.deleted = true
+            WHERE s.studentName = :studentName AND s.exerciseId = :exerciseId
+              AND s.source = :source AND s.deleted = false
+            """)
+    int softDeleteActiveByStudentNameAndExerciseIdAndSource(
+            @Param("studentName") String studentName,
+            @Param("exerciseId") Long exerciseId,
+            @Param("source") String source);
 
     // LOWER() is explicit here (unlike findFiltered's studentName search) because H2 in test
     // mode defaults to case-sensitive LIKE. MySQL's utf8mb4_general_ci already ignores case,
