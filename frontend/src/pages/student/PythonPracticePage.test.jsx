@@ -91,4 +91,15 @@ describe('PythonPracticePage submit/draft', () => {
     await waitFor(() => expect(studentApi.submit).toHaveBeenCalledWith(5, expect.objectContaining({ answerData: expect.any(String) })));
     expect(await screen.findByText(/100/)).toBeInTheDocument();
   });
+
+  it('shows an error message when submit is rejected (e.g. already graded)', async () => {
+    studentApi.getDraft.mockResolvedValue(null);
+    studentApi.submit.mockRejectedValue({
+      response: { data: { error: { message: 'This exercise has already been graded and cannot be resubmitted.' } } },
+    });
+    render(<MemoryRouter><PythonPracticePage exercise={exercise} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(await screen.findByText(/already been graded and cannot be resubmitted/i)).toBeInTheDocument();
+  });
 });

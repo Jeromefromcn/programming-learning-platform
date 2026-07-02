@@ -300,4 +300,16 @@ describe('Save and Submit', () => {
     await waitFor(() => expect(studentApi.submit).toHaveBeenCalledWith(blocklyExercise.id, expect.any(Object)));
     expect((await screen.findAllByText(/Pass|100/)).length).toBeGreaterThan(0);
   });
+
+  it('shows an error modal when submit is rejected (e.g. already graded)', async () => {
+    const { studentApi } = await import('../../api/studentApi');
+    studentApi.getDraft.mockResolvedValue(null);
+    studentApi.submit.mockRejectedValue({
+      response: { data: { error: { message: 'This exercise has already been graded and cannot be resubmitted.' } } },
+    });
+    render(<MemoryRouter><BlocklyPracticePage exercise={blocklyExercise} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /submit/i }));
+
+    expect(await screen.findByText(/already been graded and cannot be resubmitted/i)).toBeInTheDocument();
+  });
 });

@@ -29,6 +29,7 @@ export default function PythonPracticePage({ exercise }) {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
   const [savedToast, setSavedToast] = useState(false);
   const workerRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -101,10 +102,13 @@ export default function PythonPracticePage({ exercise }) {
   async function handleSubmit() {
     setSubmitting(true);
     setSubmitResult(null);
+    setSubmitError(null);
     try { await studentApi.saveDraft(exercise.id, { answerData: code }); } catch { /* best-effort */ }
     try {
       const res = await studentApi.submit(exercise.id, { answerData: code });
       setSubmitResult(res);
+    } catch (e) {
+      setSubmitError(e.response?.data?.error?.message || 'Failed to submit.');
     } finally {
       setSubmitting(false);
     }
@@ -266,6 +270,20 @@ export default function PythonPracticePage({ exercise }) {
               <h2 style={{ marginTop: 0 }}>Submitted</h2>
             )}
             <button onClick={() => setSubmitResult(null)}
+              style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {submitError && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 32, minWidth: 320, textAlign: 'center' }}>
+            <h2 style={{ marginTop: 0, color: '#c62828' }}>Submission Failed</h2>
+            <p>{submitError}</p>
+            <button onClick={() => setSubmitError(null)}
               style={{ marginTop: 16, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 24px', cursor: 'pointer' }}>
               OK
             </button>
