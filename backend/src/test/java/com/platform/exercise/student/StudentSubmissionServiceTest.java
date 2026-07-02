@@ -100,6 +100,46 @@ class StudentSubmissionServiceTest {
     }
 
     @Test
+    void submit_deadlineInPast_throwsDeadlinePassed() {
+        Exercise ex = new Exercise();
+        ex.setId(2L);
+        ex.setType(Exercise.ExerciseType.PYTHON);
+        ex.setStatus(Exercise.Status.PUBLISHED);
+        ex.setCurrentVersionId(9L);
+        ex.setDeadline(LocalDateTime.now().minusDays(1));
+        when(exerciseRepo.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(ex));
+
+        com.platform.exercise.common.PlatformException thrown = assertThrows(
+            com.platform.exercise.common.PlatformException.class,
+            () -> service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null)));
+
+        assertEquals(com.platform.exercise.common.ErrorCode.EXERCISE_DEADLINE_PASSED, thrown.getErrorCode());
+        verify(submissionRepo, never()).save(any());
+    }
+
+    @Test
+    void submit_deadlineInFuture_succeeds() {
+        Exercise ex = new Exercise();
+        ex.setId(2L);
+        ex.setType(Exercise.ExerciseType.PYTHON);
+        ex.setStatus(Exercise.Status.PUBLISHED);
+        ex.setCurrentVersionId(9L);
+        ex.setDeadline(LocalDateTime.now().plusDays(1));
+        when(exerciseRepo.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(ex));
+        ExerciseVersion v = new ExerciseVersion();
+        v.setId(9L);
+        v.setVersionNumber(1);
+        v.setConfig("{\"autoGrade\":true,\"testCases\":[]}");
+        when(versionRepo.findById(9L)).thenReturn(Optional.of(v));
+        when(pythonGrader.grade(any(), any()))
+            .thenReturn(new PythonGrader.Result(BigDecimal.valueOf(100), "{}"));
+
+        SubmitResultDto result = service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
+
+        assertTrue(result.showResult());
+    }
+
+    @Test
     void submit_priorUngradedStudentSubmissionExists_softDeletesItAndInsertsNew() {
         stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
         Submission prior = new Submission();

@@ -282,6 +282,34 @@ class FileImportServiceTest {
         assertThat(captor.getValue().getImportActiveKey()).isEqualTo("IMPORT:1:Alex");
     }
 
+    @Test
+    void processSingleFile_pastDeadline_stillImportsSuccessfully() {
+        Exercise exercise = new Exercise();
+        exercise.setId(1L);
+        exercise.setTitle("Hello");
+        exercise.setType(ExerciseType.BLOCKLY);
+        exercise.setCurrentVersionId(10L);
+        exercise.setDeadline(java.time.LocalDateTime.now().minusDays(1));
+        when(exerciseRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(exercise));
+        ExerciseVersion version = new ExerciseVersion();
+        version.setId(10L);
+        version.setVersionNumber(1);
+        version.setConfig(BLOCKLY_CONFIG);
+        when(versionRepository.findById(10L)).thenReturn(Optional.of(version));
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        ImportResultDto result = service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        assertThat(result.status()).isEqualTo("IMPORTED");
+    }
+
     private byte[] buildZipWithEntry(String entryName, byte[] content) {
         try {
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();

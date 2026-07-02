@@ -37,6 +37,12 @@ public class StudentSubmissionService {
         Exercise exercise = exerciseRepository.findByIdAndDeletedFalse(exerciseId)
             .filter(e -> e.getStatus() == Exercise.Status.PUBLISHED)
             .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
+
+        if (exercise.getDeadline() != null && LocalDateTime.now().isAfter(exercise.getDeadline())) {
+            throw new PlatformException(ErrorCode.EXERCISE_DEADLINE_PASSED,
+                "The submission deadline for this exercise has passed.");
+        }
+
         ExerciseVersion version = versionRepository.findById(exercise.getCurrentVersionId())
             .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
 
