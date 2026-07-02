@@ -33,4 +33,14 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorResponse> response = handler.handlePlatformException(ex);
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     }
+
+    @Test
+    void dataIntegrityViolation_submissionActiveKeyConflict_mapsTo409() {
+        org.springframework.dao.DataIntegrityViolationException ex =
+            new org.springframework.dao.DataIntegrityViolationException(
+                "Duplicate entry for key 'uk_submissions_student_active'");
+        ResponseEntity<ErrorResponse> response = handler.handleDataIntegrity(ex);
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("SUBMISSION_CONFLICT", response.getBody().error().code());
+    }
 }

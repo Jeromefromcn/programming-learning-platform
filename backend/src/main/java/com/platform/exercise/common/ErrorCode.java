@@ -27,7 +27,8 @@ public enum ErrorCode {
     CANNOT_MODIFY_SELF(HttpStatus.BAD_REQUEST),
     BATCH_NOT_FOUND(HttpStatus.NOT_FOUND),
     ACCOUNT_EXPIRED(HttpStatus.FORBIDDEN),
-    SUBMISSION_ALREADY_GRADED(HttpStatus.CONFLICT);
+    SUBMISSION_ALREADY_GRADED(HttpStatus.CONFLICT),
+    SUBMISSION_CONFLICT(HttpStatus.CONFLICT);
 
     private final HttpStatus httpStatus;
 

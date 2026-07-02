@@ -22,6 +22,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 
@@ -170,6 +172,23 @@ class SubmissionRepositoryTest {
         assertEquals(1, affected);
         assertTrue(repository.findById(s1.getId()).map(Submission::isDeleted).orElse(false));
         assertFalse(repository.findById(s2.getId()).map(Submission::isDeleted).orElse(true));
+    }
+
+    @Test
+    void softDeleteByFilters_clearsActiveKeysOnMatchedRow() {
+        LocalDateTime old = LocalDateTime.of(2024, 3, 1, 0, 0);
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        Submission s1 = subWithDate(old, "IMPORT", "Eve");
+        s1.setImportActiveKey("IMPORT:" + exerciseId + ":Eve");
+        Submission saved = repository.save(s1);
+
+        int affected = repository.softDeleteByFilters(cutoff, null, null);
+
+        assertEquals(1, affected);
+        Submission reloaded = repository.findById(saved.getId()).orElseThrow();
+        assertTrue(reloaded.isDeleted());
+        assertNull(reloaded.getImportActiveKey());
     }
 
     @Test
@@ -438,5 +457,71 @@ class SubmissionRepositoryTest {
         assertTrue(repository.findById(targetImport.getId()).map(Submission::isDeleted).orElse(false));
         assertFalse(repository.findById(differentSource.getId()).map(Submission::isDeleted).orElse(true));
         assertFalse(repository.findById(differentExercise.getId()).map(Submission::isDeleted).orElse(true));
+    }
+
+    @Test
+    void studentActiveKey_duplicateActiveInsert_violatesUniqueConstraint() {
+        Submission s1 = sub("STUDENT", userId7, exerciseId);
+        s1.setStudentActiveKey("STUDENT:" + exerciseId + ":" + userId7);
+        repository.saveAndFlush(s1);
+
+        Submission s2 = sub("STUDENT", userId7, exerciseId);
+        s2.setStudentActiveKey("STUDENT:" + exerciseId + ":" + userId7);
+
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+            () -> repository.saveAndFlush(s2));
+    }
+
+    @Test
+    void studentActiveKey_nullOnBothRows_doesNotConflict() {
+        Submission s1 = sub("STUDENT", userId7, exerciseId);
+        s1.setDeleted(true);
+        repository.saveAndFlush(s1);
+
+        Submission s2 = sub("STUDENT", userId7, exerciseId);
+        s2.setDeleted(true);
+        repository.saveAndFlush(s2);
+    }
+
+    @Test
+    void softDeleteActiveByStudentNameAndExerciseIdAndSource_alsoClearsImportActiveKey() {
+        Submission s = sub("IMPORT", null, exerciseId);
+        s.setImportActiveKey("IMPORT:" + exerciseId + ":Alice");
+        Submission saved = repository.save(s);
+
+        repository.softDeleteActiveByStudentNameAndExerciseIdAndSource("Alice", exerciseId, "IMPORT");
+
+        Submission reloaded = repository.findById(saved.getId()).orElseThrow();
+        assertTrue(reloaded.isDeleted());
+        assertNull(reloaded.getImportActiveKey());
+    }
+
+    @Test
+    void softDeleteAllByBatchId_clearsImportActiveKey() {
+        ImportBatch batch = new ImportBatch();
+        batch.setUuid(java.util.UUID.randomUUID().toString());
+        batch.setImportedBy(userId7);
+        batch.setFileCount(1);
+        batch.setImportedCount(1);
+        batch.setDuplicateCount(0);
+        batch.setFailedCount(0);
+        Long batchId = ((ImportBatch) em.persistAndFlush(batch)).getId();
+
+        Submission s = sub("IMPORT", null, exerciseId);
+        s.setImportActiveKey("IMPORT:" + exerciseId + ":Alice");
+        Submission saved = repository.save(s);
+        em.getEntityManager().createNativeQuery(
+            "UPDATE submissions SET batch_id = :b WHERE id = :id")
+            .setParameter("b", batchId)
+            .setParameter("id", saved.getId())
+            .executeUpdate();
+        em.flush(); em.clear();
+
+        int affected = repository.softDeleteAllByBatchId(batchId);
+
+        assertEquals(1, affected);
+        Submission reloaded = repository.findById(saved.getId()).orElseThrow();
+        assertTrue(reloaded.isDeleted());
+        assertNull(reloaded.getImportActiveKey());
     }
 }

@@ -174,6 +174,7 @@ public class FileImportService {
             sub.setAutoScore(autoScore);
             sub.setAutoGradeDetails(autoGradeDetails);
             sub.setImportBatchId(batchId);
+            sub.setImportActiveKey("IMPORT:" + exerciseId + ":" + studentName);
 
             // Resolve user_id from studentName
             userRepository.findByUsername(studentName)

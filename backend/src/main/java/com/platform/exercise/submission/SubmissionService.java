@@ -245,6 +245,8 @@ public class SubmissionService {
             .orElseThrow(() -> new PlatformException(ErrorCode.SUBMISSION_NOT_FOUND,
                 "Submission not found."));
         sub.setDeleted(true);
+        sub.setStudentActiveKey(null);
+        sub.setImportActiveKey(null);
         submissionRepository.save(sub);
     }
 

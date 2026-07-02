@@ -114,8 +114,19 @@ class StudentSubmissionServiceTest {
         service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
 
         assertTrue(prior.isDeleted());
+        assertNull(prior.getStudentActiveKey());
         verify(submissionRepo, times(2)).save(any());
         verify(submissionRepo).save(prior);
+    }
+
+    @Test
+    void submit_setsStudentActiveKeyOnNewSubmission() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
+
+        service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
+
+        verify(submissionRepo).save(argThat(s ->
+            "STUDENT:2:7".equals(s.getStudentActiveKey())));
     }
 
     @Test

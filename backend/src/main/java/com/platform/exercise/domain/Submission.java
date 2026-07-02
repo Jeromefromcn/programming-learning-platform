@@ -68,6 +68,12 @@ public class Submission {
     @Column(name = "graded", nullable = false)
     private boolean graded = false;
 
+    @Column(name = "student_active_key", length = 160)
+    private String studentActiveKey;
+
+    @Column(name = "import_active_key", length = 160)
+    private String importActiveKey;
+
     @Column(name = "source", nullable = false, length = 20)
     private String source = "IMPORT";
 

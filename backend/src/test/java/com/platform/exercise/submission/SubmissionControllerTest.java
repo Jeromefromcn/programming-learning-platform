@@ -241,6 +241,27 @@ class SubmissionControllerTest {
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void deleteSubmission_clearsImportActiveKey() throws Exception {
+        Submission sub = new Submission();
+        sub.setExerciseId(blocklyExercise.getId());
+        sub.setGradedVersionId(blocklyVersion.getId());
+        sub.setStudentName("Alex");
+        sub.setExerciseType("BLOCKLY");
+        sub.setAnswerData("print('Hello');");
+        sub.setExportTimestamp(LocalDateTime.of(2026, 5, 1, 10, 0));
+        sub.setImportActiveKey("IMPORT:" + blocklyExercise.getId() + ":Alex");
+        Submission saved = submissionRepository.save(sub);
+
+        mockMvc.perform(delete("/v1/submissions/" + saved.getId()))
+            .andExpect(status().isNoContent());
+
+        Submission updated = submissionRepository.findById(saved.getId()).orElseThrow();
+        assertThat(updated.isDeleted()).isTrue();
+        assertThat(updated.getImportActiveKey()).isNull();
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
     void deleteSubmission_notFound_returns404() throws Exception {
         mockMvc.perform(delete("/v1/submissions/99999"))
             .andExpect(status().isNotFound())
@@ -292,9 +313,12 @@ class SubmissionControllerTest {
         // Import once
         mockMvc.perform(multipart("/v1/submissions/import").file(file)).andExpect(status().isOk());
 
-        // Soft-delete it
+        // Soft-delete it (mirrors the invariant SubmissionService.delete() enforces: an
+        // inactive row must never keep a non-null active key, or a later re-import for
+        // the same student+exercise would collide with uk_submissions_import_active).
         Submission sub = submissionRepository.findByStudentNameAndDeletedFalse("tutor1").get(0);
         sub.setDeleted(true);
+        sub.setImportActiveKey(null);
         submissionRepository.save(sub);
 
         // Re-import same file — should succeed as new import, not duplicate

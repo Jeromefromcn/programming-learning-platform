@@ -47,6 +47,7 @@ public class StudentSubmissionService {
                         "This exercise has already been graded and cannot be resubmitted.");
                 }
                 existing.setDeleted(true);
+                existing.setStudentActiveKey(null);
                 submissionRepository.save(existing);
             });
 
@@ -80,6 +81,7 @@ public class StudentSubmissionService {
         sub.setAutoGradeDetails(autoGradeDetails);
         sub.setSource("STUDENT");
         sub.setUserId(userId);
+        sub.setStudentActiveKey("STUDENT:" + exerciseId + ":" + userId);
         Submission saved = submissionRepository.save(sub);
 
         return new SubmitResultDto(

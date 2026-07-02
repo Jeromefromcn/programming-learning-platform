@@ -46,6 +46,13 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(ErrorCode.CATEGORY_DUPLICATE, "This category already exists"));
         }
+        if (msg != null && (msg.toLowerCase().contains("uk_submissions_student_active")
+                || msg.toLowerCase().contains("uk_submissions_import_active"))) {
+            return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(ErrorCode.SUBMISSION_CONFLICT,
+                    "Your submission conflicted with a concurrent request. Please try again."));
+        }
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(ErrorResponse.of(ErrorCode.VALIDATION_ERROR,

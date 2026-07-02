@@ -96,7 +96,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Modifying(clearAutomatically = true)
     @Transactional
     @Query("""
-            UPDATE Submission s SET s.deleted = true
+            UPDATE Submission s SET s.deleted = true, s.studentActiveKey = null, s.importActiveKey = null
             WHERE s.createdAt < :before
               AND (:exerciseId IS NULL OR s.exerciseId = :exerciseId)
               AND (:source IS NULL OR s.source = :source)
@@ -126,7 +126,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     @Modifying(clearAutomatically = true)
     @Transactional
-    @Query("UPDATE Submission s SET s.deleted = true WHERE s.batchId = :batchId")
+    @Query("UPDATE Submission s SET s.deleted = true, s.studentActiveKey = null, s.importActiveKey = null WHERE s.batchId = :batchId")
     int softDeleteAllByBatchId(@Param("batchId") Long batchId);
 
     Optional<Submission> findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(
@@ -135,7 +135,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Modifying(clearAutomatically = true)
     @Transactional
     @Query("""
-            UPDATE Submission s SET s.deleted = true
+            UPDATE Submission s SET s.deleted = true, s.importActiveKey = null
             WHERE s.studentName = :studentName AND s.exerciseId = :exerciseId
               AND s.source = :source AND s.deleted = false
             """)
