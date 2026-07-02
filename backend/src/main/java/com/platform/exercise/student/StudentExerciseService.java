@@ -83,7 +83,7 @@ public class StudentExerciseService {
             return new StudentExerciseDetailDto(
                     exercise.getId(), exercise.getTitle(),
                     exercise.getType().name(), exercise.getDifficulty().name(),
-                    cat, versionDto, exercise.getLikeCount(), false);
+                    cat, versionDto, exercise.getLikeCount(), false, exercise.getDeadline());
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse version config", e);
         }

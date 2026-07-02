@@ -168,6 +168,25 @@ class StudentExerciseControllerTest {
 
     @Test
     @WithMockUser(username = "student1", roles = "STUDENT")
+    void get_exerciseWithDeadline_includesDeadlineInResponse() throws Exception {
+        jdbcTemplate.update("UPDATE exercises SET deadline = ? WHERE id = ?",
+            java.sql.Timestamp.valueOf("2026-07-15 23:59:00"), publishedPythonExId);
+
+        mockMvc.perform(get("/v1/student/exercises/" + publishedPythonExId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.deadline").value("2026-07-15T23:59:00"));
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
+    void get_exerciseWithoutDeadline_deadlineIsNull() throws Exception {
+        mockMvc.perform(get("/v1/student/exercises/" + publishedPythonExId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.deadline").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
     void get_publishedBlocklyExercise_stripsGradingRulesKeepsAllowedBlocks() throws Exception {
         mockMvc.perform(get("/v1/student/exercises/" + publishedBlocklyExId))
             .andExpect(status().isOk())
