@@ -17,7 +17,7 @@ Exercises have no notion of a submission deadline today. This spec adds an optio
       .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
   ```
 - `FileImportService.processSingleFile()` looks up the exercise with `exerciseRepository.findByIdAndDeletedFalse(exerciseId).orElse(null)` — it doesn't even filter by `PUBLISHED`, confirming tutor import already bypasses the one student-facing gate that exists today. A new deadline check follows the same precedent: student path only.
-- Latest Flyway migration is `V13__rename_show_result_to_auto_grade.sql`; this spec adds `V14`.
+- Latest Flyway migration is `V13__rename_show_result_to_auto_grade.sql`; this spec adds `V15`.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ Exercises have no notion of a submission deadline today. This spec adds an optio
 
 ## Schema Change
 
-New migration `V14__add_exercise_deadline.sql`:
+New migration `V15__add_exercise_deadline.sql`:
 ```sql
 ALTER TABLE exercises
     ADD COLUMN deadline DATETIME NULL COMMENT 'Optional submission deadline; NULL = no deadline' AFTER status;

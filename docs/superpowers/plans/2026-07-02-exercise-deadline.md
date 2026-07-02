@@ -20,7 +20,7 @@
 ### Task 1: Backend — schema, entity, and error code
 
 **Files:**
-- Create: `backend/src/main/resources/db/migration/V14__add_exercise_deadline.sql`
+- Create: `backend/src/main/resources/db/migration/V15__add_exercise_deadline.sql`
 - Modify: `backend/src/main/java/com/platform/exercise/domain/Exercise.java`
 - Modify: `backend/src/main/java/com/platform/exercise/common/ErrorCode.java`
 
@@ -29,7 +29,7 @@
 
 - [ ] **Step 1: Add the migration**
 
-Create `backend/src/main/resources/db/migration/V14__add_exercise_deadline.sql`:
+Create `backend/src/main/resources/db/migration/V15__add_exercise_deadline.sql`:
 
 ```sql
 ALTER TABLE exercises
@@ -64,7 +64,7 @@ Expected: `BUILD SUCCESS`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/main/resources/db/migration/V14__add_exercise_deadline.sql backend/src/main/java/com/platform/exercise/domain/Exercise.java backend/src/main/java/com/platform/exercise/common/ErrorCode.java
+git add backend/src/main/resources/db/migration/V15__add_exercise_deadline.sql backend/src/main/java/com/platform/exercise/domain/Exercise.java backend/src/main/java/com/platform/exercise/common/ErrorCode.java
 git commit -m "feat(exercise): add nullable deadline column and EXERCISE_DEADLINE_PASSED error code"
 ```
 
