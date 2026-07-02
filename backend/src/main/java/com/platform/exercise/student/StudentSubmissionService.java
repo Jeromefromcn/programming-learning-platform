@@ -40,6 +40,16 @@ public class StudentSubmissionService {
         ExerciseVersion version = versionRepository.findById(exercise.getCurrentVersionId())
             .orElseThrow(() -> new PlatformException(ErrorCode.EXERCISE_NOT_FOUND));
 
+        submissionRepository.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(userId, exerciseId, "STUDENT")
+            .ifPresent(existing -> {
+                if (existing.isGraded()) {
+                    throw new PlatformException(ErrorCode.SUBMISSION_ALREADY_GRADED,
+                        "This exercise has already been graded and cannot be resubmitted.");
+                }
+                existing.setDeleted(true);
+                submissionRepository.save(existing);
+            });
+
         boolean autoGrade = autoGradeConfigResolver.isEnabled(version.getConfig());
         String type = exercise.getType().name();
         BigDecimal autoScore = null;

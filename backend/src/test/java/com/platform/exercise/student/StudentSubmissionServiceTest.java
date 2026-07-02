@@ -100,6 +100,46 @@ class StudentSubmissionServiceTest {
     }
 
     @Test
+    void submit_priorUngradedStudentSubmissionExists_softDeletesItAndInsertsNew() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
+        Submission prior = new Submission();
+        prior.setId(50L);
+        prior.setUserId(7L);
+        prior.setExerciseId(2L);
+        prior.setSource("STUDENT");
+        prior.setGraded(false);
+        when(submissionRepo.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(7L, 2L, "STUDENT"))
+            .thenReturn(Optional.of(prior));
+
+        service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
+
+        assertTrue(prior.isDeleted());
+        verify(submissionRepo, times(2)).save(any());
+        verify(submissionRepo).save(prior);
+    }
+
+    @Test
+    void submit_priorGradedStudentSubmissionExists_throwsAndDoesNotInsert() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
+        Submission prior = new Submission();
+        prior.setId(50L);
+        prior.setUserId(7L);
+        prior.setExerciseId(2L);
+        prior.setSource("STUDENT");
+        prior.setGraded(true);
+        when(submissionRepo.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(7L, 2L, "STUDENT"))
+            .thenReturn(Optional.of(prior));
+
+        com.platform.exercise.common.PlatformException ex = assertThrows(
+            com.platform.exercise.common.PlatformException.class,
+            () -> service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null)));
+
+        assertEquals(com.platform.exercise.common.ErrorCode.SUBMISSION_ALREADY_GRADED, ex.getErrorCode());
+        assertFalse(prior.isDeleted());
+        verify(submissionRepo, never()).save(any());
+    }
+
+    @Test
     void history_autoGradeFalse_hidesStoredScores() {
         Exercise ex = new Exercise();
         ex.setId(2L);
