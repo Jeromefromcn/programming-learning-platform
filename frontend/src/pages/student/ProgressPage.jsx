@@ -7,11 +7,10 @@ import { formatDate } from '../../utils/dateFormat';
 
 const EMPTY_FILTERS = { exercise: '', type: '', source: '' };
 
-function ScoreChip({ score, graded }) {
-  if (!graded && score == null) return <span style={{ color: '#888' }}>—</span>;
-  if (!graded) return <span style={{ color: '#888', fontSize: 12 }}>Pending</span>;
-  const val = score != null ? score.toFixed(1) : '—';
-  const pass = score != null && score >= 60;
+function ScoreChip({ score }) {
+  if (score == null) return null;
+  const val = score.toFixed(1);
+  const pass = score >= 60;
   return (
     <span style={{
       background: pass ? '#e8f5e9' : '#ffebee',
@@ -127,7 +126,7 @@ export default function ProgressPage() {
               <th style={{ padding: '8px 12px' }}>Exercise</th>
               <th style={{ padding: '8px 12px' }}>Type</th>
               <th style={{ padding: '8px 12px' }}>Source</th>
-              <th style={{ padding: '8px 12px' }}>Score</th>
+              <th style={{ padding: '8px 12px' }}>Auto Grade</th>
               <th style={{ padding: '8px 12px' }}>Date</th>
             </tr>
           </thead>
@@ -154,7 +153,7 @@ export default function ProgressPage() {
                   {sub.source === 'STUDENT' ? 'Submitted' : 'Imported'}
                 </td>
                 <td style={{ padding: '10px 12px' }}>
-                  <ScoreChip score={sub.score} graded={sub.graded} />
+                  <ScoreChip score={sub.score} />
                 </td>
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
                   {formatDate(sub.createdAt)}

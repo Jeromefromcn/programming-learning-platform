@@ -28,8 +28,42 @@ const emptyData = {
   submissions: { content: [], totalPages: 0, totalElements: 0 },
 };
 
+const dataWithSubmissions = {
+  submissions: {
+    content: [
+      { submissionId: 1, exerciseId: 10, exerciseTitle: 'Loops', exerciseType: 'PYTHON', source: 'STUDENT', score: 75, createdAt: '2026-07-01T10:00:00' },
+      { submissionId: 2, exerciseId: 11, exerciseTitle: 'Arrays', exerciseType: 'PYTHON', source: 'STUDENT', score: 40, createdAt: '2026-07-01T10:00:00' },
+      { submissionId: 3, exerciseId: 12, exerciseTitle: 'Recursion', exerciseType: 'PYTHON', source: 'IMPORT', score: null, createdAt: '2026-07-01T10:00:00' },
+    ],
+    totalPages: 1,
+    totalElements: 3,
+  },
+};
+
 beforeEach(() => {
   progressApi.getProgress = vi.fn().mockResolvedValue(emptyData);
+});
+
+it('renders "Auto Grade" as the score column header', async () => {
+  progressApi.getProgress = vi.fn().mockResolvedValue(dataWithSubmissions);
+  render(<ProgressPage />);
+  await waitFor(() => expect(progressApi.getProgress).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('columnheader', { name: 'Auto Grade' })).toBeInTheDocument();
+  expect(screen.queryByRole('columnheader', { name: 'Score' })).not.toBeInTheDocument();
+});
+
+it('renders a green chip for a passing auto-grade score, red for failing, and blank when null', async () => {
+  progressApi.getProgress = vi.fn().mockResolvedValue(dataWithSubmissions);
+  render(<ProgressPage />);
+  await waitFor(() => expect(progressApi.getProgress).toHaveBeenCalledTimes(1));
+
+  expect(screen.getByText('75.0')).toBeInTheDocument();
+  expect(screen.getByText('40.0')).toBeInTheDocument();
+
+  const rows = screen.getAllByRole('row').slice(1); // skip header row
+  const recursionRow = rows.find(r => r.textContent.includes('Recursion'));
+  const scoreCell = recursionRow.querySelectorAll('td')[3];
+  expect(scoreCell.textContent).toBe('');
 });
 
 it('calls progressApi.getProgress once on mount with page=0, size=20, no filters', async () => {
