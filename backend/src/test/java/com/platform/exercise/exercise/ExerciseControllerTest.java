@@ -118,6 +118,31 @@ class ExerciseControllerTest {
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void createExercise_withDeadline_returnsDeadlineInResponse() throws Exception {
+        String body = """
+                {"title":"T","description":"D","type":"PYTHON","difficulty":"EASY",
+                 "deadline":"2026-07-15T23:59:00",
+                 "config":{"starterCode":"pass","timeLimitSeconds":5,
+                           "testCases":[{"input":"","expectedOutput":"","visible":true}]}}
+                """;
+        mockMvc.perform(post("/v1/exercises")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.deadline").value("2026-07-15T23:59:00"));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void createExercise_withoutDeadline_returnsNullDeadline() throws Exception {
+        mockMvc.perform(post("/v1/exercises")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(pythonBody()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.deadline").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
     void createPythonExercise_noTestCases_returns400() throws Exception {
         String body = """
                 {"title":"T","description":"D","type":"PYTHON","difficulty":"EASY",
@@ -214,6 +239,37 @@ class ExerciseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("FizzBuzz Updated"))
                 .andExpect(jsonPath("$.currentVersion.versionNumber").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void updateExercise_setsAndClearsDeadline() throws Exception {
+        String createResult = mockMvc.perform(post("/v1/exercises")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(pythonBody()))
+                .andReturn().getResponse().getContentAsString();
+        Long id = ((Number) com.jayway.jsonpath.JsonPath.read(createResult, "$.id")).longValue();
+
+        String updateWithDeadline = """
+                {"title":"FizzBuzz","description":"desc","difficulty":"MEDIUM",
+                 "deadline":"2026-08-01T10:00:00",
+                 "config":{"starterCode":"pass","timeLimitSeconds":5,
+                           "testCases":[{"input":"","expectedOutput":"","visible":true}]}}
+                """;
+        mockMvc.perform(put("/v1/exercises/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content(updateWithDeadline))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deadline").value("2026-08-01T10:00:00"));
+
+        String updateClearingDeadline = """
+                {"title":"FizzBuzz","description":"desc","difficulty":"MEDIUM",
+                 "config":{"starterCode":"pass","timeLimitSeconds":5,
+                           "testCases":[{"input":"","expectedOutput":"","visible":true}]}}
+                """;
+        mockMvc.perform(put("/v1/exercises/" + id)
+                        .contentType(MediaType.APPLICATION_JSON).content(updateClearingDeadline))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deadline").value(org.hamcrest.Matchers.nullValue()));
     }
 
     // ── Delete ────────────────────────────────────────────────────────────────

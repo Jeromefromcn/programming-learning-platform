@@ -55,6 +55,7 @@ public class ExerciseService {
         exercise.setType(req.type());
         exercise.setDifficulty(req.difficulty());
         exercise.setCategoryId(req.categoryId());
+        exercise.setDeadline(req.deadline());
         exercise.setCreatedBy(userId);
         Exercise saved = exerciseRepository.save(exercise);
 
@@ -98,6 +99,7 @@ public class ExerciseService {
         exercise.setDescription(req.description());
         exercise.setDifficulty(req.difficulty());
         exercise.setCategoryId(req.categoryId());
+        exercise.setDeadline(req.deadline());
         exercise.setCurrentVersionId(savedVersion.getId());
         exerciseRepository.save(exercise);
 
@@ -226,6 +228,7 @@ public class ExerciseService {
                 exercise.getTitle(),
                 exercise.getType().name(),
                 exercise.getStatus().name(),
+                exercise.getDeadline(),
                 toVersionDto(version, true));
     }
 
