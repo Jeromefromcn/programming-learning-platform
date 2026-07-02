@@ -136,13 +136,12 @@ class StudentProgressControllerTest {
 
     @Test
     @WithMockUser(username = "alex01", roles = "STUDENT")
-    void tutorScoreWinsOverAutoScore() throws Exception {
+    void autoScoreShownRegardlessOfTutorScore() throws Exception {
         savedSubmission(exercise1, student, new BigDecimal("60.00"), new BigDecimal("90.00"));
 
         mockMvc.perform(get("/v1/student/progress"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.submissions.content[0].score").value(90.0))
-            .andExpect(jsonPath("$.submissions.content[0].graded").value(true));
+            .andExpect(jsonPath("$.submissions.content[0].score").value(60.0));
     }
 
     @Test

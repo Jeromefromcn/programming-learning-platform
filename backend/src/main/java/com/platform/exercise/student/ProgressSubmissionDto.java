@@ -10,18 +10,16 @@ public record ProgressSubmissionDto(
     String exerciseTitle,
     String exerciseType,
     String source,        // STUDENT | IMPORT
-    boolean graded,
-    BigDecimal score,     // tutorScore if present, else autoScore, else null
+    BigDecimal score,     // autoScore only — tutor review status is not shown here
     String answerData,
     String workspaceXml,
     LocalDateTime createdAt
 ) {
     public static ProgressSubmissionDto of(Submission sub, String exerciseTitle) {
-        BigDecimal score = sub.getTutorScore() != null ? sub.getTutorScore() : sub.getAutoScore();
         return new ProgressSubmissionDto(
             sub.getId(), sub.getExerciseId(), exerciseTitle,
             sub.getExerciseType(), sub.getSource(),
-            sub.isGraded(), score,
+            sub.getAutoScore(),
             sub.getAnswerData(), sub.getWorkspaceXml(),
             sub.getCreatedAt());
     }
