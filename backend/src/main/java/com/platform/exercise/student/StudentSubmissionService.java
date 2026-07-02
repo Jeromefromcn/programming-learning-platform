@@ -48,7 +48,11 @@ public class StudentSubmissionService {
                 }
                 existing.setDeleted(true);
                 existing.setStudentActiveKey(null);
-                submissionRepository.save(existing);
+                // Flush now: the new row's INSERT below is forced immediate by IDENTITY
+                // generation, so a deferred UPDATE here would still see the old
+                // student_active_key in the DB at insert time and collide with the
+                // unique index. saveAndFlush avoids that ordering hazard.
+                submissionRepository.saveAndFlush(existing);
             });
 
         boolean autoGrade = autoGradeConfigResolver.isEnabled(version.getConfig());

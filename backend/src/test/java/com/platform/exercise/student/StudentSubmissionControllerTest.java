@@ -97,6 +97,25 @@ class StudentSubmissionControllerTest {
 
     @Test
     @WithMockUser(username = "student1", roles = "STUDENT")
+    void submit_twiceWhileUngraded_secondSubmitSucceedsAndReplacesFirst() throws Exception {
+        mockMvc.perform(post("/v1/student/exercises/" + pythonExId + "/submissions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"answerData\":\"print(1)\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/v1/student/exercises/" + pythonExId + "/submissions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"answerData\":\"print(1)\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.submissionId").exists());
+
+        mockMvc.perform(get("/v1/student/exercises/" + pythonExId + "/submissions"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
     void submit_blankAnswer_returns400() throws Exception {
         mockMvc.perform(post("/v1/student/exercises/" + pythonExId + "/submissions")
                 .contentType(MediaType.APPLICATION_JSON)

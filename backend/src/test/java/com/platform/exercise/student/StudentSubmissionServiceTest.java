@@ -115,8 +115,8 @@ class StudentSubmissionServiceTest {
 
         assertTrue(prior.isDeleted());
         assertNull(prior.getStudentActiveKey());
-        verify(submissionRepo, times(2)).save(any());
-        verify(submissionRepo).save(prior);
+        verify(submissionRepo).saveAndFlush(prior);
+        verify(submissionRepo).save(any());
     }
 
     @Test
