@@ -159,6 +159,8 @@ public class FileImportService {
                 }
             }
 
+            submissionRepository.softDeleteActiveByStudentNameAndExerciseIdAndSource(studentName, exerciseId, "IMPORT");
+
             Submission sub = new Submission();
             sub.setExerciseId(exerciseId);
             sub.setGradedVersionId(currentVersion.getId());

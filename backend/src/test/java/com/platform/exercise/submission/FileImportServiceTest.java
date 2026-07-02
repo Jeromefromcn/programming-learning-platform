@@ -246,6 +246,23 @@ class FileImportServiceTest {
         verifyNoInteractions(blocklyGrader);
     }
 
+    @Test
+    void processSingleFile_nonDuplicateReimport_softDeletesPriorActiveImportForSameStudentAndExercise() {
+        stubExercise(1L, 10L);
+        when(submissionRepository.existsActiveByStudentNameAndExerciseIdAndExportTimestamp(any(), any(), any()))
+            .thenReturn(false);
+        Submission saved = new Submission();
+        saved.setId(42L);
+        when(submissionRepository.save(any())).thenReturn(saved);
+        when(blocklyGrader.grade(anyString(), anyString()))
+            .thenReturn(new BlocklyGrader.Result(new BigDecimal("100.00"),
+                "{\"type\":\"BLOCKLY\",\"passed\":true}"));
+
+        service.processSingleFile("alex.json", validBlocklyJson(1L), "batch-1", false);
+
+        verify(submissionRepository).softDeleteActiveByStudentNameAndExerciseIdAndSource("Alex", 1L, "IMPORT");
+    }
+
     private byte[] buildZipWithEntry(String entryName, byte[] content) {
         try {
             java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
