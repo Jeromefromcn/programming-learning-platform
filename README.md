@@ -93,6 +93,7 @@ JWT_SECRET=<minimum-32-character-random-secret>
 
 # Monitoring
 GRAFANA_ADMIN_PASSWORD=<strong-password>
+GRAFANA_ROOT_URL=http://<your-server>:3001
 
 # Backups — host directory where database dumps are stored
 BACKUP_DIR=/var/backups/exercise-platform
@@ -104,6 +105,7 @@ BACKUP_DIR=/var/backups/exercise-platform
 | `DB_ROOT_PASSWORD` | Root (administrator) password for the database itself. Choose a different strong password. |
 | `JWT_SECRET` | A secret key used to sign login tokens. Must be at least 32 random characters. |
 | `GRAFANA_ADMIN_PASSWORD` | Password for the Grafana monitoring dashboard. |
+| `GRAFANA_ROOT_URL` | The public URL where Grafana is reachable, including the port (e.g. `http://203.0.113.10:3001`). Used to build correct "Source"/"Silence" links in alert notifications — without it, those links point at `localhost:3000` and don't work outside the host. |
 | `TELEGRAM_BOT_TOKEN` | (Optional) Telegram bot token for Grafana alert notifications. Leave blank to disable. |
 | `TELEGRAM_CHAT_ID` | (Optional) Telegram group or chat ID to receive alerts. Leave blank to disable. |
 | `BACKUP_DIR` | Host directory where daily database dumps are stored. Change this if `/var/backups` is not writable on your server (e.g. set to `/home/ubuntu/backups/exercise-platform`). The directory is created automatically by Docker if it does not exist. |
@@ -310,6 +312,8 @@ Returns `{"status":"UP"}` when the application and database connection are healt
 4. Restart the Grafana container: `docker compose restart grafana`
 
 If left blank, no alerts are sent and Grafana starts normally. Alert rules can be configured in Grafana at **Alerting → Alert rules**.
+
+Notifications are formatted as Markdown (bold alert titles, and clickable **Source**/**Silence** links instead of raw URLs). The links depend on `GRAFANA_ROOT_URL` being set correctly (see the settings table above) — if it's wrong or unset, the links will point at the wrong host.
 
 ---
 
