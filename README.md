@@ -105,7 +105,7 @@ BACKUP_DIR=/var/backups/exercise-platform
 | `DB_ROOT_PASSWORD` | Root (administrator) password for the database itself. Choose a different strong password. |
 | `JWT_SECRET` | A secret key used to sign login tokens. Must be at least 32 random characters. |
 | `GRAFANA_ADMIN_PASSWORD` | Password for the Grafana monitoring dashboard. |
-| `GRAFANA_ROOT_URL` | The public URL where Grafana is reachable, including the port (e.g. `http://203.0.113.10:3001`). Used to build correct "Source"/"Silence" links in alert notifications — without it, those links point at `localhost:3000` and don't work outside the host. |
+| `GRAFANA_ROOT_URL` | The public URL where Grafana is reachable, including the port (e.g. `http://<your-server>:3001`). Used to build correct "Source"/"Silence" links in alert notifications — without it, those links point at `localhost:3000` and don't work outside the host. |
 | `TELEGRAM_BOT_TOKEN` | (Optional) Telegram bot token for Grafana alert notifications. Leave blank to disable. |
 | `TELEGRAM_CHAT_ID` | (Optional) Telegram group or chat ID to receive alerts. Leave blank to disable. |
 | `BACKUP_DIR` | Host directory where daily database dumps are stored. Change this if `/var/backups` is not writable on your server (e.g. set to `/home/ubuntu/backups/exercise-platform`). The directory is created automatically by Docker if it does not exist. |
@@ -313,7 +313,7 @@ Returns `{"status":"UP"}` when the application and database connection are healt
 
 If left blank, no alerts are sent and Grafana starts normally. Alert rules can be configured in Grafana at **Alerting → Alert rules**.
 
-Notifications are formatted as Markdown (bold alert titles, and clickable **Source**/**Silence** links instead of raw URLs). The links depend on `GRAFANA_ROOT_URL` being set correctly (see the settings table above) — if it's wrong or unset, the links will point at the wrong host.
+Notifications are formatted as MarkdownV2 (bold alert titles, and clickable **Source**/**Silence** links instead of raw URLs). The links depend on `GRAFANA_ROOT_URL` being set correctly (see the settings table above) — if it's wrong or unset, the links will point at the wrong host.
 
 ---
 
@@ -343,6 +343,8 @@ Notifications are formatted as Markdown (bold alert titles, and clickable **Sour
    ```
 
 > **Before upgrading a production instance:** take a manual backup first (see [Database Backups](#database-backups)).
+
+> **If upgrading from before `GRAFANA_ROOT_URL` existed:** add it to your existing `.env` (see the settings table above). Without it, Grafana defaults to a blank root URL and alert notification links silently break again.
 
 ---
 
