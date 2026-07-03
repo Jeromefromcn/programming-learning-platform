@@ -9,7 +9,6 @@ export default function SubmissionListPage() {
   const [searchParams] = useSearchParams();
 
   const initialBatchId = searchParams.get('batchId') || '';
-  const hasUrlBatchId = Boolean(initialBatchId);
 
   const [submissions, setSubmissions] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
