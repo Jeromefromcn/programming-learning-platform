@@ -9,3 +9,16 @@ contactPoints:
         settings:
           chatid: "${TELEGRAM_CHAT_ID}"
           bottoken: "${TELEGRAM_BOT_TOKEN}"
+          parse_mode: MarkdownV2
+          message: |-
+            {{ define "mdv2Escape" }}{{ reReplaceAll "([_*\\[\\]()~`>#+=|{}.!\\\\-])" "\\$1" . }}{{ end }}
+            {{ if gt (len .Alerts.Firing) 0 }}🔴 *Firing* \({{ len .Alerts.Firing }}\)
+            {{ range .Alerts.Firing }}
+            *{{ template "mdv2Escape" .Labels.alertname }}*
+            {{ template "mdv2Escape" .Annotations.summary }}
+            [Source]({{ .GeneratorURL }}) · [Silence]({{ .SilenceURL }})
+            {{ end }}{{ end }}{{ if gt (len .Alerts.Resolved) 0 }}
+            ✅ *Resolved* \({{ len .Alerts.Resolved }}\)
+            {{ range .Alerts.Resolved }}
+            *{{ template "mdv2Escape" .Labels.alertname }}*
+            {{ end }}{{ end }}
