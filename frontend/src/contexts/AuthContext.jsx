@@ -112,6 +112,10 @@ export function AuthProvider({ children }) {
             setConfirmVisible(true);
           }
         });
+      },
+      (newToken) => {
+        tokenRef.current = newToken;
+        setAccessToken(newToken);
       }
     );
   }, []);

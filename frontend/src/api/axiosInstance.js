@@ -7,10 +7,12 @@ const axiosInstance = axios.create({
 
 let getToken = () => null;
 let onUnauthorized = () => {};
+let onTokenRefreshed = () => {};
 
-export function setAuthHandlers(tokenGetter, unauthorizedHandler) {
+export function setAuthHandlers(tokenGetter, unauthorizedHandler, tokenRefreshedHandler) {
   getToken = tokenGetter;
   onUnauthorized = unauthorizedHandler;
+  if (tokenRefreshedHandler) onTokenRefreshed = tokenRefreshedHandler;
 }
 
 axiosInstance.interceptors.request.use(config => {
@@ -60,6 +62,7 @@ axiosInstance.interceptors.response.use(
         try {
           const res = await axiosInstance.post('/v1/auth/refresh');
           const newToken = res.data.accessToken;
+          onTokenRefreshed(newToken);
           pendingRequests.forEach(({ onToken }) => onToken(newToken));
           pendingRequests = [];
           return axiosInstance(original);
