@@ -20,8 +20,8 @@ export default function SubmissionListPage() {
   const [studentName, setStudentName] = useState('');
   const [exerciseId, setExerciseId] = useState('');
   const [batchId, setBatchId] = useState(initialBatchId);
-  const [source, setSource] = useState(hasUrlBatchId ? '' : 'IMPORT');
-  const [pendingSource, setPendingSource] = useState(hasUrlBatchId ? '' : 'IMPORT');
+  const [source, setSource] = useState('');
+  const [pendingSource, setPendingSource] = useState('');
   const [pendingGraded, setPendingGraded] = useState('');
   const [graded, setGraded] = useState('');
   const [loading, setLoading] = useState(false);

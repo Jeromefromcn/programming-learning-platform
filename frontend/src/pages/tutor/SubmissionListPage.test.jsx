@@ -90,10 +90,10 @@ it('calls submissionApi.list with new source after clicking Search', async () =>
   );
 });
 
-it('calls submissionApi.list with IMPORT source by default on mount', async () => {
+it('calls submissionApi.list with empty source (All) by default on mount', async () => {
   renderPage();
   await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
-    expect.objectContaining({ source: 'IMPORT' })
+    expect.objectContaining({ source: '' })
   ));
 });
 
