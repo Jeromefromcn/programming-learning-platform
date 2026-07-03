@@ -332,7 +332,7 @@ class SubmissionControllerTest {
 
     @Test
     @WithMockUser(username = "tutor1", roles = "TUTOR")
-    void list_defaultsToImportSource_excludesStudentSubmissions() throws Exception {
+    void list_noOrEmptySourceParam_includesAllSources() throws Exception {
         // Insert a STUDENT-source submission directly
         Submission studentSub = new Submission();
         studentSub.setExerciseId(blocklyExercise.getId());
@@ -345,13 +345,28 @@ class SubmissionControllerTest {
         studentSub.setAutoScore(new java.math.BigDecimal("100"));
         submissionRepository.save(studentSub);
 
+        // No source param at all -> no filter -> STUDENT submission is visible
         mockMvc.perform(get("/v1/submissions"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").isEmpty());
+            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
 
+        // Explicit empty source ("All" from the tutor UI) -> same: no filter.
+        // This is the exact request the frontend sends and the exact case that
+        // was previously broken by @RequestParam(defaultValue = "IMPORT")
+        // silently rewriting "" back to "IMPORT".
+        mockMvc.perform(get("/v1/submissions").param("source", ""))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
+
+        // Explicit STUDENT source still filters correctly
         mockMvc.perform(get("/v1/submissions").param("source", "STUDENT"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").exists());
+
+        // Explicit IMPORT source still excludes the STUDENT submission
+        mockMvc.perform(get("/v1/submissions").param("source", "IMPORT"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[?(@.studentName=='Bob')]").isEmpty());
     }
 
     @Test

@@ -44,7 +44,7 @@ public class SubmissionController {
     public ResponseEntity<PageResponse<SubmissionListItemDto>> list(
             @RequestParam(required = false) Long exerciseId,
             @RequestParam(required = false) String studentName,
-            @RequestParam(defaultValue = "IMPORT") String source,
+            @RequestParam(required = false) String source,
             @RequestParam(required = false) Long batchId,
             @RequestParam(required = false) Boolean graded,
             @RequestParam(defaultValue = "0") int page,
