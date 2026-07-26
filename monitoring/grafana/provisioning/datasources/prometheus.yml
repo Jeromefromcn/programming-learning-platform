@@ -7,3 +7,7 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: false
+    basicAuth: true
+    basicAuthUser: $__env{PROMETHEUS_BASIC_AUTH_USER}
+    secureJsonData:
+      basicAuthPassword: $__env{PROMETHEUS_BASIC_AUTH_PASSWORD}

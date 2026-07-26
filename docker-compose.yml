@@ -64,8 +64,14 @@ services:
     image: prom/prometheus:v2.51.0
     ports:
       - "9090:9090"
+    environment:
+      PROMETHEUS_BASIC_AUTH_USER: ${PROMETHEUS_BASIC_AUTH_USER}
+      PROMETHEUS_BASIC_AUTH_HASH: ${PROMETHEUS_BASIC_AUTH_HASH}
+    entrypoint: ["/prometheus-entrypoint.sh"]
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/web.yml.tmpl:/etc/prometheus/web.yml.tmpl:ro
+      - ./monitoring/prometheus/prometheus-entrypoint.sh:/prometheus-entrypoint.sh:ro
       - prometheus-data:/prometheus
     networks:
       - exercise-platform-net
@@ -81,6 +87,8 @@ services:
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      PROMETHEUS_BASIC_AUTH_USER: ${PROMETHEUS_BASIC_AUTH_USER}
+      PROMETHEUS_BASIC_AUTH_PASSWORD: ${PROMETHEUS_BASIC_AUTH_PASSWORD}
     entrypoint: ["/grafana-entrypoint.sh"]
     volumes:
       - grafana-data:/var/lib/grafana
