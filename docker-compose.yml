@@ -83,6 +83,7 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     entrypoint: ["/grafana-entrypoint.sh"]
     volumes:
+      - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/grafana-entrypoint.sh:/grafana-entrypoint.sh:ro
     depends_on:
@@ -111,6 +112,7 @@ services:
 volumes:
   mysql-data:
   prometheus-data:
+  grafana-data:
 
 networks:
   exercise-platform-net:
