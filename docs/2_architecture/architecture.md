@@ -282,7 +282,7 @@ The platform targets a single university. All services run on one server via Doc
 Port mapping:
 | Service | Internal Port | External Port |
 |---|---|---|
-| Nginx (frontend + proxy) | 80 | **80** |
+| Nginx (frontend + proxy) | 80 | **8080** |
 | Spring Boot API | 8080 | — (internal only) |
 | Python Sandbox | 5000 | — (internal only) |
 | MySQL | 3306 | — (internal only) |
@@ -1874,7 +1874,7 @@ Toggle like on an exercise.
 
 #### CORS Policy
 
-Nginx reverse proxy handles CORS. In development, Vite dev server proxies to the backend. In production, all requests go through Nginx on port 80, so CORS is same-origin. The backend sets explicit CORS headers for development mode only:
+Nginx reverse proxy handles CORS. In development, Vite dev server proxies to the backend. In production, all requests go through Nginx on port 8080, so CORS is same-origin. The backend sets explicit CORS headers for development mode only:
 
 ```
 Access-Control-Allow-Origin: http://localhost:5173

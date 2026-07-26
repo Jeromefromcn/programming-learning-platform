@@ -140,7 +140,7 @@ This starts seven services:
 
 | Service | Role | Internal Port |
 |---|---|---|
-| `nginx` | Reverse proxy + static file server | 80 (public) |
+| `nginx` | Reverse proxy + static file server | 8080 (public) |
 | `api-server` | Spring Boot REST API | 8080 |
 | `mysql` | MySQL 8.0 database | 3306 |
 | `sandbox` | Python code execution (nsjail) | 5000 |

@@ -19,7 +19,7 @@ Browser ──:80──▶ Nginx ──/api/*──▶ Spring Boot API ──POS
 **Backend:** Java 25 · Spring Boot 3.5.0 · Spring Security + JWT (JJWT 0.12.6) · Spring Data JPA · Flyway 9 · Rhino 1.7 · Maven 3.9
 **Sandbox:** Python 3.12 + nsjail 3.4 (no network, mem 128MB, PID limit 32)
 **DB:** MySQL 8.0 (prod) · H2 (test) | **Monitoring:** Prometheus · Grafana · Actuator
-**Ports:** Nginx **:80** · Prometheus **:9090** · Grafana **:3001** · API :8080 · Sandbox :5000 · MySQL :3306 (last three internal). Details: `docs/architecture.md`
+**Ports:** Nginx **:8080** · Prometheus **:9090** · Grafana **:3001** · API :8080 · Sandbox :5000 · MySQL :3306 (last three internal). Details: `docs/architecture.md`
 
 ## Project Structure
 ```
