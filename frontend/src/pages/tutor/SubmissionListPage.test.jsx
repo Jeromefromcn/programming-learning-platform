@@ -162,6 +162,20 @@ it('pre-fills batchId and uses all sources when batchId is in the URL', async ()
   expect(screen.getByPlaceholderText(/filter by batch id/i).value).toBe('42');
 });
 
+it('pre-fills all filters and page from the URL on mount', async () => {
+  renderPage('/tutor/submissions?studentName=alice&exerciseId=42&source=STUDENT&graded=true&page=2');
+
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledWith(
+    expect.objectContaining({
+      studentName: 'alice', exerciseId: '42', source: 'STUDENT', graded: 'true', page: 2,
+    })
+  ));
+  expect(screen.getByPlaceholderText(/filter by student name/i).value).toBe('alice');
+  expect(screen.getByPlaceholderText(/filter by exercise id/i).value).toBe('42');
+  expect(screen.getByLabelText(/source/i).value).toBe('STUDENT');
+  expect(screen.getByLabelText(/graded/i).value).toBe('true');
+});
+
 it('does not call submissionApi.list when graded dropdown changes without clicking Search', async () => {
   renderPage();
   await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));

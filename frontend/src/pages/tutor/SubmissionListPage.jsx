@@ -8,21 +8,26 @@ export default function SubmissionListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const initialStudentName = searchParams.get('studentName') || '';
+  const initialExerciseId = searchParams.get('exerciseId') || '';
   const initialBatchId = searchParams.get('batchId') || '';
+  const initialSource = searchParams.get('source') || '';
+  const initialGraded = searchParams.get('graded') || '';
+  const initialPage = Number(searchParams.get('page')) || 0;
 
   const [submissions, setSubmissions] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
-  const [page, setPage] = useState(0);
-  const [pendingStudentName, setPendingStudentName] = useState('');
-  const [pendingExerciseId, setPendingExerciseId] = useState('');
+  const [page, setPage] = useState(initialPage);
+  const [pendingStudentName, setPendingStudentName] = useState(initialStudentName);
+  const [pendingExerciseId, setPendingExerciseId] = useState(initialExerciseId);
   const [pendingBatchId, setPendingBatchId] = useState(initialBatchId);
-  const [studentName, setStudentName] = useState('');
-  const [exerciseId, setExerciseId] = useState('');
+  const [studentName, setStudentName] = useState(initialStudentName);
+  const [exerciseId, setExerciseId] = useState(initialExerciseId);
   const [batchId, setBatchId] = useState(initialBatchId);
-  const [source, setSource] = useState('');
-  const [pendingSource, setPendingSource] = useState('');
-  const [pendingGraded, setPendingGraded] = useState('');
-  const [graded, setGraded] = useState('');
+  const [source, setSource] = useState(initialSource);
+  const [pendingSource, setPendingSource] = useState(initialSource);
+  const [pendingGraded, setPendingGraded] = useState(initialGraded);
+  const [graded, setGraded] = useState(initialGraded);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTrigger, setSearchTrigger] = useState(0);
