@@ -99,8 +99,8 @@ export default function SubmissionDetailPage() {
         }
         payload = { tutorScore: score, tutorComment: tutorComment || null };
       }
-      const data = await submissionApi.grade(id, payload);
-      setSubmission(data);
+      await submissionApi.grade(id, payload);
+      navigate(backTo);
     } catch (err) {
       if (isReauthCancelled(err)) return;
       setSaveError(err.response?.data?.error?.message || 'Save failed.');

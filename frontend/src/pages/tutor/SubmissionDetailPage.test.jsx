@@ -1,5 +1,5 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, it, expect, describe } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import SubmissionDetailPage from './SubmissionDetailPage';
 import { submissionApi } from '../../api/submissionApi';
@@ -145,4 +145,48 @@ it('falls back to /tutor/submissions when no backTo state is present', async () 
   fireEvent.click(screen.getByText(/back to submissions/i));
 
   await waitFor(() => screen.getByText('List Page'));
+});
+
+it('navigates to backTo after a successful save', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+  submissionApi.grade.mockResolvedValue({ ...baseSubmission, tutorScore: 90, graded: true });
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/tutor/submissions/1', state: { backTo: '/tutor/submissions?graded=false' } }]}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="/tutor/submissions" element={<div>List Page</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Test Exercise'));
+  fireEvent.change(screen.getByLabelText(/score/i), { target: { value: '90' } });
+  fireEvent.click(screen.getByRole('button', { name: /save grade/i }));
+
+  await waitFor(() => screen.getByText('List Page'));
+  expect(submissionApi.grade).toHaveBeenCalledWith('1', { tutorScore: 90, tutorComment: null });
+});
+
+it('stays on the page and shows an error when save fails', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+  submissionApi.grade.mockRejectedValue({ response: { data: { error: { message: 'Save failed.' } } } });
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/tutor/submissions/1', state: { backTo: '/tutor/submissions?graded=false' } }]}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="/tutor/submissions" element={<div>List Page</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Test Exercise'));
+  fireEvent.change(screen.getByLabelText(/score/i), { target: { value: '90' } });
+  fireEvent.click(screen.getByRole('button', { name: /save grade/i }));
+
+  await waitFor(() => screen.getByText('Save failed.'));
+  expect(screen.queryByText('List Page')).not.toBeInTheDocument();
 });
