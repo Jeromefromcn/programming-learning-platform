@@ -114,7 +114,7 @@ export default function SubmissionDetailPage() {
     setDeleting(true);
     try {
       await submissionApi.delete(id);
-      navigate('/tutor/submissions');
+      navigate(backTo);
     } catch {
       alert('Failed to delete submission.');
       setDeleting(false);

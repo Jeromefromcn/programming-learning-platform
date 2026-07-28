@@ -190,3 +190,28 @@ it('stays on the page and shows an error when save fails', async () => {
   await waitFor(() => screen.getByText('Save failed.'));
   expect(screen.queryByText('List Page')).not.toBeInTheDocument();
 });
+
+it('navigates to backTo after a successful delete', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+  submissionApi.delete.mockResolvedValue({});
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+  function ListPageStub() {
+    return <div>List Page {useLocation().search}</div>;
+  }
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/tutor/submissions/1', state: { backTo: '/tutor/submissions?source=STUDENT' } }]}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="/tutor/submissions" element={<ListPageStub />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Test Exercise'));
+  fireEvent.click(screen.getByRole('button', { name: /delete submission/i }));
+
+  await waitFor(() => screen.getByText('List Page ?source=STUDENT'));
+});
