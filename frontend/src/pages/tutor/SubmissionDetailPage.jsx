@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
 import { exerciseApi } from '../../api/exerciseApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
@@ -9,6 +9,8 @@ import BlocklySubmissionViewer from '../../components/BlocklySubmissionViewer';
 export default function SubmissionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = location.state?.backTo ?? '/tutor/submissions';
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
 
@@ -171,10 +173,10 @@ export default function SubmissionDetailPage() {
   return (
     <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
       <Breadcrumb items={[
-        { label: 'Submissions', to: '/tutor/submissions' },
+        { label: 'Submissions', to: backTo },
         { label: 'Submission Detail' },
       ]} />
-      <button onClick={() => navigate('/tutor/submissions')}
+      <button onClick={() => navigate(backTo)}
         style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', padding: 0, marginBottom: 16 }}>
         ← Back to Submissions
       </button>

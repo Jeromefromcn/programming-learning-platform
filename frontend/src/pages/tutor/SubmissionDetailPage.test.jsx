@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import SubmissionDetailPage from './SubmissionDetailPage';
 import { submissionApi } from '../../api/submissionApi';
 import { exerciseApi } from '../../api/exerciseApi';
+import Breadcrumb from '../../components/Breadcrumb';
 
 vi.mock('../../api/submissionApi', () => ({
   submissionApi: { getById: vi.fn(), grade: vi.fn(), delete: vi.fn() },
@@ -15,7 +16,7 @@ vi.mock('../../components/BlocklySubmissionViewer', () => ({
   default: () => <div data-testid="blockly-viewer" />,
 }));
 vi.mock('../../components/Breadcrumb', () => ({
-  default: () => null,
+  default: vi.fn(() => null),
 }));
 vi.mock('../../api/axiosInstance', () => ({
   isReauthCancelled: () => false,
@@ -85,4 +86,63 @@ it('does not render description text when description is absent', async () => {
   await waitFor(() => screen.getByText(/Logic/));
   expect(screen.queryByText('undefined')).not.toBeInTheDocument();
   expect(screen.queryByText('null')).not.toBeInTheDocument();
+});
+
+it('passes backTo as the Submissions breadcrumb link when present', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/tutor/submissions/1', state: { backTo: '/tutor/submissions?source=STUDENT' } }]}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => expect(Breadcrumb).toHaveBeenCalled());
+  const lastProps = Breadcrumb.mock.calls.at(-1)[0];
+  expect(lastProps.items).toContainEqual({ label: 'Submissions', to: '/tutor/submissions?source=STUDENT' });
+});
+
+it('navigates to backTo when Back to Submissions is clicked', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+
+  function ListPageStub() {
+    return <div>List Page {useLocation().search}</div>;
+  }
+
+  render(
+    <MemoryRouter initialEntries={[{ pathname: '/tutor/submissions/1', state: { backTo: '/tutor/submissions?source=STUDENT' } }]}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="/tutor/submissions" element={<ListPageStub />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Test Exercise'));
+  fireEvent.click(screen.getByText(/back to submissions/i));
+
+  await waitFor(() => screen.getByText('List Page ?source=STUDENT'));
+});
+
+it('falls back to /tutor/submissions when no backTo state is present', async () => {
+  submissionApi.getById.mockResolvedValue(baseSubmission);
+  exerciseApi.get.mockResolvedValue({ currentVersion: { config: {} } });
+
+  render(
+    <MemoryRouter initialEntries={['/tutor/submissions/1']}>
+      <Routes>
+        <Route path="/tutor/submissions/:id" element={<SubmissionDetailPage />} />
+        <Route path="/tutor/submissions" element={<div>List Page</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Test Exercise'));
+  fireEvent.click(screen.getByText(/back to submissions/i));
+
+  await waitFor(() => screen.getByText('List Page'));
 });
