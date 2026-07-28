@@ -151,6 +151,16 @@ const dataWithGradedSubmissions = {
   },
 };
 
+const dataWithGradedButNullScore = {
+  submissions: {
+    content: [
+      { submissionId: 3, exerciseId: 13, exerciseTitle: 'Strings', exerciseType: 'PYTHON', source: 'STUDENT', score: 50, graded: true, tutorScore: null, tutorComment: 'Needs revision', createdAt: '2026-07-01T10:00:00' },
+    ],
+    totalPages: 1,
+    totalElements: 1,
+  },
+};
+
 it('renders "Tutor Grade" column header immediately after "Auto Grade"', async () => {
   progressApi.getProgress = vi.fn().mockResolvedValue(dataWithSubmissions);
   render(<ProgressPage />);
@@ -176,8 +186,11 @@ it('shows a tutor score chip and comment button when graded with a comment', asy
   render(<ProgressPage />);
   await waitFor(() => expect(progressApi.getProgress).toHaveBeenCalledTimes(1));
 
-  expect(screen.getByText('85.0')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /view tutor comment/i })).toBeInTheDocument();
+  const rows = screen.getAllByRole('row').slice(1);
+  const loopsRow = rows.find(r => r.textContent.includes('Loops'));
+  const tutorCell = loopsRow.querySelectorAll('td')[4];
+  expect(tutorCell.textContent).toContain('85.0');
+  expect(within(loopsRow).getByRole('button', { name: /view tutor comment/i })).toBeInTheDocument();
 });
 
 it('hides the comment button when graded with no comment', async () => {
@@ -211,4 +224,15 @@ it('closing the tutor comment modal removes it', async () => {
   fireEvent.click(screen.getByRole('button', { name: /close/i }));
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('shows an em dash in Tutor Grade when graded but tutorScore is null', async () => {
+  progressApi.getProgress = vi.fn().mockResolvedValue(dataWithGradedButNullScore);
+  render(<ProgressPage />);
+  await waitFor(() => expect(progressApi.getProgress).toHaveBeenCalledTimes(1));
+
+  const rows = screen.getAllByRole('row').slice(1);
+  const stringsRow = rows.find(r => r.textContent.includes('Strings'));
+  const tutorCell = stringsRow.querySelectorAll('td')[4];
+  expect(tutorCell.textContent).toBe('—');
 });

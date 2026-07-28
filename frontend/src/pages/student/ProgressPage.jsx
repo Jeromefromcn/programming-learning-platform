@@ -177,7 +177,7 @@ export default function ProgressPage() {
                   <ScoreChip score={sub.score} />
                 </td>
                 <td style={{ padding: '10px 12px' }}>
-                  {sub.graded ? (
+                  {sub.graded && sub.tutorScore != null ? (
                     <>
                       <ScoreChip score={sub.tutorScore} />
                       {sub.tutorComment && (
