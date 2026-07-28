@@ -22,6 +22,25 @@ function ScoreChip({ score }) {
   );
 }
 
+function TutorCommentModal({ comment, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div role="dialog" aria-modal="true" aria-label="Tutor comment" style={{ background: '#fff', borderRadius: 8, padding: 24, width: 400, maxWidth: '90%' }}>
+        <h3 style={{ marginBottom: 12 }}>Tutor Comment</h3>
+        <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{comment}</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+          <button
+            onClick={onClose}
+            style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 16px', cursor: 'pointer' }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProgressPage() {
   const [data, setData] = useState(null);
   const [page, setPage] = useState(0);
@@ -30,6 +49,7 @@ export default function ProgressPage() {
   const [selected, setSelected] = useState(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [pendingFilters, setPendingFilters] = useState(EMPTY_FILTERS);
+  const [commentModal, setCommentModal] = useState(null);
 
   async function load(p, f) {
     setLoading(true);
@@ -127,6 +147,7 @@ export default function ProgressPage() {
               <th style={{ padding: '8px 12px' }}>Type</th>
               <th style={{ padding: '8px 12px' }}>Source</th>
               <th style={{ padding: '8px 12px' }}>Auto Grade</th>
+              <th style={{ padding: '8px 12px' }}>Tutor Grade</th>
               <th style={{ padding: '8px 12px' }}>Date</th>
             </tr>
           </thead>
@@ -155,6 +176,25 @@ export default function ProgressPage() {
                 <td style={{ padding: '10px 12px' }}>
                   <ScoreChip score={sub.score} />
                 </td>
+                <td style={{ padding: '10px 12px' }}>
+                  {sub.graded ? (
+                    <>
+                      <ScoreChip score={sub.tutorScore} />
+                      {sub.tutorComment && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setCommentModal(sub.tutorComment); }}
+                          aria-label="View tutor comment"
+                          title="View tutor comment"
+                          style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
+                        >
+                          💬
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span style={{ color: '#aaa' }}>—</span>
+                  )}
+                </td>
                 <td style={{ padding: '10px 12px', color: '#888', fontSize: 12 }}>
                   {formatDate(sub.createdAt)}
                 </td>
@@ -165,6 +205,9 @@ export default function ProgressPage() {
       )}
 
       <Pagination page={page} totalPages={submissions.totalPages} onPageChange={p => load(p, filters)} />
+      {commentModal && (
+        <TutorCommentModal comment={commentModal} onClose={() => setCommentModal(null)} />
+      )}
     </div>
   );
 }
