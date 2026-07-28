@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/authApi';
 
-const ROLE_ROUTES = { STUDENT: '/app', TUTOR: '/app', SUPER_ADMIN: '/app' };
+const ROLE_ROUTES = { STUDENT: '/dashboard', TUTOR: '/dashboard', SUPER_ADMIN: '/dashboard' };
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -26,7 +26,7 @@ export default function LoginPage() {
         sessionStorage.removeItem('returnUrl');
         navigate(returnUrl, { replace: true });
       } else {
-        navigate(ROLE_ROUTES[data.user.role] ?? '/app', { replace: true });
+        navigate(ROLE_ROUTES[data.user.role] ?? '/dashboard', { replace: true });
       }
     } catch (err) {
       const code = err.response?.data?.error?.code;

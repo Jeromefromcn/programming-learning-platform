@@ -24,8 +24,8 @@ test('/login renders LoginPage', () => {
   expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
 });
 
-test('/app redirects to /login when unauthenticated', async () => {
-  window.history.pushState({}, '', '/app');
+test('/dashboard redirects to /login when unauthenticated', async () => {
+  window.history.pushState({}, '', '/dashboard');
   render(<App />);
   // Wait for AuthProvider to finish initializing (authApi.refresh rejects → initializing becomes false)
   // then ProtectedRoute redirects unauthenticated user to /login

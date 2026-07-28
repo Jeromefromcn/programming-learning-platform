@@ -53,7 +53,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route
-              path="/app"
+              path="/dashboard"
               element={
                 <ProtectedRoute requiredRole="STUDENT">
                   <AppShell />

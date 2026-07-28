@@ -31,13 +31,13 @@ beforeEach(() => {
   });
 });
 
-test('redirects to /app after login when no returnUrl saved', async () => {
+test('redirects to /dashboard after login when no returnUrl saved', async () => {
   render(<MemoryRouter><LoginPage /></MemoryRouter>);
   await userEvent.type(screen.getByLabelText('Username'), 'alice');
   await userEvent.type(screen.getByLabelText('Password'), 'pass');
   await userEvent.click(screen.getByRole('button', { name: /login/i }));
   await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
-  expect(mockNavigate).toHaveBeenCalledWith('/app', { replace: true });
+  expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
 });
 
 test('shows expired error when ACCOUNT_EXPIRED is returned', async () => {
