@@ -198,6 +198,7 @@ class ExerciseControllerTest {
         mockMvc.perform(get("/v1/exercises/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.categoryId").value(categoryId))
                 .andExpect(jsonPath("$.currentVersion").isNotEmpty());
     }
 

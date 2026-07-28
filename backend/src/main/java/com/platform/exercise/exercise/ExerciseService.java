@@ -228,6 +228,7 @@ public class ExerciseService {
                 exercise.getTitle(),
                 exercise.getType().name(),
                 exercise.getStatus().name(),
+                exercise.getCategoryId(),
                 exercise.getDeadline(),
                 toVersionDto(version, true));
     }

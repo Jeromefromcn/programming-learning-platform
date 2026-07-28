@@ -128,6 +128,35 @@ it('prefills the deadline field when editing an exercise that has one', async ()
   await waitFor(() => expect(screen.getByLabelText(/deadline/i).value).toBe('2026-07-15T23:59'));
 });
 
+it('prefills the category field when editing and preserves it on save', async () => {
+  categoryApi.list = vi.fn().mockResolvedValue({
+    content: [{ id: 5, name: 'Loops' }, { id: 7, name: 'Recursion' }],
+  });
+  exerciseApi.get = vi.fn().mockResolvedValue({
+    id: 1, title: 'Existing', type: 'PYTHON', categoryId: 5,
+    currentVersion: { description: 'd', difficulty: 'EASY', hints: [], config: { autoGrade: true, testCases: [] } },
+    deadline: null,
+  });
+  render(
+    <MemoryRouter initialEntries={['/tutor/exercises/1/edit']}>
+      <Routes>
+        <Route path="/tutor/exercises/:id/edit" element={<ExerciseFormPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => expect(screen.getByDisplayValue('Loops')).toBeInTheDocument());
+
+  fireEvent.click(screen.getByRole('button', { name: /save/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.update).toHaveBeenCalledWith(
+      '1',
+      expect.objectContaining({ categoryId: 5 })
+    )
+  );
+});
+
 it('unchecking the toggle sends autoGrade false', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();

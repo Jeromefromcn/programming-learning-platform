@@ -7,6 +7,7 @@ public record ExerciseDetailDto(
         String title,
         String type,
         String status,
+        Long categoryId,
         LocalDateTime deadline,
         ExerciseVersionDto currentVersion
 ) {}
