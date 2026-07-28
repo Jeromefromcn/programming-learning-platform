@@ -1,10 +1,14 @@
+# syntax=docker/dockerfile:1.7
+
 # Stage 1: Build
 FROM maven:3.9-eclipse-temurin-25 AS builder
 WORKDIR /app
 COPY pom.xml .
-RUN mvn dependency:go-offline -q
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    mvn dependency:go-offline -q
 COPY src ./src
-RUN mvn package -DskipTests -q
+RUN --mount=type=cache,target=/root/.m2,sharing=locked \
+    mvn package -DskipTests -q
 
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre-jammy
