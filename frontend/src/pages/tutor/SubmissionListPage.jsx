@@ -6,7 +6,7 @@ import { formatDate } from '../../utils/dateFormat';
 
 export default function SubmissionListPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const initialStudentName = searchParams.get('studentName') || '';
   const initialExerciseId = searchParams.get('exerciseId') || '';
@@ -53,6 +53,17 @@ export default function SubmissionListPage() {
     if (graded !== '') params.graded = graded;
     fetchSubmissions(params);
   }, [page, studentName, exerciseId, batchId, source, graded, searchTrigger]);
+
+  useEffect(() => {
+    const params = {};
+    if (studentName.trim()) params.studentName = studentName.trim();
+    if (exerciseId.trim()) params.exerciseId = exerciseId.trim();
+    if (batchId.trim()) params.batchId = batchId.trim();
+    if (source) params.source = source;
+    if (graded !== '') params.graded = graded;
+    if (page > 0) params.page = String(page);
+    setSearchParams(params, { replace: true });
+  }, [page, studentName, exerciseId, batchId, source, graded, setSearchParams]);
 
   function handleSearch() {
     setPage(0);

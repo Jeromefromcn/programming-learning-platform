@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import SubmissionListPage from './SubmissionListPage';
 import { submissionApi } from '../../api/submissionApi';
 
@@ -196,4 +196,30 @@ it('calls submissionApi.list with graded=true after clicking Search', async () =
   expect(submissionApi.list).toHaveBeenLastCalledWith(
     expect.objectContaining({ graded: 'true', page: 0 })
   );
+});
+
+it('updates the location search to match applied filters after clicking Search', async () => {
+  let capturedSearch;
+  function LocationSpy() {
+    capturedSearch = useLocation().search;
+    return null;
+  }
+
+  render(
+    <MemoryRouter initialEntries={['/tutor/submissions']}>
+      <SubmissionListPage />
+      <LocationSpy />
+    </MemoryRouter>
+  );
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText(/source/i), { target: { value: 'STUDENT' } });
+  fireEvent.change(screen.getByLabelText(/graded/i), { target: { value: 'true' } });
+  fireEvent.click(screen.getByRole('button', { name: /search/i }));
+
+  await waitFor(() => expect(submissionApi.list).toHaveBeenCalledTimes(2));
+  const params = new URLSearchParams(capturedSearch);
+  expect(params.get('source')).toBe('STUDENT');
+  expect(params.get('graded')).toBe('true');
+  expect(params.get('page')).toBeNull();
 });
