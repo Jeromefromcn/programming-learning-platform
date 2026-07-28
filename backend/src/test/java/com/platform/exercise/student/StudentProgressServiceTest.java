@@ -105,4 +105,59 @@ class StudentProgressServiceTest {
         verify(submissionRepository).findByUserIdFiltered(
                 eq(42L), eq("fizz"), eq("PYTHON"), eq("STUDENT"), any());
     }
+
+    @Test
+    void getProgress_includesTutorScoreCommentAndGradedWhenGraded() {
+        Submission sub = new Submission();
+        sub.setId(3L);
+        sub.setExerciseId(10L);
+        sub.setExerciseType("PYTHON");
+        sub.setSource("STUDENT");
+        sub.setGraded(true);
+        sub.setAutoScore(new BigDecimal("70.00"));
+        sub.setTutorScore(new BigDecimal("85.00"));
+        sub.setTutorComment("Nice work, watch your indentation.");
+        sub.setCreatedAt(LocalDateTime.now());
+
+        Exercise exercise = new Exercise();
+        exercise.setId(10L);
+        exercise.setTitle("Loops");
+
+        when(submissionRepository.findByUserIdFiltered(
+                eq(42L), isNull(), isNull(), isNull(), any())).thenReturn(new PageImpl<>(List.of(sub)));
+        when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
+
+        StudentProgressDto result = service.getProgress(42L, 0, 20, null, null, null);
+
+        ProgressSubmissionDto item = result.submissions().content().get(0);
+        assertEquals(new BigDecimal("85.00"), item.tutorScore());
+        assertEquals("Nice work, watch your indentation.", item.tutorComment());
+        assertTrue(item.graded());
+    }
+
+    @Test
+    void getProgress_tutorFieldsNullAndGradedFalseWhenNotGraded() {
+        Submission sub = new Submission();
+        sub.setId(4L);
+        sub.setExerciseId(10L);
+        sub.setExerciseType("PYTHON");
+        sub.setSource("STUDENT");
+        sub.setAutoScore(new BigDecimal("70.00"));
+        sub.setCreatedAt(LocalDateTime.now());
+
+        Exercise exercise = new Exercise();
+        exercise.setId(10L);
+        exercise.setTitle("Loops");
+
+        when(submissionRepository.findByUserIdFiltered(
+                eq(42L), isNull(), isNull(), isNull(), any())).thenReturn(new PageImpl<>(List.of(sub)));
+        when(exerciseRepository.findAllById(List.of(10L))).thenReturn(List.of(exercise));
+
+        StudentProgressDto result = service.getProgress(42L, 0, 20, null, null, null);
+
+        ProgressSubmissionDto item = result.submissions().content().get(0);
+        assertNull(item.tutorScore());
+        assertNull(item.tutorComment());
+        assertFalse(item.graded());
+    }
 }

@@ -10,7 +10,10 @@ public record ProgressSubmissionDto(
     String exerciseTitle,
     String exerciseType,
     String source,        // STUDENT | IMPORT
-    BigDecimal score,     // autoScore only — tutor review status is not shown here
+    BigDecimal score,     // autoScore
+    BigDecimal tutorScore,
+    String tutorComment,
+    boolean graded,
     String answerData,
     String workspaceXml,
     LocalDateTime createdAt
@@ -20,6 +23,7 @@ public record ProgressSubmissionDto(
             sub.getId(), sub.getExerciseId(), exerciseTitle,
             sub.getExerciseType(), sub.getSource(),
             sub.getAutoScore(),
+            sub.getTutorScore(), sub.getTutorComment(), sub.isGraded(),
             sub.getAnswerData(), sub.getWorkspaceXml(),
             sub.getCreatedAt());
     }
