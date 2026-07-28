@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { submissionApi } from '../../api/submissionApi';
 import Pagination from '../../components/Pagination';
 import { formatDate } from '../../utils/dateFormat';
@@ -7,6 +7,7 @@ import { formatDate } from '../../utils/dateFormat';
 export default function SubmissionListPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
 
   const initialStudentName = searchParams.get('studentName') || '';
   const initialExerciseId = searchParams.get('exerciseId') || '';
@@ -166,7 +167,7 @@ export default function SubmissionListPage() {
             ) : submissions.map(sub => (
               <tr
                 key={sub.id}
-                onClick={() => navigate(`/tutor/submissions/${sub.id}`)}
+                onClick={() => navigate(`/tutor/submissions/${sub.id}`, { state: { backTo: `/tutor/submissions${location.search}` } })}
                 style={{ cursor: 'pointer', borderBottom: '1px solid #eee' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
                 onMouseLeave={e => e.currentTarget.style.background = ''}

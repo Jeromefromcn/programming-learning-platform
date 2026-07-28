@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import SubmissionListPage from './SubmissionListPage';
 import { submissionApi } from '../../api/submissionApi';
 
@@ -222,4 +222,35 @@ it('updates the location search to match applied filters after clicking Search',
   expect(params.get('source')).toBe('STUDENT');
   expect(params.get('graded')).toBe('true');
   expect(params.get('page')).toBeNull();
+});
+
+it('navigates to a clicked submission with backTo set to the current filtered URL', async () => {
+  submissionApi.list = vi.fn().mockResolvedValue({
+    content: [{
+      id: 5, studentName: 'Alice', exerciseTitle: 'Ex1', exerciseType: 'BLOCKLY',
+      autoScore: 100, tutorScore: null, graded: false, versionMismatch: false,
+      createdAt: '2026-05-01T10:00:00', batchId: null,
+    }],
+    totalPages: 1,
+  });
+
+  let capturedState;
+  function StateSpy() {
+    capturedState = useLocation().state;
+    return null;
+  }
+
+  render(
+    <MemoryRouter initialEntries={['/tutor/submissions?source=STUDENT']}>
+      <Routes>
+        <Route path="/tutor/submissions" element={<SubmissionListPage />} />
+        <Route path="/tutor/submissions/:id" element={<StateSpy />} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+  await waitFor(() => screen.getByText('Alice'));
+  fireEvent.click(screen.getByText('Alice'));
+
+  await waitFor(() => expect(capturedState).toEqual({ backTo: '/tutor/submissions?source=STUDENT' }));
 });
