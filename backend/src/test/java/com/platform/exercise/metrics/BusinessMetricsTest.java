@@ -46,9 +46,9 @@ class BusinessMetricsTest {
         businessMetrics.recordSubmissionCreated("BLOCKLY");
         businessMetrics.recordSubmissionCreated("PYTHON");
 
-        assertThat(meterRegistry.find("business.submission.created").tag("exercise_type", "BLOCKLY").counter().count())
+        assertThat(meterRegistry.find("business.submissions").tag("exercise_type", "BLOCKLY").counter().count())
             .isEqualTo(2.0);
-        assertThat(meterRegistry.find("business.submission.created").tag("exercise_type", "PYTHON").counter().count())
+        assertThat(meterRegistry.find("business.submissions").tag("exercise_type", "PYTHON").counter().count())
             .isEqualTo(1.0);
     }
 

@@ -27,7 +27,7 @@ public class BusinessMetrics {
     }
 
     public void recordSubmissionCreated(String exerciseType) {
-        Counter.builder("business.submission.created")
+        Counter.builder("business.submissions")
             .tag("exercise_type", exerciseType)
             .register(meterRegistry)
             .increment();

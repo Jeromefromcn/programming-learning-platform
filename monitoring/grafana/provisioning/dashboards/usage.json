@@ -11,7 +11,7 @@
       "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
       "id": 1,
       "targets": [
-        { "expr": "sum(rate(business_submission_created_total[1h])) by (exercise_type)", "legendFormat": "{{exercise_type}}" }
+        { "expr": "sum(rate(business_submissions_total[1h])) by (exercise_type)", "legendFormat": "{{exercise_type}}" }
       ],
       "title": "Submissions/hour by Exercise Type",
       "type": "timeseries"

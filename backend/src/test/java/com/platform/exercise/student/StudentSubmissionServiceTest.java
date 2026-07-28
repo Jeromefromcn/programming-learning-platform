@@ -7,6 +7,7 @@ import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.BusinessMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -29,6 +30,7 @@ class StudentSubmissionServiceTest {
     ExerciseVersionRepository versionRepo;
     BlocklyGrader blocklyGrader;
     PythonGrader pythonGrader;
+    BusinessMetrics businessMetrics;
     StudentSubmissionService service;
 
     @BeforeEach
@@ -38,8 +40,9 @@ class StudentSubmissionServiceTest {
         versionRepo = mock(ExerciseVersionRepository.class);
         blocklyGrader = mock(BlocklyGrader.class);
         pythonGrader = mock(PythonGrader.class);
+        businessMetrics = mock(BusinessMetrics.class);
         service = new StudentSubmissionService(submissionRepo, exerciseRepo, versionRepo,
-            blocklyGrader, pythonGrader, new AutoGradeConfigResolver(new ObjectMapper()));
+            blocklyGrader, pythonGrader, new AutoGradeConfigResolver(new ObjectMapper()), businessMetrics);
         when(submissionRepo.save(any())).thenAnswer(inv -> {
             Submission s = inv.getArgument(0);
             s.setId(123L);
@@ -76,6 +79,32 @@ class StudentSubmissionServiceTest {
             "STUDENT".equals(s.getSource()) && s.getUserId().equals(7L)
                 && "Alice".equals(s.getStudentName())
                 && s.getAutoScore() != null));
+    }
+
+    @Test
+    void submit_success_recordsSubmissionCreatedMetric() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
+
+        service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
+
+        verify(businessMetrics).recordSubmissionCreated("PYTHON");
+    }
+
+    @Test
+    void submit_resubmitOverwritingUngraded_recordsMetricAgain() {
+        stubExercise("{\"autoGrade\":true,\"testCases\":[]}");
+        Submission prior = new Submission();
+        prior.setId(50L);
+        prior.setUserId(7L);
+        prior.setExerciseId(2L);
+        prior.setSource("STUDENT");
+        prior.setGraded(false);
+        when(submissionRepo.findFirstByUserIdAndExerciseIdAndSourceAndDeletedFalse(7L, 2L, "STUDENT"))
+            .thenReturn(Optional.of(prior));
+
+        service.submit(7L, "Alice", 2L, new SubmitRequest("print(1)", null));
+
+        verify(businessMetrics, times(1)).recordSubmissionCreated("PYTHON");
     }
 
     @Test

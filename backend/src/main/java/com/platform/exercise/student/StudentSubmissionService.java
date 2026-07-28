@@ -8,6 +8,7 @@ import com.platform.exercise.domain.Submission;
 import com.platform.exercise.grading.AutoGradeConfigResolver;
 import com.platform.exercise.grading.BlocklyGrader;
 import com.platform.exercise.grading.PythonGrader;
+import com.platform.exercise.metrics.BusinessMetrics;
 import com.platform.exercise.repository.ExerciseRepository;
 import com.platform.exercise.repository.ExerciseVersionRepository;
 import com.platform.exercise.repository.SubmissionRepository;
@@ -31,6 +32,7 @@ public class StudentSubmissionService {
     private final BlocklyGrader blocklyGrader;
     private final PythonGrader pythonGrader;
     private final AutoGradeConfigResolver autoGradeConfigResolver;
+    private final BusinessMetrics businessMetrics;
 
     @Transactional
     public SubmitResultDto submit(Long userId, String studentName, Long exerciseId, SubmitRequest req) {
@@ -93,6 +95,7 @@ public class StudentSubmissionService {
         sub.setUserId(userId);
         sub.setStudentActiveKey("STUDENT:" + exerciseId + ":" + userId);
         Submission saved = submissionRepository.save(sub);
+        businessMetrics.recordSubmissionCreated(type);
 
         return new SubmitResultDto(
             saved.getId(),
