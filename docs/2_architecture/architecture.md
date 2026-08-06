@@ -1997,9 +1997,9 @@ services:
 
   sandbox:
     build: ./sandbox
-    security_opt: ["no-new-privileges:true"]
+    security_opt: ["seccomp:unconfined", "apparmor:unconfined"]
     cap_drop: [ALL]
-    cap_add: [SYS_ADMIN]  # Required for nsjail namespaces
+    cap_add: [SYS_ADMIN, SETUID, SETGID, SETPCAP]  # nsjail mount/namespace + jail setup
     tmpfs: ["/tmp:size=256m"]
     networks: [exercise-platform-net]
 
@@ -2063,18 +2063,19 @@ The Python sandbox container exposes a single HTTP endpoint:
 ```
 
 **Internal execution flow:**
-1. Receive request via Flask/FastAPI (lightweight HTTP server).
-2. For each test case, spawn a nsjail subprocess with:
+1. Receive request via Flask (lightweight HTTP server).
+2. Write student code + test case wrapper to a temp file, prefixed with `import restricted_imports` (activates the blocked-module hook before any student code runs).
+3. For each test case, spawn a nsjail subprocess with:
    - `--time_limit {timeLimitSeconds}`
    - `--rlimit_as {memoryLimitMb}`
-   - `--disable_clone_newnet` (network isolation)
-   - Read-only root filesystem, writable `/tmp` only
-3. Write student code + test case wrapper to a temp file.
+   - `--disable_clone_newnet` (network isolation) and `--disable_clone_newuser` (skip nsjail's own user namespace — not needed given the container's own capability drop, and recent kernels restrict unprivileged user namespace creation; see README troubleshooting)
+   - `--env PYTHONPATH=/app` (nsjail passes no environment by default; needed so `import restricted_imports` resolves)
+   - Read-only root filesystem; writable `/tmp` comes from the container's own tmpfs mount, not an nsjail-level one (an nsjail `--tmpfsmount /tmp` would shadow the temp file already written there)
 4. Execute `python3 temp_file.py` inside nsjail.
 5. Capture stdout, compare with expected output.
 6. Collect results and return.
 
-**Restricted imports:** A custom import hook blocks `os`, `sys`, `subprocess`, `socket`, `shutil`, `ctypes`, `importlib`, and file I/O modules.
+**Restricted imports:** `sandbox/restricted_imports.py` patches `builtins.__import__` to block `os`, `sys`, `subprocess`, `socket`, `shutil`, `ctypes`, `importlib`, `pathlib`, `glob`, `pty`, `signal`, `resource`. It only takes effect because the executed script explicitly imports it first (step 2 above) — it does nothing on its own.
 
 ### 5.7 Exported Answer File Format (JSON Schema)
 

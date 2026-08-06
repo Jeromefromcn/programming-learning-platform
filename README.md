@@ -382,17 +382,15 @@ docker compose up -d
 
 #### Sandbox does not execute code / returns errors
 
-The sandbox requires `SYS_ADMIN` capability for nsjail. Verify the host kernel supports user namespaces:
+The sandbox needs `nsjail` to actually launch the student's Python process. If it can't, `POST /execute` still returns HTTP 200 with an empty `actual` and `error`, which looks like "the code ran and printed nothing" rather than a sandbox failure — check the sandbox logs, not just the API response, when a test case that should obviously pass instead shows no output:
 
 ```bash
 docker compose logs sandbox
 ```
 
-If you see permission errors, ensure the host allows unprivileged user namespaces:
+`docker-compose.yml` grants the `sandbox` service exactly what nsjail needs: `cap_add: [SYS_ADMIN, SETUID, SETGID, SETPCAP]` and `security_opt: [seccomp:unconfined, apparmor:unconfined]`. Don't remove any of these — each is required for a different nsjail operation (namespace/mount setup, capability handling for its jail, etc.), and it will fail differently depending on which one is missing. If you're running on a host with additional AppArmor/seccomp hardening layered on top of Docker's own (e.g. a custom MAC policy), those can still block nsjail even with this config; check `docker compose logs sandbox` for the specific `nsjail` error.
 
-```bash
-sysctl kernel.unprivileged_userns_clone   # should be 1
-```
+Note: nsjail intentionally does **not** create its own Linux user namespace here (`--disable_clone_newuser` in `sandbox/executor.py`) — recent kernels (e.g. Ubuntu 24.04's `kernel.apparmor_restrict_unprivileged_userns=1`) restrict unprivileged user namespace creation, and satisfying that would mean loosening a host-wide kernel security setting just for this one container. Isolation instead comes from the container's own capability drop, read-only root, size-limited `/tmp`, and nsjail's other namespaces (mount/PID/IPC/UTS/cgroup), none of which need it. No host-level `sysctl` changes are required for the sandbox to work.
 
 #### Grafana shows no data
 

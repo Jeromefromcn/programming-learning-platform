@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+    environment:
+      TZ: Asia/Hong_Kong
+    volumes:
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     ports:
       - "8080:80"
     depends_on:
@@ -16,10 +20,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
+      TZ: Asia/Hong_Kong
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -30,6 +37,8 @@ services:
   sandbox:
     build:
       context: ./sandbox
+    environment:
+      TZ: Asia/Hong_Kong
     security_opt:
       - seccomp:unconfined
       - apparmor:unconfined
@@ -42,6 +51,8 @@ services:
       - SETPCAP
     tmpfs:
       - /tmp:size=256m
+    volumes:
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -49,6 +60,7 @@ services:
   mysql:
     image: mysql:8.0
     environment:
+      TZ: Asia/Hong_Kong
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_USER: ${DB_USERNAME}
@@ -60,6 +72,7 @@ services:
       retries: 5
     volumes:
       - mysql-data:/var/lib/mysql
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -69,6 +82,7 @@ services:
     ports:
       - "9090:9090"
     environment:
+      TZ: Asia/Hong_Kong
       PROMETHEUS_BASIC_AUTH_USER: ${PROMETHEUS_BASIC_AUTH_USER}
       PROMETHEUS_BASIC_AUTH_HASH: ${PROMETHEUS_BASIC_AUTH_HASH}
     entrypoint: ["/prometheus-entrypoint.sh"]
@@ -77,6 +91,7 @@ services:
       - ./monitoring/prometheus/web.yml.tmpl:/etc/prometheus/web.yml.tmpl:ro
       - ./monitoring/prometheus/prometheus-entrypoint.sh:/prometheus-entrypoint.sh:ro
       - prometheus-data:/prometheus
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -86,6 +101,7 @@ services:
     ports:
       - "3001:3000"
     environment:
+      TZ: Asia/Hong_Kong
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
@@ -98,6 +114,7 @@ services:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/grafana-entrypoint.sh:/grafana-entrypoint.sh:ro
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       - prometheus
     networks:
@@ -108,12 +125,14 @@ services:
     build:
       context: ./backup
     environment:
+      TZ: Asia/Hong_Kong
       MYSQL_HOST: ${MYSQL_HOST}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - ${BACKUP_DIR:-/var/backups/exercise-platform}:/backups
+      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
