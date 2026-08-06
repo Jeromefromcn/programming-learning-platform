@@ -90,7 +90,7 @@ export default function PythonAuthoringEditor({
       <div style={{ marginTop: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <label style={{ fontWeight: 600 }}>Test Cases</label>
-          <button onClick={addTestCase}
+          <button type="button" onClick={addTestCase}
             style={{ padding: '4px 10px', cursor: 'pointer', borderRadius: 4,
                      border: '1px solid #1976d2', color: '#1976d2', background: 'none' }}>
             + Add Test Case
@@ -128,7 +128,7 @@ export default function PythonAuthoringEditor({
                   style={{ marginTop: 6 }}
                 />
               </div>
-              <button onClick={() => removeTestCase(idx)}
+              <button type="button" onClick={() => removeTestCase(idx)}
                 style={{ alignSelf: 'flex-end', padding: '4px 8px', cursor: 'pointer',
                          border: '1px solid #c62828', color: '#c62828', borderRadius: 4, background: 'none' }}>
                 Remove
@@ -155,6 +155,7 @@ export default function PythonAuthoringEditor({
       {/* Verify button */}
       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
+          type="button"
           onClick={handleVerify}
           disabled={verifying}
           style={{ padding: '6px 14px', cursor: verifying ? 'default' : 'pointer',
