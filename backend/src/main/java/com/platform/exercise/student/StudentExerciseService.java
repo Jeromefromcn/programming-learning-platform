@@ -98,6 +98,7 @@ public class StudentExerciseService {
             }
         }
         if ("PYTHON".equals(type)) {
+            stripped.remove("referenceSolution");
             JsonNode testCases = stripped.get("testCases");
             ArrayNode visible = objectMapper.createArrayNode();
             if (testCases != null && testCases.isArray()) {

@@ -179,7 +179,7 @@ public class ExerciseService {
     // ── Verify Test Cases ─────────────────────────────────────────────────────
 
     public JsonNode verifyTestCases(VerifyRequest req) {
-        return sandboxClient.execute(req.starterCode(), req.testCases(), req.timeLimitSeconds());
+        return sandboxClient.execute(req.referenceSolution(), req.testCases(), req.timeLimitSeconds());
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

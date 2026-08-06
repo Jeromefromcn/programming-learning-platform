@@ -27,6 +27,7 @@ const EMPTY_BLOCKLY_CONFIG = {
 
 const EMPTY_PYTHON_CONFIG = {
   starterCode: '',
+  referenceSolution: '',
   timeLimitSeconds: 5,
   testCases: [],
   autoGrade: true,
@@ -346,10 +347,13 @@ export default function ExerciseFormPage() {
               <h3 style={{ marginTop: 0 }}>Python Configuration</h3>
               <PythonAuthoringEditor
                 starterCode={pythonConfig.starterCode || ''}
+                referenceSolution={pythonConfig.referenceSolution || ''}
                 timeLimitSeconds={pythonConfig.timeLimitSeconds || 5}
                 testCases={pythonConfig.testCases || []}
                 onStarterCodeChange={code =>
                   setPythonConfig(prev => ({ ...prev, starterCode: code }))}
+                onReferenceSolutionChange={code =>
+                  setPythonConfig(prev => ({ ...prev, referenceSolution: code }))}
                 onTimeLimitChange={secs =>
                   setPythonConfig(prev => ({ ...prev, timeLimitSeconds: secs }))}
                 onTestCasesChange={cases =>

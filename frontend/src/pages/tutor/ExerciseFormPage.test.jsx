@@ -84,6 +84,21 @@ it('includes autoGrade true in the create payload by default', async () => {
   );
 });
 
+it('includes an empty referenceSolution in the create payload by default', async () => {
+  await renderCreateForm('PYTHON');
+  fillRequiredFields();
+
+  fireEvent.click(screen.getByRole('button', { name: /create exercise/i }));
+
+  await waitFor(() =>
+    expect(exerciseApi.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({ referenceSolution: '' }),
+      })
+    )
+  );
+});
+
 it('sends deadline null in the create payload when left blank', async () => {
   await renderCreateForm('PYTHON');
   fillRequiredFields();

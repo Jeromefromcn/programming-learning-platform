@@ -439,4 +439,35 @@ class ExerciseControllerTest {
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].status").value("PUBLISHED"));
     }
+
+    // ── Verify Test Cases ────────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void verify_blankReferenceSolution_returns400() throws Exception {
+        String body = """
+                {"referenceSolution":"","timeLimitSeconds":5,
+                 "testCases":[{"input":"print(1)","expectedOutput":"1"}]}
+                """;
+        // Asserting the message names "referenceSolution" (not the old
+        // "starterCode") proves VerifyRequest's field was actually renamed,
+        // not just that some 400 happened to come back.
+        mockMvc.perform(post("/v1/exercises/verify")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.message").value(containsString("referenceSolution")));
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void verify_noTestCases_returns400() throws Exception {
+        String body = """
+                {"referenceSolution":"print(1)","timeLimitSeconds":5,"testCases":[]}
+                """;
+        mockMvc.perform(post("/v1/exercises/verify")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
 }

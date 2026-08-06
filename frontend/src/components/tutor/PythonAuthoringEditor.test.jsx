@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import PythonAuthoringEditor from './PythonAuthoringEditor';
+import { exerciseApi } from '../../api/exerciseApi';
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, onChange }) => (
@@ -153,6 +154,92 @@ describe('Test cases help popover', () => {
     fireEvent.mouseDown(document.body);
 
     expect(screen.queryByText(/must print/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('Reference solution editor', () => {
+  it('renders with the given value and reports edits via onReferenceSolutionChange', () => {
+    const onReferenceSolutionChange = vi.fn();
+    render(
+      <PythonAuthoringEditor
+        testCases={[]}
+        onTestCasesChange={() => {}}
+        referenceSolution={'def add(a, b):\n    return a + b'}
+        onReferenceSolutionChange={onReferenceSolutionChange}
+      />
+    );
+
+    const editors = screen.getAllByTestId('monaco-editor');
+    expect(editors[1]).toHaveValue('def add(a, b):\n    return a + b');
+
+    fireEvent.change(editors[1], { target: { value: 'def add(a, b):\n    return a - b' } });
+
+    expect(onReferenceSolutionChange).toHaveBeenCalledWith('def add(a, b):\n    return a - b');
+  });
+
+  it('does not submit the enclosing form when its help icon is clicked', () => {
+    const onSubmit = vi.fn(e => e.preventDefault());
+    renderInForm(
+      <PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />,
+      onSubmit
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'What is a reference solution?' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('explains that it is used to verify test cases and is never shown to students', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'What is a reference solution?' }));
+
+    expect(screen.getByText(/never shown to students/i)).toBeInTheDocument();
+    expect(screen.getByText(/runs your test cases against this code/i)).toBeInTheDocument();
+  });
+});
+
+describe('Verify Test Cases uses the reference solution', () => {
+  it('sends referenceSolution (not starterCode) to exerciseApi.verify', async () => {
+    exerciseApi.verify = vi.fn().mockResolvedValue({ results: [] });
+    const testCases = [{ input: 'print(add(2, 3))', expectedOutput: '5', visible: true }];
+    render(
+      <PythonAuthoringEditor
+        starterCode={'def add(a, b):\n    pass'}
+        referenceSolution={'def add(a, b):\n    return a + b'}
+        timeLimitSeconds={5}
+        testCases={testCases}
+        onTestCasesChange={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Test Cases' }));
+
+    await vi.waitFor(() => expect(exerciseApi.verify).toHaveBeenCalled());
+    expect(exerciseApi.verify).toHaveBeenCalledWith({
+      referenceSolution: 'def add(a, b):\n    return a + b',
+      timeLimitSeconds: 5,
+      testCases: [{ input: 'print(add(2, 3))', expectedOutput: '5' }],
+    });
+  });
+
+  it('shows an alert and does not call the API when the reference solution is blank', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    exerciseApi.verify = vi.fn();
+    const testCases = [{ input: 'print(add(2, 3))', expectedOutput: '5', visible: true }];
+    render(
+      <PythonAuthoringEditor
+        referenceSolution=""
+        testCases={testCases}
+        onTestCasesChange={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Test Cases' }));
+
+    expect(alertSpy).toHaveBeenCalledWith('Add a reference solution before verifying.');
+    expect(exerciseApi.verify).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });
 

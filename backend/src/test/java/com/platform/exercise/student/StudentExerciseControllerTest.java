@@ -168,6 +168,15 @@ class StudentExerciseControllerTest {
 
     @Test
     @WithMockUser(username = "student1", roles = "STUDENT")
+    void get_publishedPythonExercise_stripsReferenceSolution() throws Exception {
+        mockMvc.perform(get("/v1/student/exercises/" + publishedPythonExId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version.config.visibleTestCases").isArray())
+            .andExpect(jsonPath("$.version.config.referenceSolution").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "student1", roles = "STUDENT")
     void get_exerciseWithDeadline_includesDeadlineInResponse() throws Exception {
         jdbcTemplate.update("UPDATE exercises SET deadline = ? WHERE id = ?",
             java.sql.Timestamp.valueOf("2026-07-15 23:59:00"), publishedPythonExId);
@@ -248,6 +257,7 @@ class StudentExerciseControllerTest {
             "INSERT INTO exercise_versions (exercise_id, version_number, title, description, difficulty, hints, config) VALUES (?,?,?,?,?,?,?)",
             exId, 1, title, "A description", "MEDIUM", null,
             "{\"starterCode\":\"def f():\\n    pass\",\"timeLimitSeconds\":5," +
+            "\"referenceSolution\":\"def f():\\n    return 1\"," +
             "\"testCases\":[" +
             "{\"input\":\"f()\",\"expectedOutput\":\"1\",\"visible\":true}," +
             "{\"input\":\"f()\",\"expectedOutput\":\"2\",\"visible\":false}]}");

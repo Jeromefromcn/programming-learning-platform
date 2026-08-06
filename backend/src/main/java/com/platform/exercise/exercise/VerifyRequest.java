@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 public record VerifyRequest(
-        @NotBlank String starterCode,
+        @NotBlank String referenceSolution,
         @Min(1) @Max(30) int timeLimitSeconds,
         @NotEmpty List<TestCaseItem> testCases
 ) {

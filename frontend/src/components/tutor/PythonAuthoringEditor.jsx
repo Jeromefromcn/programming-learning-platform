@@ -69,6 +69,19 @@ function StarterCodeHelp() {
   );
 }
 
+function ReferenceSolutionHelp() {
+  return (
+    <HelpPopover ariaLabel="What is a reference solution?" width={320}>
+      <p style={{ margin: 0 }}>
+        Reference Solution is a complete, correct implementation that only you see — it is
+        never shown to students. Clicking <strong>Verify Test Cases</strong> runs your test
+        cases against this code, not the Starter Code, so you can confirm the expected outputs
+        are actually correct before saving the exercise.
+      </p>
+    </HelpPopover>
+  );
+}
+
 function TestCasesHelp() {
   return (
     <HelpPopover ariaLabel="How do test cases work?" width={360}>
@@ -93,11 +106,9 @@ function TestCasesHelp() {
         <strong>+ Add Test Case</strong>: adds a new blank row below for you to fill in.
       </p>
       <p style={{ margin: 0 }}>
-        <strong>Verify Test Cases</strong>: runs every test case above against the code
-        currently in the Starter Code editor, using the sandbox, so you can catch mistakes
-        (typos, wrong expected output, syntax errors) before saving. If your starter code is
-        just a stub, tests will fail as expected — write a full solution temporarily to
-        verify, then revert to the stub.
+        <strong>Verify Test Cases</strong>: runs every test case above against your Reference
+        Solution (not the Starter Code), using the sandbox, so you can catch mistakes (typos,
+        wrong expected output, syntax errors) before saving.
       </p>
     </HelpPopover>
   );
@@ -106,17 +117,21 @@ function TestCasesHelp() {
 /**
  * Props:
  *   starterCode: string
+ *   referenceSolution: string
  *   timeLimitSeconds: number
  *   testCases: Array<{input: string, expectedOutput: string, visible: boolean}>
  *   onStarterCodeChange: (code: string) => void
+ *   onReferenceSolutionChange: (code: string) => void
  *   onTimeLimitChange: (seconds: number) => void
  *   onTestCasesChange: (cases: Array) => void
  */
 export default function PythonAuthoringEditor({
   starterCode = '',
+  referenceSolution = '',
   timeLimitSeconds = 5,
   testCases = [],
   onStarterCodeChange,
+  onReferenceSolutionChange,
   onTimeLimitChange,
   onTestCasesChange,
 }) {
@@ -142,12 +157,16 @@ export default function PythonAuthoringEditor({
       alert('Add at least one test case before verifying.');
       return;
     }
+    if (!referenceSolution.trim()) {
+      alert('Add a reference solution before verifying.');
+      return;
+    }
     setVerifying(true);
     setVerifyError(null);
     setVerifyResults(null);
     try {
       const result = await exerciseApi.verify({
-        starterCode,
+        referenceSolution,
         timeLimitSeconds,
         testCases: testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput })),
       });
@@ -172,6 +191,20 @@ export default function PythonAuthoringEditor({
         language="python"
         value={starterCode}
         onChange={value => onStarterCodeChange?.(value || '')}
+        options={{ minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false }}
+        theme="light"
+      />
+
+      {/* Reference solution */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16, marginBottom: 6 }}>
+        <label style={{ fontWeight: 600 }}>Reference Solution (not shown to students)</label>
+        <ReferenceSolutionHelp />
+      </div>
+      <Editor
+        height="300px"
+        language="python"
+        value={referenceSolution}
+        onChange={value => onReferenceSolutionChange?.(value || '')}
         options={{ minimap: { enabled: false }, fontSize: 14, scrollBeyondLastLine: false }}
         theme="light"
       />
