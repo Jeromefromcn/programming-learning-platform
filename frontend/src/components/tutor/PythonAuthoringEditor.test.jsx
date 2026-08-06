@@ -60,4 +60,55 @@ describe('PythonAuthoringEditor buttons inside a form', () => {
 
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it('does not submit the enclosing form when the starter code help icon is clicked', () => {
+    const onSubmit = vi.fn(e => e.preventDefault());
+    renderInForm(
+      <PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />,
+      onSubmit
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'What is starter code?' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe('Starter code help popover', () => {
+  it('is hidden by default', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    expect(screen.queryByText(/initial code template/i)).not.toBeInTheDocument();
+  });
+
+  it('opens and shows an explanation with an example when the help icon is clicked', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'What is starter code?' }));
+
+    expect(screen.getByText(/initial code template/i)).toBeInTheDocument();
+    expect(screen.getByText(/def add\(a, b\):/)).toBeInTheDocument();
+  });
+
+  it('closes when the help icon is clicked again', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+    const helpButton = screen.getByRole('button', { name: 'What is starter code?' });
+
+    fireEvent.click(helpButton);
+    expect(screen.getByText(/initial code template/i)).toBeInTheDocument();
+
+    fireEvent.click(helpButton);
+    expect(screen.queryByText(/initial code template/i)).not.toBeInTheDocument();
+  });
+
+  it('closes when clicking outside the popover', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'What is starter code?' }));
+    expect(screen.getByText(/initial code template/i)).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByText(/initial code template/i)).not.toBeInTheDocument();
+  });
 });

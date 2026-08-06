@@ -1,7 +1,65 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { exerciseApi } from '../../api/exerciseApi';
 import { isReauthCancelled } from '../../api/axiosInstance';
+
+const STARTER_CODE_EXAMPLE = `def add(a, b):
+    """Return the sum of a and b."""
+    # TODO: implement your solution here
+    pass`;
+
+function StarterCodeHelp() {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutsideClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    function handleEscape(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-label="What is starter code?"
+        style={{ width: 18, height: 18, lineHeight: '16px', padding: 0, borderRadius: '50%',
+                 border: '1px solid #999', color: '#666', background: 'none',
+                 fontSize: 12, cursor: 'pointer' }}>
+        ?
+      </button>
+      {open && (
+        <div role="tooltip" style={{ position: 'absolute', top: 24, left: 0, zIndex: 10,
+                 width: 320, padding: 12, background: '#fff', border: '1px solid #ccc',
+                 borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 13, fontWeight: 400 }}>
+          <p style={{ margin: '0 0 8px' }}>
+            Starter code is the initial code template shown in the editor when a student opens
+            this exercise. It usually includes a function signature, required imports, or hint
+            comments, so students can build on the skeleton instead of starting from scratch.
+          </p>
+          <p style={{ margin: '0 0 4px', fontWeight: 600 }}>Example (add two numbers):</p>
+          <pre style={{ margin: 0, padding: 8, background: '#f5f5f5', borderRadius: 4,
+                   fontSize: 12, overflowX: 'auto' }}>
+            <code>{STARTER_CODE_EXAMPLE}</code>
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Props:
@@ -63,7 +121,10 @@ export default function PythonAuthoringEditor({
   return (
     <div>
       {/* Starter code */}
-      <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Starter Code</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <label style={{ fontWeight: 600 }}>Starter Code</label>
+        <StarterCodeHelp />
+      </div>
       <Editor
         height="300px"
         language="python"
