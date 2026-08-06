@@ -1,4 +1,4 @@
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
+importScripts('/pyodide/pyodide.js');
 
 var pyodide = null;
 
@@ -27,7 +27,7 @@ function friendlyError(raw) {
 self.onmessage = async function ({ data: { code, visibleTestCases } }) {
   try {
     if (!pyodide) {
-      pyodide = await loadPyodide();
+      pyodide = await loadPyodide({ indexURL: '/pyodide/' });
     }
 
     var results = [];

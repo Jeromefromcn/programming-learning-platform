@@ -2,7 +2,7 @@
 // Accepts: { code: string }
 // Posts back: { output: string } or { error: string }
 
-importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
+importScripts('/pyodide/pyodide.js');
 
 var pyodide = null;
 
@@ -32,7 +32,7 @@ self.onmessage = async function(e) {
   var code = e.data.code || '';
   try {
     if (!pyodide) {
-      pyodide = await loadPyodide();
+      pyodide = await loadPyodide({ indexURL: '/pyodide/' });
     }
     pyodide.runPython(
       'import sys, io\n' +

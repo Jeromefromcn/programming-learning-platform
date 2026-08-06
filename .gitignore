@@ -15,6 +15,7 @@ node_modules/
 dist/
 .vite/
 coverage/
+frontend/public/pyodide/
 
 # IntelliJ IDEA
 .idea/
@@ -43,3 +44,4 @@ __pycache__/
 # opencode tool config
 .opencode/
 monitoring/grafana/provisioning/alerting/contact-points.yaml
+report/
