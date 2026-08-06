@@ -112,3 +112,62 @@ describe('Starter code help popover', () => {
     expect(screen.queryByText(/initial code template/i)).not.toBeInTheDocument();
   });
 });
+
+describe('Test cases help popover', () => {
+  it('is hidden by default', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    expect(screen.queryByText(/must print/i)).not.toBeInTheDocument();
+  });
+
+  it('does not submit the enclosing form when clicked', () => {
+    const onSubmit = vi.fn(e => e.preventDefault());
+    renderInForm(
+      <PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />,
+      onSubmit
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'How do test cases work?' }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('explains Input expression, Expected output, Add Test Case, and Verify Test Cases', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'How do test cases work?' }));
+
+    expect(screen.getByText(/must print/i)).toBeInTheDocument();
+    expect(screen.getByText(/print\(fizzbuzz\(3\)\)/)).toBeInTheDocument();
+    expect(screen.getByText(/exact text/i)).toBeInTheDocument();
+    expect(screen.getByText(/adds a new blank/i)).toBeInTheDocument();
+    expect(screen.getByText(/runs every test case/i)).toBeInTheDocument();
+  });
+
+  it('closes when clicking outside the popover', () => {
+    render(<PythonAuthoringEditor testCases={[]} onTestCasesChange={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'How do test cases work?' }));
+    expect(screen.getByText(/must print/i)).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByText(/must print/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('Test case field placeholders', () => {
+  it('shows a print()-based example for Input expression, matching how the sandbox evaluates it', () => {
+    const testCases = [{ input: '', expectedOutput: '', visible: true }];
+    render(<PythonAuthoringEditor testCases={testCases} onTestCasesChange={() => {}} />);
+
+    expect(screen.getByPlaceholderText('e.g. print(fizzbuzz(3))')).toBeInTheDocument();
+  });
+
+  it('shows an unquoted example for Expected output, matching raw stdout comparison', () => {
+    const testCases = [{ input: '', expectedOutput: '', visible: true }];
+    render(<PythonAuthoringEditor testCases={testCases} onTestCasesChange={() => {}} />);
+
+    expect(screen.getByPlaceholderText('e.g. Fizz')).toBeInTheDocument();
+  });
+});

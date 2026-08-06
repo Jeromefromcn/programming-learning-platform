@@ -8,7 +8,7 @@ const STARTER_CODE_EXAMPLE = `def add(a, b):
     # TODO: implement your solution here
     pass`;
 
-function StarterCodeHelp() {
+function HelpPopover({ ariaLabel, width = 320, children }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -35,7 +35,7 @@ function StarterCodeHelp() {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        aria-label="What is starter code?"
+        aria-label={ariaLabel}
         style={{ width: 18, height: 18, lineHeight: '16px', padding: 0, borderRadius: '50%',
                  border: '1px solid #999', color: '#666', background: 'none',
                  fontSize: 12, cursor: 'pointer' }}>
@@ -43,21 +43,63 @@ function StarterCodeHelp() {
       </button>
       {open && (
         <div role="tooltip" style={{ position: 'absolute', top: 24, left: 0, zIndex: 10,
-                 width: 320, padding: 12, background: '#fff', border: '1px solid #ccc',
+                 width, padding: 12, background: '#fff', border: '1px solid #ccc',
                  borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: 13, fontWeight: 400 }}>
-          <p style={{ margin: '0 0 8px' }}>
-            Starter code is the initial code template shown in the editor when a student opens
-            this exercise. It usually includes a function signature, required imports, or hint
-            comments, so students can build on the skeleton instead of starting from scratch.
-          </p>
-          <p style={{ margin: '0 0 4px', fontWeight: 600 }}>Example (add two numbers):</p>
-          <pre style={{ margin: 0, padding: 8, background: '#f5f5f5', borderRadius: 4,
-                   fontSize: 12, overflowX: 'auto' }}>
-            <code>{STARTER_CODE_EXAMPLE}</code>
-          </pre>
+          {children}
         </div>
       )}
     </div>
+  );
+}
+
+function StarterCodeHelp() {
+  return (
+    <HelpPopover ariaLabel="What is starter code?">
+      <p style={{ margin: '0 0 8px' }}>
+        Starter code is the initial code template shown in the editor when a student opens
+        this exercise. It usually includes a function signature, required imports, or hint
+        comments, so students can build on the skeleton instead of starting from scratch.
+      </p>
+      <p style={{ margin: '0 0 4px', fontWeight: 600 }}>Example (add two numbers):</p>
+      <pre style={{ margin: 0, padding: 8, background: '#f5f5f5', borderRadius: 4,
+               fontSize: 12, overflowX: 'auto' }}>
+        <code>{STARTER_CODE_EXAMPLE}</code>
+      </pre>
+    </HelpPopover>
+  );
+}
+
+function TestCasesHelp() {
+  return (
+    <HelpPopover ariaLabel="How do test cases work?" width={360}>
+      <p style={{ margin: '0 0 8px' }}>
+        <strong>Input expression</strong>: a line of Python run right after your Starter Code.
+        It must print its result — a bare expression alone produces no output in a script, so
+        wrap the call in print(...).
+      </p>
+      <pre style={{ margin: '0 0 8px', padding: 8, background: '#f5f5f5', borderRadius: 4,
+               fontSize: 12, overflowX: 'auto' }}>
+        <code>print(fizzbuzz(3))</code>
+      </pre>
+      <p style={{ margin: '0 0 8px' }}>
+        <strong>Expected output</strong>: the exact text that print should produce, compared as
+        plain stdout — no quotes around strings.
+      </p>
+      <pre style={{ margin: '0 0 8px', padding: 8, background: '#f5f5f5', borderRadius: 4,
+               fontSize: 12, overflowX: 'auto' }}>
+        <code>Fizz</code>
+      </pre>
+      <p style={{ margin: '0 0 8px' }}>
+        <strong>+ Add Test Case</strong>: adds a new blank row below for you to fill in.
+      </p>
+      <p style={{ margin: 0 }}>
+        <strong>Verify Test Cases</strong>: runs every test case above against the code
+        currently in the Starter Code editor, using the sandbox, so you can catch mistakes
+        (typos, wrong expected output, syntax errors) before saving. If your starter code is
+        just a stub, tests will fail as expected — write a full solution temporarily to
+        verify, then revert to the stub.
+      </p>
+    </HelpPopover>
   );
 }
 
@@ -150,7 +192,10 @@ export default function PythonAuthoringEditor({
       {/* Test cases */}
       <div style={{ marginTop: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <label style={{ fontWeight: 600 }}>Test Cases</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontWeight: 600 }}>Test Cases</label>
+            <TestCasesHelp />
+          </div>
           <button type="button" onClick={addTestCase}
             style={{ padding: '4px 10px', cursor: 'pointer', borderRadius: 4,
                      border: '1px solid #1976d2', color: '#1976d2', background: 'none' }}>
@@ -166,7 +211,7 @@ export default function PythonAuthoringEditor({
                 <input
                   value={tc.input}
                   onChange={e => updateTestCase(idx, 'input', e.target.value)}
-                  placeholder="e.g. fizzbuzz(3)"
+                  placeholder="e.g. print(fizzbuzz(3))"
                   style={{ display: 'block', width: '100%', padding: '4px 8px',
                            border: '1px solid #ccc', borderRadius: 4, marginTop: 2, boxSizing: 'border-box' }}
                 />
@@ -176,7 +221,7 @@ export default function PythonAuthoringEditor({
                 <input
                   value={tc.expectedOutput}
                   onChange={e => updateTestCase(idx, 'expectedOutput', e.target.value)}
-                  placeholder='e.g. "Fizz"'
+                  placeholder="e.g. Fizz"
                   style={{ display: 'block', width: '100%', padding: '4px 8px',
                            border: '1px solid #ccc', borderRadius: 4, marginTop: 2, boxSizing: 'border-box' }}
                 />
