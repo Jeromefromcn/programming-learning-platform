@@ -5,8 +5,6 @@ services:
       dockerfile: nginx/Dockerfile
     environment:
       TZ: Asia/Hong_Kong
-    volumes:
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     ports:
       - "8080:80"
     depends_on:
@@ -25,8 +23,6 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-    volumes:
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -51,8 +47,6 @@ services:
       - SETPCAP
     tmpfs:
       - /tmp:size=256m
-    volumes:
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -72,7 +66,6 @@ services:
       retries: 5
     volumes:
       - mysql-data:/var/lib/mysql
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -91,7 +84,6 @@ services:
       - ./monitoring/prometheus/web.yml.tmpl:/etc/prometheus/web.yml.tmpl:ro
       - ./monitoring/prometheus/prometheus-entrypoint.sh:/prometheus-entrypoint.sh:ro
       - prometheus-data:/prometheus
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     networks:
       - exercise-platform-net
     restart: unless-stopped
@@ -114,7 +106,6 @@ services:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/grafana-entrypoint.sh:/grafana-entrypoint.sh:ro
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       - prometheus
     networks:
@@ -132,7 +123,6 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     volumes:
       - ${BACKUP_DIR:-/var/backups/exercise-platform}:/backups
-      - /usr/share/zoneinfo/Asia/Hong_Kong:/etc/localtime:ro
     depends_on:
       mysql:
         condition: service_healthy
