@@ -25,6 +25,7 @@ export default function PythonPracticePage({ exercise }) {
   const [code, setCode] = useState(config.starterCode || '');
   const [results, setResults] = useState(null);
   const [running, setRunning] = useState(false);
+  const [pyodideReady, setPyodideReady] = useState(false);
   const [tle, setTle] = useState(false);
   const [runError, setRunError] = useState(null);
   const [hintIndex, setHintIndex] = useState(-1);
@@ -41,6 +42,8 @@ export default function PythonPracticePage({ exercise }) {
       new URL('../../workers/pyodideRunner.worker.js', import.meta.url),
       { type: 'classic' }
     );
+    workerRef.current.onmessage = handleWorkerMessage;
+    workerRef.current.onerror = handleWorkerError;
     return () => {
       if (workerRef.current) workerRef.current.terminate();
     };
@@ -53,7 +56,7 @@ export default function PythonPracticePage({ exercise }) {
   }, [exercise.id]);
 
   function handleRun() {
-    if (!workerRef.current || running) return;
+    if (!workerRef.current || running || !pyodideReady) return;
     setRunning(true);
     setResults(null);
     setTle(false);
@@ -70,18 +73,21 @@ export default function PythonPracticePage({ exercise }) {
       workerRef.current.onerror = handleWorkerError;
       setRunning(false);
       setTle(true);
+      setPyodideReady(false);
     }, timeLimitSeconds * 1000 + 500);
 
-    workerRef.current.onmessage = handleWorkerMessage;
-    workerRef.current.onerror = handleWorkerError;
     workerRef.current.postMessage({ code, visibleTestCases });
   }
 
-  function handleWorkerMessage({ data: { results, error } }) {
+  function handleWorkerMessage({ data }) {
+    if (data.type === 'ready') {
+      setPyodideReady(true);
+      return;
+    }
     clearTimeout(timeoutRef.current);
     setRunning(false);
-    if (error) setRunError(error);
-    else setResults(results);
+    if (data.error) setRunError(data.error);
+    else setResults(data.results);
   }
 
   function handleWorkerError(e) {
@@ -168,7 +174,8 @@ export default function PythonPracticePage({ exercise }) {
       <div style={{ display: 'flex', gap: 12, margin: '16px 0', flexWrap: 'wrap' }}>
         <button
           onClick={handleRun}
-          disabled={running}
+          disabled={running || !pyodideReady}
+          title={pyodideReady ? undefined : 'Loading Python environment…'}
           style={{ background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, padding: '8px 20px', cursor: 'pointer' }}
         >
           {running ? 'Running…' : 'Run'}

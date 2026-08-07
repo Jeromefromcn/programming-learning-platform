@@ -2,6 +2,15 @@ importScripts('/pyodide/pyodide.js');
 
 var pyodide = null;
 
+// Bootstrap Pyodide (WASM fetch/compile + stdlib load) as soon as the worker
+// starts, outside of any run's time budget — a run's timeLimitSeconds should
+// only bound the student's code, matching the server-side grading semantics.
+var pyodideReadyPromise = loadPyodide({ indexURL: '/pyodide/' }).then(function (p) {
+  pyodide = p;
+  self.postMessage({ type: 'ready' });
+  return p;
+});
+
 var ERROR_MAP = [
   ['IndentationError', 'Check your indentation'],
   ['NameError',        'Variable not defined'],
@@ -26,9 +35,7 @@ function friendlyError(raw) {
 
 self.onmessage = async function ({ data: { code, visibleTestCases } }) {
   try {
-    if (!pyodide) {
-      pyodide = await loadPyodide({ indexURL: '/pyodide/' });
-    }
+    await pyodideReadyPromise;
 
     var results = [];
     for (var i = 0; i < visibleTestCases.length; i++) {
@@ -48,8 +55,8 @@ self.onmessage = async function ({ data: { code, visibleTestCases } }) {
         results.push({ index: i, passed: false, actual: null, error: friendlyError(String(e)) });
       }
     }
-    self.postMessage({ results: results, error: null });
+    self.postMessage({ type: 'result', results: results, error: null });
   } catch (e) {
-    self.postMessage({ results: [], error: String(e) });
+    self.postMessage({ type: 'result', results: [], error: String(e) });
   }
 };

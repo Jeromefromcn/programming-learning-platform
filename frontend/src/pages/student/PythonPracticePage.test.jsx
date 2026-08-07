@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PythonPracticePage from './PythonPracticePage';
@@ -30,8 +30,10 @@ class MockWorker {
     this.postMessage = vi.fn();
     this.onmessage = null;
     this.onerror = null;
+    MockWorker.instances.push(this);
   }
 }
+MockWorker.instances = [];
 global.Worker = MockWorker;
 
 const mockExercise = {
@@ -101,6 +103,30 @@ describe('PythonPracticePage submit/draft', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit/i }));
 
     expect(await screen.findByText(/already been graded and cannot be resubmitted/i)).toBeInTheDocument();
+  });
+});
+
+describe('PythonPracticePage Pyodide bootstrap vs. run timeout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    MockWorker.instances = [];
+    studentApi.getDraft.mockResolvedValue(null);
+  });
+
+  it('disables Run until the worker reports the Python environment is ready', () => {
+    render(<MemoryRouter><PythonPracticePage exercise={mockExercise} /></MemoryRouter>);
+    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
+  });
+
+  it('enables Run once the worker posts a ready message', () => {
+    render(<MemoryRouter><PythonPracticePage exercise={mockExercise} /></MemoryRouter>);
+    const worker = MockWorker.instances[0];
+
+    act(() => {
+      worker.onmessage({ data: { type: 'ready' } });
+    });
+
+    expect(screen.getByRole('button', { name: /run/i })).not.toBeDisabled();
   });
 });
 
