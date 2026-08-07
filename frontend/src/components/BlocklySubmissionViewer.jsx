@@ -33,6 +33,7 @@ export default function BlocklySubmissionViewer({ workspaceXml }) {
     const workspace = Blockly.inject(containerRef.current, {
       readOnly: true,
       scrollbars: true,
+      media: '/blockly-media/',
     });
     workspaceRef.current = workspace;
 

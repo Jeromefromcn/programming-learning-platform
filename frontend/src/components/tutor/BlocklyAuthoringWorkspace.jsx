@@ -112,6 +112,7 @@ export default function BlocklyAuthoringWorkspace({
       toolbox: toolboxXml,
       trashcan: true,
       scrollbars: true,
+      media: '/blockly-media/',
     });
     workspaceRef.current = workspace;
 

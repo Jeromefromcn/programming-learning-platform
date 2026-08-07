@@ -62,6 +62,7 @@ export default function BlocklyPracticePage({ exercise }) {
       toolbox: toolboxXml,
       trashcan: true,
       scrollbars: true,
+      media: '/blockly-media/',
     });
     workspaceRef.current = workspace;
 

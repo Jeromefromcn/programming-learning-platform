@@ -106,5 +106,15 @@ describe('BlocklySubmissionViewer', () => {
     vi.restoreAllMocks();
   });
 
+});
 
+describe('Blockly.inject media assets', () => {
+  test('is injected with a self-hosted media path, not the default Google CDN', async () => {
+    const { default: Blockly } = await import('blockly');
+    render(<BlocklySubmissionViewer workspaceXml={SAMPLE_XML} />);
+    expect(Blockly.inject).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ media: '/blockly-media/' })
+    );
+  });
 });

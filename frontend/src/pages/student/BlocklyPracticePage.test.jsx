@@ -336,3 +336,14 @@ describe('Deadline', () => {
     expect(screen.getByRole('button', { name: /submit/i })).not.toBeDisabled();
   });
 });
+
+describe('Blockly.inject media assets', () => {
+  test('is injected with a self-hosted media path, not the default Google CDN', async () => {
+    const { default: Blockly } = await import('blockly');
+    render(<BlocklyPracticePage exercise={makeExercise()} />);
+    expect(Blockly.inject).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ media: '/blockly-media/' })
+    );
+  });
+});

@@ -243,3 +243,14 @@ describe('Interactive input modal', () => {
     expect(screen.queryByRole('heading', { name: /enter input/i })).not.toBeInTheDocument();
   });
 });
+
+describe('Blockly.inject media assets', () => {
+  test('is injected with a self-hosted media path, not the default Google CDN', async () => {
+    const Blockly = await import('blockly');
+    renderWorkspace();
+    expect(Blockly.inject).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ media: '/blockly-media/' })
+    );
+  });
+});
