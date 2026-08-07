@@ -55,3 +55,57 @@ def format_report(rows):
         result = "PASS" if row["passed"] else "FAIL"
         lines.append(f"{row['name']:<45} {row['target']:<20} {row['actual']:<15} {result}")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+def login(base_url, username, password):
+    resp = requests.post(
+        f"{base_url}/api/v1/auth/login",
+        json={"username": username, "password": password},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["accessToken"]
+
+
+def make_session(base_url, token):
+    session = requests.Session()
+    session.headers["Authorization"] = f"Bearer {token}"
+    session.base_url = base_url
+    return session
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-url", default="http://localhost:8080",
+                         help="Nginx entry point (default: http://localhost:8080)")
+    parser.add_argument("--username", default="admin")
+    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--dry-run", action="store_true",
+                         help="Seed fixtures, make one request of each kind, print, exit.")
+    parser.add_argument("--keep", action="store_true",
+                         help="Skip cleanup of seeded fixtures and submissions.")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    print(f"Logging in as {args.username} against {args.base_url} ...")
+    token = login(args.base_url, args.username, args.password)
+    session = make_session(args.base_url, token)
+    print("Logged in.")
+    if args.dry_run:
+        print("(--dry-run) login succeeded; later stages not wired up yet in this task.")
+        return
+    print("(full run not wired up yet in this task)")
+
+
+if __name__ == "__main__":
+    main()
