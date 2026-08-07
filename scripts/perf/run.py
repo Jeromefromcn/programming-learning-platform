@@ -79,6 +79,87 @@ def make_session(base_url, token):
 
 
 # ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+BLOCKLY_CONFIG = {
+    "rubric": {"dimensions": []},
+    "autoGrade": True,
+    "gradingRules": {
+        "outputMatch": {"enabled": True, "expectedOutput": "hello"},
+        "requiredBlocks": {"blocks": [], "enabled": False},
+        "blockCountLimit": {"max": None, "enabled": False},
+        "forbiddenBlocks": {"blocks": [], "enabled": False},
+    },
+    "showCodeView": False,
+    "allowedBlocks": ["text", "text_print"],
+    "canViewAnswer": False,
+    "answerWorkspaceXml": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+    "initialWorkspaceXml": "<xml xmlns=\"https://developers.google.com/blockly/xml\"></xml>",
+}
+
+PYTHON_CONFIG = {
+    "rubric": {"dimensions": []},
+    "autoGrade": True,
+    "testCases": [
+        {"input": "print(add(1, 2))", "expectedOutput": "3", "visible": True},
+    ],
+    "starterCode": "def add(a, b):\n    pass",
+    "timeLimitSeconds": 5,
+    "referenceSolution": "def add(a, b):\n    return a + b",
+}
+
+
+def seed_fixtures(session):
+    base = session.base_url
+    cat = session.post(f"{base}/api/v1/categories",
+                        json={"name": "perf-test"}, timeout=10)
+    cat.raise_for_status()
+    category_id = cat.json()["id"]
+
+    blockly = session.post(f"{base}/api/v1/exercises", json={
+        "title": "perf-test-blockly",
+        "description": "perf-test fixture, safe to delete",
+        "type": "BLOCKLY",
+        "difficulty": "EASY",
+        "categoryId": category_id,
+        "hints": [],
+        "config": BLOCKLY_CONFIG,
+    }, timeout=10)
+    blockly.raise_for_status()
+    blockly_id = blockly.json()["id"]
+    session.patch(f"{base}/api/v1/exercises/{blockly_id}/publish", timeout=10).raise_for_status()
+
+    python = session.post(f"{base}/api/v1/exercises", json={
+        "title": "perf-test-python",
+        "description": "perf-test fixture, safe to delete",
+        "type": "PYTHON",
+        "difficulty": "EASY",
+        "categoryId": category_id,
+        "hints": [],
+        "config": PYTHON_CONFIG,
+    }, timeout=10)
+    python.raise_for_status()
+    python_id = python.json()["id"]
+    session.patch(f"{base}/api/v1/exercises/{python_id}/publish", timeout=10).raise_for_status()
+
+    return {
+        "category_id": category_id,
+        "blockly_exercise_id": blockly_id,
+        "python_exercise_id": python_id,
+    }
+
+
+def cleanup_fixtures(session, fixture_ids, submission_ids):
+    base = session.base_url
+    for sub_id in submission_ids:
+        session.delete(f"{base}/api/v1/submissions/{sub_id}", timeout=10)
+    session.delete(f"{base}/api/v1/exercises/{fixture_ids['blockly_exercise_id']}", timeout=10)
+    session.delete(f"{base}/api/v1/exercises/{fixture_ids['python_exercise_id']}", timeout=10)
+    session.delete(f"{base}/api/v1/categories/{fixture_ids['category_id']}", timeout=10)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -101,10 +182,26 @@ def main():
     token = login(args.base_url, args.username, args.password)
     session = make_session(args.base_url, token)
     print("Logged in.")
-    if args.dry_run:
-        print("(--dry-run) login succeeded; later stages not wired up yet in this task.")
-        return
-    print("(full run not wired up yet in this task)")
+
+    fixture_ids = None
+    submission_ids = []
+    try:
+        print("Seeding perf-test fixtures ...")
+        fixture_ids = seed_fixtures(session)
+        print(f"Seeded: {fixture_ids}")
+
+        if args.dry_run:
+            print("(--dry-run) fixtures seeded; later stages not wired up yet in this task.")
+            return
+
+        print("(measurement stages not wired up yet in this task)")
+    finally:
+        if fixture_ids and not args.keep:
+            print("Cleaning up fixtures ...")
+            cleanup_fixtures(session, fixture_ids, submission_ids)
+            print("Cleaned up.")
+        elif fixture_ids:
+            print(f"--keep set; leaving fixtures in place: {fixture_ids}")
 
 
 if __name__ == "__main__":
