@@ -230,46 +230,74 @@ def parse_args():
     return parser.parse_args()
 
 
+NFR_TARGETS = {
+    "list_p95_ms": 500,
+    "detail_p95_ms": 500,
+    "blockly_avg_ms": 2000,
+    "python_avg_ms": 2000,
+    "idle_memory_mb": 4096,
+    "batch_memory_mb": 4096,
+}
+
+
 def main():
     args = parse_args()
+    n_requests = 1 if args.dry_run else 200
+
     print(f"Logging in as {args.username} against {args.base_url} ...")
     token = login(args.base_url, args.username, args.password)
     session = make_session(args.base_url, token)
     print("Logged in.")
 
-    # Owned here (not just assigned from seed_fixtures' return value) so that
-    # if seed_fixtures raises partway through, this dict still reflects
-    # whatever was actually created on the server — seed_fixtures mutates it
-    # in place as each id is confirmed, rather than only returning at the end.
-    fixture_ids = {}
+    fixture_ids = None
     submission_ids = []
+    # Default for cleanup_fixtures if measure_grading_throughput never runs
+    # (e.g. an earlier stage raises). Populated from throughput["user_ids"]
+    # below once grading-throughput fixtures (perf-test STUDENT accounts)
+    # actually exist, so cleanup can disable them.
     user_ids = []
+    rows = []
     try:
         print("Seeding perf-test fixtures ...")
-        seed_fixtures(session, fixture_ids)
+        fixture_ids = seed_fixtures(session)
         print(f"Seeded: {fixture_ids}")
 
-        if args.dry_run:
-            print("(--dry-run) fixtures seeded; later stages not wired up yet in this task.")
-            return
+        print("Sampling idle memory ...")
+        idle_mb = sample_memory()
+        rows.append({"name": "Idle memory, whole stack", "target": "fits 4096 MB",
+                      "actual": f"{idle_mb:.0f} MB", "passed": idle_mb <= NFR_TARGETS["idle_memory_mb"]})
 
-        print("Measuring exercise list response time (200 requests, concurrency 10) ...")
-        list_timings = measure_response_times(session, "/api/v1/student/exercises?page=0&size=20")
-        print(f"  p50={list_timings['p50_ms']:.0f}ms p95={list_timings['p95_ms']:.0f}ms")
+        print("Measuring exercise list response time ...")
+        list_timings = measure_response_times(
+            session, "/api/v1/student/exercises?page=0&size=20", n=n_requests)
+        rows.append({"name": "Exercise list p95", "target": "< 500 ms",
+                      "actual": f"{list_timings['p95_ms']:.0f} ms",
+                      "passed": list_timings["p95_ms"] < NFR_TARGETS["list_p95_ms"]})
 
         print("Measuring exercise detail response time ...")
         detail_path = f"/api/v1/student/exercises/{fixture_ids['blockly_exercise_id']}"
-        detail_timings = measure_response_times(session, detail_path)
-        print(f"  p50={detail_timings['p50_ms']:.0f}ms p95={detail_timings['p95_ms']:.0f}ms")
+        detail_timings = measure_response_times(session, detail_path, n=n_requests)
+        rows.append({"name": "Exercise detail p95", "target": "< 500 ms",
+                      "actual": f"{detail_timings['p95_ms']:.0f} ms",
+                      "passed": detail_timings["p95_ms"] < NFR_TARGETS["detail_p95_ms"]})
 
-        print("Measuring auto-grading throughput (30 Blockly + 10 Python submissions) ...")
+        print("Measuring auto-grading throughput ...")
         throughput = measure_grading_throughput(session, fixture_ids)
         submission_ids = throughput["submission_ids"]
         user_ids = throughput["user_ids"]
-        print(f"  Blockly avg={throughput['blockly_avg_ms']:.0f}ms/submission")
-        print(f"  Python avg={throughput['python_avg_ms']:.0f}ms/submission")
+        rows.append({"name": "Blockly auto-grade, avg/submission", "target": "< 2000 ms",
+                      "actual": f"{throughput['blockly_avg_ms']:.0f} ms",
+                      "passed": throughput["blockly_avg_ms"] < NFR_TARGETS["blockly_avg_ms"]})
+        rows.append({"name": "Python auto-grade, avg/submission", "target": "< 2000 ms",
+                      "actual": f"{throughput['python_avg_ms']:.0f} ms",
+                      "passed": throughput["python_avg_ms"] < NFR_TARGETS["python_avg_ms"]})
 
-        print("(memory stage not wired up yet in this task)")
+        print("Sampling memory during/after batch grading ...")
+        batch_mb = sample_memory()
+        rows.append({"name": "Memory during batch grading", "target": "fits 4096 MB",
+                      "actual": f"{batch_mb:.0f} MB",
+                      "passed": batch_mb <= NFR_TARGETS["batch_memory_mb"]})
+
     finally:
         if fixture_ids and not args.keep:
             print("Cleaning up fixtures ...")
@@ -277,6 +305,15 @@ def main():
             print("Cleaned up.")
         elif fixture_ids:
             print(f"--keep set; leaving fixtures in place: {fixture_ids}")
+
+    report = format_report(rows)
+    print("\n" + report)
+
+    results_dir = Path(__file__).parent / "results"
+    results_dir.mkdir(exist_ok=True)
+    out_path = results_dir / f"{time.strftime('%Y-%m-%d-%H%M%S')}.txt"
+    out_path.write_text(report + "\n")
+    print(f"\nSaved to {out_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +438,23 @@ def measure_grading_throughput(session, fixture_ids):
         "submission_ids": blockly_ids + python_ids,
         "user_ids": blockly_user_ids + python_user_ids,
     }
+
+
+# ---------------------------------------------------------------------------
+# Memory
+# ---------------------------------------------------------------------------
+
+def sample_memory():
+    out = subprocess.run(
+        ["docker", "stats", "--no-stream", "--format", "{{.Name}} {{.MemUsage}}"],
+        capture_output=True, text=True, timeout=15, check=True,
+    ).stdout
+    total_mb = 0.0
+    for line in out.strip().splitlines():
+        name, mem_usage = line.split(" ", 1)
+        if name.startswith("programming-learning-platform-"):
+            total_mb += parse_mem_mb(mem_usage)
+    return total_mb
 
 
 if __name__ == "__main__":

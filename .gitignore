@@ -45,3 +45,4 @@ __pycache__/
 .opencode/
 monitoring/grafana/provisioning/alerting/contact-points.yaml
 report/
+scripts/perf/results/*.txt
