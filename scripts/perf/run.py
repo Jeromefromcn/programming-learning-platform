@@ -254,11 +254,12 @@ def main():
     # whatever was actually created on the server — seed_fixtures mutates it
     # in place as each id is confirmed, rather than only returning at the end.
     fixture_ids = {}
+    # Owned here too, and passed into measure_grading_throughput below, for
+    # the same reason as fixture_ids: if that call raises partway through
+    # (e.g. the Python batch fails after the Blockly batch already
+    # succeeded), these still reflect whatever submissions/STUDENT accounts
+    # were actually created on the server, so cleanup can still remove them.
     submission_ids = []
-    # Default for cleanup_fixtures if measure_grading_throughput never runs
-    # (e.g. an earlier stage raises). Populated from throughput["user_ids"]
-    # below once grading-throughput fixtures (perf-test STUDENT accounts)
-    # actually exist, so cleanup can disable them.
     user_ids = []
     rows = []
     try:
@@ -286,9 +287,7 @@ def main():
                       "passed": detail_timings["p95_ms"] < NFR_TARGETS["detail_p95_ms"]})
 
         print("Measuring auto-grading throughput ...")
-        throughput = measure_grading_throughput(session, fixture_ids)
-        submission_ids = throughput["submission_ids"]
-        user_ids = throughput["user_ids"]
+        throughput = measure_grading_throughput(session, fixture_ids, submission_ids, user_ids)
         rows.append({"name": "Blockly auto-grade, avg/submission", "target": "< 2000 ms",
                       "actual": f"{throughput['blockly_avg_ms']:.0f} ms",
                       "passed": throughput["blockly_avg_ms"] < NFR_TARGETS["blockly_avg_ms"]})
@@ -417,30 +416,50 @@ def ensure_student_users(session, usernames, password=PERF_TEST_STUDENT_PASSWORD
     return user_ids
 
 
-def measure_grading_throughput(session, fixture_ids):
+def measure_grading_throughput(session, fixture_ids, submission_ids=None, user_ids=None):
+    """Import Blockly and Python submission batches, timing each.
+
+    `submission_ids` and `user_ids` may be passed in as caller-owned lists to
+    populate in place: each batch's ids are appended the moment that batch's
+    `ensure_student_users` / `import_zip` call succeeds, *before* the next
+    call is attempted, so a caller inspecting the same list objects after an
+    exception raised partway through (e.g. the Python batch failing after the
+    Blockly batch already succeeded) still sees whatever was actually
+    created on the server. If omitted, fresh lists are used, populated the
+    same way, and returned in the result dict on full success as before.
+    """
+    if submission_ids is None:
+        submission_ids = []
+    if user_ids is None:
+        user_ids = []
+
     blockly_user_ids = ensure_student_users(
         session, [f"perf-test-student-blockly-{i}" for i in range(30)])
+    user_ids.extend(blockly_user_ids)
     blockly_zip = build_submission_zip(
         fixture_ids["blockly_exercise_id"], "perf-test-blockly", "BLOCKLY",
         "print('hello');", count=30)
     start = time.monotonic()
     blockly_ids = import_zip(session, blockly_zip)
     blockly_elapsed_ms = (time.monotonic() - start) * 1000
+    submission_ids.extend(blockly_ids)
 
     python_user_ids = ensure_student_users(
         session, [f"perf-test-student-python-{i}" for i in range(10)])
+    user_ids.extend(python_user_ids)
     python_zip = build_submission_zip(
         fixture_ids["python_exercise_id"], "perf-test-python", "PYTHON",
         "def add(a, b):\n    return a + b", count=10)
     start = time.monotonic()
     python_ids = import_zip(session, python_zip)
     python_elapsed_ms = (time.monotonic() - start) * 1000
+    submission_ids.extend(python_ids)
 
     return {
         "blockly_avg_ms": blockly_elapsed_ms / 30,
         "python_avg_ms": python_elapsed_ms / 10,
-        "submission_ids": blockly_ids + python_ids,
-        "user_ids": blockly_user_ids + python_user_ids,
+        "submission_ids": submission_ids,
+        "user_ids": user_ids,
     }
 
 
