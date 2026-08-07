@@ -41,6 +41,11 @@ def run_test_case(code: str, test_input: str, expected_output: str,
                     # to the child by default -- make the module importable.
                     '--env', 'PYTHONPATH=/app',
                     '--bindmount_ro', '/',
+                    # /tmp is its own tmpfs mount at the container level and
+                    # does not inherit read-only through the recursive bind
+                    # of / above -- it must be listed as its own read-only
+                    # bind target, or a submission can write files there.
+                    '--bindmount_ro', '/tmp',
                     '--cwd', '/tmp',
                     '--', PYTHON_BIN, tmp_path
                 ],
