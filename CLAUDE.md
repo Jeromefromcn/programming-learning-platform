@@ -110,6 +110,7 @@ cd frontend && npm run dev           # dev server :5173
 cd backend && mvn spring-boot:run    # API :8080
 cd backend && mvn test               # backend tests
 cd frontend && npm test              # frontend tests
+cd scripts/perf && python3 run.py    # performance measurements, see scripts/perf/README.md
 ```
 
 ## Git

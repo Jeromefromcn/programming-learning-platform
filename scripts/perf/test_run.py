@@ -1,8 +1,12 @@
 import sys
 import os
+import json
+import zipfile
+from io import BytesIO
+
 sys.path.insert(0, os.path.dirname(__file__))
 
-from run import percentile, parse_mem_mb, format_report
+from run import percentile, parse_mem_mb, format_report, build_submission_zip
 
 
 def test_percentile_p50_of_odd_count():
@@ -41,3 +45,32 @@ def test_format_report_marks_pass_and_fail():
     assert "Exercise list p95" in out
     assert "PASS" in out
     assert "FAIL" in out
+
+
+def test_build_submission_zip_entries_and_schema():
+    zip_bytes = build_submission_zip(
+        exercise_id=42, exercise_title="perf-test-blockly", exercise_type="BLOCKLY",
+        answer="print('hello');", count=3)
+
+    with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
+        names = zf.namelist()
+        assert len(names) == 3
+
+        expected_keys = {
+            "platformVersion", "exerciseId", "exerciseTitle", "exerciseType",
+            "exerciseVersion", "studentName", "answer", "exportedAt",
+        }
+        for name in names:
+            payload = json.loads(zf.read(name))
+            assert set(payload.keys()) == expected_keys
+            assert payload["exerciseId"] == 42
+            assert payload["exerciseTitle"] == "perf-test-blockly"
+            assert payload["exerciseType"] == "BLOCKLY"
+            assert payload["answer"] == "print('hello');"
+
+        student_names = {json.loads(zf.read(n))["studentName"] for n in names}
+        assert student_names == {
+            "perf-test-student-blockly-0",
+            "perf-test-student-blockly-1",
+            "perf-test-student-blockly-2",
+        }
