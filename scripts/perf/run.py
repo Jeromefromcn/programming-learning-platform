@@ -230,7 +230,16 @@ def main():
             print("(--dry-run) fixtures seeded; later stages not wired up yet in this task.")
             return
 
-        print("(measurement stages not wired up yet in this task)")
+        print("Measuring exercise list response time (200 requests, concurrency 10) ...")
+        list_timings = measure_response_times(session, "/api/v1/student/exercises?page=0&size=20")
+        print(f"  p50={list_timings['p50_ms']:.0f}ms p95={list_timings['p95_ms']:.0f}ms")
+
+        print("Measuring exercise detail response time ...")
+        detail_path = f"/api/v1/student/exercises/{fixture_ids['blockly_exercise_id']}"
+        detail_timings = measure_response_times(session, detail_path)
+        print(f"  p50={detail_timings['p50_ms']:.0f}ms p95={detail_timings['p95_ms']:.0f}ms")
+
+        print("(grading throughput and memory stages not wired up yet in this task)")
     finally:
         if fixture_ids and not args.keep:
             print("Cleaning up fixtures ...")
@@ -238,6 +247,25 @@ def main():
             print("Cleaned up.")
         elif fixture_ids:
             print(f"--keep set; leaving fixtures in place: {fixture_ids}")
+
+
+# ---------------------------------------------------------------------------
+# Response time
+# ---------------------------------------------------------------------------
+
+def _timed_get(session, url):
+    start = time.monotonic()
+    resp = session.get(url, timeout=10)
+    elapsed_ms = (time.monotonic() - start) * 1000
+    resp.raise_for_status()
+    return elapsed_ms
+
+
+def measure_response_times(session, path, n=200, concurrency=10):
+    url = f"{session.base_url}{path}"
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        timings = list(pool.map(lambda _: _timed_get(session, url), range(n)))
+    return {"p50_ms": percentile(timings, 50), "p95_ms": percentile(timings, 95)}
 
 
 if __name__ == "__main__":
