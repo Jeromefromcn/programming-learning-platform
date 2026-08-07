@@ -71,7 +71,6 @@ public class SubmissionController {
     }
 
     @GetMapping("/export-csv")
-    @PreAuthorize("permitAll()")
     public void exportCsv(
             @RequestParam(required = false) Long exerciseId,
             HttpServletResponse response) throws IOException {

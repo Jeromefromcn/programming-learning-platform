@@ -35,7 +35,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/v1/auth/login", "/v1/auth/refresh", "/v1/auth/logout").permitAll()
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
-                .requestMatchers("/v1/submissions/export-csv", "/api/v1/submissions/export-csv").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
             )

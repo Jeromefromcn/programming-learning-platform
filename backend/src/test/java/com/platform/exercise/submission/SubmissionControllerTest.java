@@ -483,7 +483,14 @@ class SubmissionControllerTest {
     }
 
     @Test
-    void exportCsv_unauthenticated_returns200WithCsv() throws Exception {
+    void exportCsv_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/v1/submissions/export-csv"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "tutor1", roles = "TUTOR")
+    void exportCsv_asTutor_returns200WithCsv() throws Exception {
         Submission sub = new Submission();
         sub.setExerciseId(blocklyExercise.getId());
         sub.setGradedVersionId(blocklyVersion.getId());
