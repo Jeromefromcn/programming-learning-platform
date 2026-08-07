@@ -181,6 +181,12 @@ export default function PythonPracticePage({ exercise }) {
           {running ? 'Running…' : 'Run'}
         </button>
 
+        {!pyodideReady && (
+          <span style={{ display: 'flex', alignItems: 'center', color: '#888', fontSize: 13 }}>
+            Loading Python environment…
+          </span>
+        )}
+
         {hints.length > 0 && (
           <button
             onClick={() => setHintIndex(i => Math.min(i + 1, hints.length - 1))}

@@ -128,6 +128,22 @@ describe('PythonPracticePage Pyodide bootstrap vs. run timeout', () => {
 
     expect(screen.getByRole('button', { name: /run/i })).not.toBeDisabled();
   });
+
+  it('shows a visible loading message while the Python environment is not ready', () => {
+    render(<MemoryRouter><PythonPracticePage exercise={mockExercise} /></MemoryRouter>);
+    expect(screen.getByText(/loading python/i)).toBeInTheDocument();
+  });
+
+  it('hides the loading message once the worker posts a ready message', () => {
+    render(<MemoryRouter><PythonPracticePage exercise={mockExercise} /></MemoryRouter>);
+    const worker = MockWorker.instances[0];
+
+    act(() => {
+      worker.onmessage({ data: { type: 'ready' } });
+    });
+
+    expect(screen.queryByText(/loading python/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('PythonPracticePage deadline', () => {
