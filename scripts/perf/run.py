@@ -82,6 +82,12 @@ def make_session(base_url, token):
 # Fixtures
 # ---------------------------------------------------------------------------
 
+# Shared password for the synthetic STUDENT accounts ensure_student_users
+# provisions so grading-throughput submissions have a real username to
+# resolve against (see ensure_student_users docstring). Not a secret — these
+# are disposable perf-test fixture accounts, disabled again by cleanup_fixtures.
+PERF_TEST_STUDENT_PASSWORD = "Perf-Test-P4ssword!"
+
 BLOCKLY_CONFIG = {
     "rubric": {"dimensions": []},
     "autoGrade": True,
@@ -161,11 +167,17 @@ def seed_fixtures(session, fixture_ids=None):
     return fixture_ids
 
 
-def cleanup_fixtures(session, fixture_ids, submission_ids):
+def cleanup_fixtures(session, fixture_ids, submission_ids, user_ids=()):
     """Delete whatever fixtures exist. Tolerates a partially-populated
     `fixture_ids` (e.g. after seed_fixtures raised partway through) by
     skipping any missing key, and prints a warning for any delete that
     doesn't come back OK instead of silently swallowing it.
+
+    `user_ids` are the perf-test STUDENT accounts provisioned by
+    ensure_student_users for the grading-throughput batches. There's no
+    user-delete endpoint, so they're disabled instead (PATCH .../status ->
+    DISABLED), matching this project's existing "disable, don't delete"
+    convention for users. Same warn-on-failure pattern as `_delete` below.
     """
     base = session.base_url
 
@@ -175,8 +187,18 @@ def cleanup_fixtures(session, fixture_ids, submission_ids):
             print(f"WARNING: failed to delete {label}: "
                   f"{resp.status_code} {resp.text}")
 
+    def _disable_user(user_id):
+        resp = session.patch(f"{base}/api/v1/users/{user_id}/status",
+                              json={"status": "DISABLED"}, timeout=10)
+        if not resp.ok:
+            print(f"WARNING: failed to disable user {user_id}: "
+                  f"{resp.status_code} {resp.text}")
+
     for sub_id in submission_ids:
         _delete(f"{base}/api/v1/submissions/{sub_id}", f"submission {sub_id}")
+
+    for user_id in user_ids:
+        _disable_user(user_id)
 
     if "blockly_exercise_id" in fixture_ids:
         eid = fixture_ids["blockly_exercise_id"]
@@ -221,6 +243,7 @@ def main():
     # in place as each id is confirmed, rather than only returning at the end.
     fixture_ids = {}
     submission_ids = []
+    user_ids = []
     try:
         print("Seeding perf-test fixtures ...")
         seed_fixtures(session, fixture_ids)
@@ -242,6 +265,7 @@ def main():
         print("Measuring auto-grading throughput (30 Blockly + 10 Python submissions) ...")
         throughput = measure_grading_throughput(session, fixture_ids)
         submission_ids = throughput["submission_ids"]
+        user_ids = throughput["user_ids"]
         print(f"  Blockly avg={throughput['blockly_avg_ms']:.0f}ms/submission")
         print(f"  Python avg={throughput['python_avg_ms']:.0f}ms/submission")
 
@@ -249,7 +273,7 @@ def main():
     finally:
         if fixture_ids and not args.keep:
             print("Cleaning up fixtures ...")
-            cleanup_fixtures(session, fixture_ids, submission_ids)
+            cleanup_fixtures(session, fixture_ids, submission_ids, user_ids)
             print("Cleaned up.")
         elif fixture_ids:
             print(f"--keep set; leaving fixtures in place: {fixture_ids}")
@@ -304,8 +328,10 @@ def import_zip(session, zip_bytes):
     return [r["submissionId"] for r in body["results"] if r.get("submissionId") is not None]
 
 
-def ensure_student_users(session, usernames, password="Perf-Test-P4ssword!"):
-    """Create STUDENT accounts for `usernames` if they don't already exist.
+def ensure_student_users(session, usernames, password=PERF_TEST_STUDENT_PASSWORD):
+    """Create STUDENT accounts for `usernames` if they don't already exist,
+    returning the id of each (whether just-created or pre-existing) so the
+    caller can disable them again in cleanup.
 
     Not part of the original task brief for this stage: manual verification
     against the live deployment showed FileImportService.validateFile()
@@ -316,12 +342,20 @@ def ensure_student_users(session, usernames, password="Perf-Test-P4ssword!"):
     — superseded by the two-phase import + username-existence gate added later.
     Without this, build_submission_zip's synthetic student names are all
     rejected and measure_grading_throughput would time import failures, not
-    grading. Tolerates 409 USERNAME_TAKEN so these fixture usernames are safely
-    reusable across repeated runs (there is no user-delete endpoint, only
-    PATCH .../status to disable, so — like other perf-test fixtures — they're
-    left in place rather than hard-deleted).
+    grading.
+
+    One request per username rather than the bulk POST /v1/users/import:
+    that endpoint pre-validates the whole batch and rejects it all-or-nothing
+    on a single duplicate (see UserService.importUsers), which would break
+    the tolerate-and-reuse behavior below on any run after the first.
+
+    Tolerates 409 USERNAME_TAKEN (looking the existing user up by username to
+    get its id) so these fixture usernames are safely reusable across
+    repeated runs. There is no user-delete endpoint, only PATCH .../status to
+    disable — cleanup_fixtures does that for every id this returns.
     """
     base = session.base_url
+    user_ids = []
     for username in usernames:
         resp = session.post(f"{base}/api/v1/users", json={
             "username": username,
@@ -330,12 +364,21 @@ def ensure_student_users(session, usernames, password="Perf-Test-P4ssword!"):
             "role": "STUDENT",
         }, timeout=10)
         if resp.status_code == 409:
+            lookup = session.get(f"{base}/api/v1/users",
+                                  params={"name": username, "size": 50}, timeout=10)
+            lookup.raise_for_status()
+            match = next((u for u in lookup.json()["content"] if u["username"] == username), None)
+            if match is not None:
+                user_ids.append(match["id"])
             continue
         resp.raise_for_status()
+        user_ids.append(resp.json()["id"])
+    return user_ids
 
 
 def measure_grading_throughput(session, fixture_ids):
-    ensure_student_users(session, [f"perf-test-student-blockly-{i}" for i in range(30)])
+    blockly_user_ids = ensure_student_users(
+        session, [f"perf-test-student-blockly-{i}" for i in range(30)])
     blockly_zip = build_submission_zip(
         fixture_ids["blockly_exercise_id"], "perf-test-blockly", "BLOCKLY",
         "print('hello');", count=30)
@@ -343,7 +386,8 @@ def measure_grading_throughput(session, fixture_ids):
     blockly_ids = import_zip(session, blockly_zip)
     blockly_elapsed_ms = (time.monotonic() - start) * 1000
 
-    ensure_student_users(session, [f"perf-test-student-python-{i}" for i in range(10)])
+    python_user_ids = ensure_student_users(
+        session, [f"perf-test-student-python-{i}" for i in range(10)])
     python_zip = build_submission_zip(
         fixture_ids["python_exercise_id"], "perf-test-python", "PYTHON",
         "def add(a, b):\n    return a + b", count=10)
@@ -355,6 +399,7 @@ def measure_grading_throughput(session, fixture_ids):
         "blockly_avg_ms": blockly_elapsed_ms / 30,
         "python_avg_ms": python_elapsed_ms / 10,
         "submission_ids": blockly_ids + python_ids,
+        "user_ids": blockly_user_ids + python_user_ids,
     }
 
 
