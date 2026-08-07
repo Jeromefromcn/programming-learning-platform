@@ -239,7 +239,13 @@ def main():
         detail_timings = measure_response_times(session, detail_path)
         print(f"  p50={detail_timings['p50_ms']:.0f}ms p95={detail_timings['p95_ms']:.0f}ms")
 
-        print("(grading throughput and memory stages not wired up yet in this task)")
+        print("Measuring auto-grading throughput (30 Blockly + 10 Python submissions) ...")
+        throughput = measure_grading_throughput(session, fixture_ids)
+        submission_ids = throughput["submission_ids"]
+        print(f"  Blockly avg={throughput['blockly_avg_ms']:.0f}ms/submission")
+        print(f"  Python avg={throughput['python_avg_ms']:.0f}ms/submission")
+
+        print("(memory stage not wired up yet in this task)")
     finally:
         if fixture_ids and not args.keep:
             print("Cleaning up fixtures ...")
@@ -266,6 +272,90 @@ def measure_response_times(session, path, n=200, concurrency=10):
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         timings = list(pool.map(lambda _: _timed_get(session, url), range(n)))
     return {"p50_ms": percentile(timings, 50), "p95_ms": percentile(timings, 95)}
+
+
+# ---------------------------------------------------------------------------
+# Grading throughput
+# ---------------------------------------------------------------------------
+
+def build_submission_zip(exercise_id, exercise_title, exercise_type, answer, count):
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for i in range(count):
+            payload = {
+                "platformVersion": "1.0",
+                "exerciseId": exercise_id,
+                "exerciseTitle": exercise_title,
+                "exerciseType": exercise_type,
+                "exerciseVersion": 1,
+                "studentName": f"perf-test-student-{exercise_type.lower()}-{i}",
+                "answer": answer,
+                "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            zf.writestr(f"submission_{i}.json", json.dumps(payload))
+    return buf.getvalue()
+
+
+def import_zip(session, zip_bytes):
+    files = {"files": ("batch.zip", zip_bytes, "application/zip")}
+    resp = session.post(f"{session.base_url}/api/v1/submissions/import", files=files, timeout=60)
+    resp.raise_for_status()
+    body = resp.json()
+    return [r["submissionId"] for r in body["results"] if r.get("submissionId") is not None]
+
+
+def ensure_student_users(session, usernames, password="Perf-Test-P4ssword!"):
+    """Create STUDENT accounts for `usernames` if they don't already exist.
+
+    Not part of the original task brief for this stage: manual verification
+    against the live deployment showed FileImportService.validateFile()
+    (backend/src/main/java/com/platform/exercise/submission/FileImportService.java)
+    rejects any submission whose `studentName` isn't an existing `users.username`
+    ("Username '...' not found in the system."). CLAUDE.md's note that
+    "submissions are keyed by name string (students may lack accounts)" is stale
+    — superseded by the two-phase import + username-existence gate added later.
+    Without this, build_submission_zip's synthetic student names are all
+    rejected and measure_grading_throughput would time import failures, not
+    grading. Tolerates 409 USERNAME_TAKEN so these fixture usernames are safely
+    reusable across repeated runs (there is no user-delete endpoint, only
+    PATCH .../status to disable, so — like other perf-test fixtures — they're
+    left in place rather than hard-deleted).
+    """
+    base = session.base_url
+    for username in usernames:
+        resp = session.post(f"{base}/api/v1/users", json={
+            "username": username,
+            "displayName": username,
+            "password": password,
+            "role": "STUDENT",
+        }, timeout=10)
+        if resp.status_code == 409:
+            continue
+        resp.raise_for_status()
+
+
+def measure_grading_throughput(session, fixture_ids):
+    ensure_student_users(session, [f"perf-test-student-blockly-{i}" for i in range(30)])
+    blockly_zip = build_submission_zip(
+        fixture_ids["blockly_exercise_id"], "perf-test-blockly", "BLOCKLY",
+        "print('hello');", count=30)
+    start = time.monotonic()
+    blockly_ids = import_zip(session, blockly_zip)
+    blockly_elapsed_ms = (time.monotonic() - start) * 1000
+
+    ensure_student_users(session, [f"perf-test-student-python-{i}" for i in range(10)])
+    python_zip = build_submission_zip(
+        fixture_ids["python_exercise_id"], "perf-test-python", "PYTHON",
+        "def add(a, b):\n    return a + b", count=10)
+    start = time.monotonic()
+    python_ids = import_zip(session, python_zip)
+    python_elapsed_ms = (time.monotonic() - start) * 1000
+
+    return {
+        "blockly_avg_ms": blockly_elapsed_ms / 30,
+        "python_avg_ms": python_elapsed_ms / 10,
+        "submission_ids": blockly_ids + python_ids,
+    }
 
 
 if __name__ == "__main__":
