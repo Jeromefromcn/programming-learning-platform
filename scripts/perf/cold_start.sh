@@ -23,10 +23,13 @@ echo "Starting the stack and timing until healthy ..."
 START=$(date +%s)
 docker compose up -d
 
-# export-csv is the only GET endpoint SecurityConfig permits without a JWT
-# (see backend SecurityConfig.java); every other /api/v1/* route requires
-# auth and would 401 forever here, so it doubles as the readiness probe.
-until curl -sf http://localhost:8080/api/v1/submissions/export-csv >/dev/null 2>&1; do
+# Spring Boot's actuator is mounted under the app's context-path (/api, see
+# application.yml) and is explicitly permitAll in SecurityConfig.java, so
+# /api/actuator/health is a real, intentionally public readiness probe --
+# unlike app data endpoints, which require a JWT and would 401 forever here.
+# Note: the bare (no /api/ prefix) /actuator/health is NOT this endpoint --
+# nginx's SPA fallback serves index.html for it with a false 200.
+until curl -sf http://localhost:8080/api/actuator/health >/dev/null 2>&1; do
   sleep 1
 done
 END=$(date +%s)
