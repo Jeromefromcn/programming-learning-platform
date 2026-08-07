@@ -110,12 +110,25 @@ PYTHON_CONFIG = {
 }
 
 
-def seed_fixtures(session):
+def seed_fixtures(session, fixture_ids=None):
+    """Create the perf-test category + Blockly/Python exercises.
+
+    `fixture_ids` may be passed in as a dict to populate in place (e.g. an
+    empty dict owned by the caller): each id is recorded the moment its
+    create call succeeds, *before* the next call is attempted, so that a
+    caller inspecting the same dict object after an exception still sees
+    whatever was actually created on the server. If omitted, a fresh dict
+    is used and returned on full success as before.
+    """
+    if fixture_ids is None:
+        fixture_ids = {}
     base = session.base_url
+
     cat = session.post(f"{base}/api/v1/categories",
                         json={"name": "perf-test"}, timeout=10)
     cat.raise_for_status()
-    category_id = cat.json()["id"]
+    fixture_ids["category_id"] = cat.json()["id"]
+    category_id = fixture_ids["category_id"]
 
     blockly = session.post(f"{base}/api/v1/exercises", json={
         "title": "perf-test-blockly",
@@ -127,8 +140,9 @@ def seed_fixtures(session):
         "config": BLOCKLY_CONFIG,
     }, timeout=10)
     blockly.raise_for_status()
-    blockly_id = blockly.json()["id"]
-    session.patch(f"{base}/api/v1/exercises/{blockly_id}/publish", timeout=10).raise_for_status()
+    fixture_ids["blockly_exercise_id"] = blockly.json()["id"]
+    session.patch(f"{base}/api/v1/exercises/{fixture_ids['blockly_exercise_id']}/publish",
+                  timeout=10).raise_for_status()
 
     python = session.post(f"{base}/api/v1/exercises", json={
         "title": "perf-test-python",
@@ -140,23 +154,41 @@ def seed_fixtures(session):
         "config": PYTHON_CONFIG,
     }, timeout=10)
     python.raise_for_status()
-    python_id = python.json()["id"]
-    session.patch(f"{base}/api/v1/exercises/{python_id}/publish", timeout=10).raise_for_status()
+    fixture_ids["python_exercise_id"] = python.json()["id"]
+    session.patch(f"{base}/api/v1/exercises/{fixture_ids['python_exercise_id']}/publish",
+                  timeout=10).raise_for_status()
 
-    return {
-        "category_id": category_id,
-        "blockly_exercise_id": blockly_id,
-        "python_exercise_id": python_id,
-    }
+    return fixture_ids
 
 
 def cleanup_fixtures(session, fixture_ids, submission_ids):
+    """Delete whatever fixtures exist. Tolerates a partially-populated
+    `fixture_ids` (e.g. after seed_fixtures raised partway through) by
+    skipping any missing key, and prints a warning for any delete that
+    doesn't come back OK instead of silently swallowing it.
+    """
     base = session.base_url
+
+    def _delete(url, label):
+        resp = session.delete(url, timeout=10)
+        if not resp.ok:
+            print(f"WARNING: failed to delete {label}: "
+                  f"{resp.status_code} {resp.text}")
+
     for sub_id in submission_ids:
-        session.delete(f"{base}/api/v1/submissions/{sub_id}", timeout=10)
-    session.delete(f"{base}/api/v1/exercises/{fixture_ids['blockly_exercise_id']}", timeout=10)
-    session.delete(f"{base}/api/v1/exercises/{fixture_ids['python_exercise_id']}", timeout=10)
-    session.delete(f"{base}/api/v1/categories/{fixture_ids['category_id']}", timeout=10)
+        _delete(f"{base}/api/v1/submissions/{sub_id}", f"submission {sub_id}")
+
+    if "blockly_exercise_id" in fixture_ids:
+        eid = fixture_ids["blockly_exercise_id"]
+        _delete(f"{base}/api/v1/exercises/{eid}", f"blockly exercise {eid}")
+
+    if "python_exercise_id" in fixture_ids:
+        eid = fixture_ids["python_exercise_id"]
+        _delete(f"{base}/api/v1/exercises/{eid}", f"python exercise {eid}")
+
+    if "category_id" in fixture_ids:
+        cid = fixture_ids["category_id"]
+        _delete(f"{base}/api/v1/categories/{cid}", f"category {cid}")
 
 
 # ---------------------------------------------------------------------------
@@ -183,11 +215,15 @@ def main():
     session = make_session(args.base_url, token)
     print("Logged in.")
 
-    fixture_ids = None
+    # Owned here (not just assigned from seed_fixtures' return value) so that
+    # if seed_fixtures raises partway through, this dict still reflects
+    # whatever was actually created on the server — seed_fixtures mutates it
+    # in place as each id is confirmed, rather than only returning at the end.
+    fixture_ids = {}
     submission_ids = []
     try:
         print("Seeding perf-test fixtures ...")
-        fixture_ids = seed_fixtures(session)
+        seed_fixtures(session, fixture_ids)
         print(f"Seeded: {fixture_ids}")
 
         if args.dry_run:
