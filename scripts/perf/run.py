@@ -249,7 +249,11 @@ def main():
     session = make_session(args.base_url, token)
     print("Logged in.")
 
-    fixture_ids = None
+    # Owned here (not just assigned from seed_fixtures' return value) so that
+    # if seed_fixtures raises partway through, this dict still reflects
+    # whatever was actually created on the server — seed_fixtures mutates it
+    # in place as each id is confirmed, rather than only returning at the end.
+    fixture_ids = {}
     submission_ids = []
     # Default for cleanup_fixtures if measure_grading_throughput never runs
     # (e.g. an earlier stage raises). Populated from throughput["user_ids"]
@@ -259,7 +263,7 @@ def main():
     rows = []
     try:
         print("Seeding perf-test fixtures ...")
-        fixture_ids = seed_fixtures(session)
+        seed_fixtures(session, fixture_ids)
         print(f"Seeded: {fixture_ids}")
 
         print("Sampling idle memory ...")
