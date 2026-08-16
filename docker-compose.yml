@@ -138,3 +138,10 @@ volumes:
 networks:
   exercise-platform-net:
     driver: bridge
+    ipam:
+      config:
+        # Pinned 2026-08-16: a subnet outside docker's default 172.x pool
+        # (and outside k3s pod CIDR 10.42/16, VCN 10.0/24) can never collide
+        # with stale/ghost firewall rules left over from old networks —
+        # see scripts/host/README.md.
+        - subnet: 10.221.0.0/24
